@@ -1,5 +1,8 @@
 # ---- dependencies / build output -------------------------------------------
 node_modules/
+.next/
+out/
+next-env.d.ts
 dist/
 .vite/
 *.tsbuildinfo

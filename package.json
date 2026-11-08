@@ -3,13 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "license": "MIT",
-  "type": "module",
   "description": "Clavis — describe a home in plain language; it is laid out in metres, checked by a deterministic validator, and shown in synchronized 2D and 3D.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -b",
+    "dev": "next dev -p 5199",
+    "build": "next build",
+    "start": "next start -p 5199",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:live": "vitest run tests/live --reporter=verbose",
     "e2e": "node tests/e2e/smoke.mjs"
