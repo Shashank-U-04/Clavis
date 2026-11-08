@@ -3,6 +3,7 @@ import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles 
 import { BuildFigure, type BuildStep } from "@/components/figures/BuildFigure";
 import { buildSunsetFigure } from "@/components/figures/sunsetFigure";
 import { Frame, Section } from "@/components/site/Sheet";
+import { LogoMark } from "@/components/site/Logo";
 import { BriefBox } from "@/components/site/BriefBox";
 import { ButtonLink } from "@/components/ui/Button";
 import { CATALOG } from "@/model/catalog";
@@ -85,7 +86,34 @@ export default function Home() {
       <section className="border-b border-rule">
         <div className="mx-auto max-w-[1440px]">
           <Frame className="px-5 py-8 md:px-12 md:py-10">
-            <BuildFigure data={figure} steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)} caption="Sunset Loft · built live from the plan" />
+            <BuildFigure
+              data={figure}
+              steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)}
+              caption="Sunset Loft · built live from the plan"
+              side={
+                <div>
+                  <p className="label text-ink-3">Sheet 01 · Title block</p>
+                  <div className="mt-6 flex items-center gap-4">
+                    <LogoMark size={64} className="shrink-0" />
+                    <span className="text-[clamp(3.2rem,6vw,5.2rem)] font-semibold leading-none tracking-[-0.05em]">Clavis</span>
+                  </div>
+                  <p className="mt-6 max-w-sm text-pretty text-lg leading-snug text-ink-2">An architectural design studio that turns one sentence into a home you can walk through.</p>
+                  <dl className="mt-8 border-t border-rule font-mono text-[0.7rem] uppercase tracking-[0.08em]">
+                    {[
+                      ["Type", "Design studio, in the browser"],
+                      ["Units", "Metres, true to scale"],
+                      ["Checks", `${CHECK_COUNT} on every change`],
+                      ["Status", "Free · no account needed"],
+                    ].map(([k, v]) => (
+                      <div key={k} className="grid grid-cols-[5.5rem_1fr] border-b border-rule py-2">
+                        <dt className="text-ink-3">{k}</dt>
+                        <dd className="text-ink">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              }
+            />
           </Frame>
           <div className="grid border-t border-rule lg:grid-cols-[1fr_minmax(0,24rem)_minmax(0,16rem)]">
             <h1 className="border-b border-rule p-5 text-[clamp(1.9rem,7.6vw,4.4rem)] font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:p-8 lg:border-b-0 lg:border-r">

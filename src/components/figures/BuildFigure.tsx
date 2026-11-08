@@ -13,7 +13,7 @@
  * so React renders it once.
  */
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { boxFaces, type Box3 } from "./iso";
 import type { FigureData, SolidKind } from "./sunsetFigure";
@@ -89,7 +89,7 @@ interface Els {
 const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: Els }) {
   const [vx, vy, vw, vh] = data.viewBox.split(" ").map(Number);
   return (
-    <svg viewBox={data.viewBox} className="block w-full select-none" role="img" aria-label="An isometric drawing of the Sunset Loft being built: walls, doors, windows and furniture.">
+    <svg viewBox={data.viewBox} className="mx-auto block max-h-[min(72vh,680px)] w-full select-none" role="img" aria-label="An isometric drawing of the Sunset Loft being built: walls, doors, windows and furniture.">
       <defs>
         <pattern id="bf-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="4" stroke="#161513" strokeWidth="0.5" strokeOpacity="0.18" />
@@ -194,7 +194,7 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
   );
 });
 
-export function BuildFigure({ data, steps, caption }: { data: FigureData; steps: BuildStep[]; caption: string }) {
+export function BuildFigure({ data, steps, caption, side }: { data: FigureData; steps: BuildStep[]; caption: string; side?: ReactNode }) {
   const els = useRef<Els>({ solids: [], faces: [], rooms: [], plan: null, arcs: null, clip: null, band: null, notes: null }).current;
   const plans = useRef<Plan[] | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -284,43 +284,47 @@ export function BuildFigure({ data, steps, caption }: { data: FigureData; steps:
   }, [paint, play, steps.length]);
 
   return (
-    <div ref={box} className="relative">
+    <div ref={box} className="grid gap-8 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[minmax(0,25rem)_minmax(0,1fr)]">
       <noscript>
         <style>{".bf-render{clip-path:none}.bf-notes{opacity:1}"}</style>
       </noscript>
 
-      <div className="flex items-start justify-between gap-4 px-1 pb-2">
-        <span className="label text-ink-3">Fig. 01</span>
-        <span className="label text-right text-ink-2">{caption}</span>
-      </div>
-
-      <div className="mx-auto max-w-5xl">
-        <Drawing data={data} els={els} />
-      </div>
-
-      {/* on wide screens the progress and the log sit in the drawing's empty bottom corners */}
-      <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:items-end lg:pointer-events-none lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:[&>*]:pointer-events-auto">
-        <div className="flex items-center gap-4">
-          <span className="label tabular-nums text-ink">
-            <span className="text-ink-3">Build </span>
-            {String(pct).padStart(3, "0")} %
-          </span>
-          <span className="relative h-px w-32 bg-rule" aria-hidden="true">
-            <span className="absolute inset-y-0 left-0 bg-marker" style={{ width: `${pct}%`, height: 1 }} />
-          </span>
-          <button type="button" onClick={play} disabled={playing} className="label flex items-center gap-1.5 text-ink-2 hover:text-marker disabled:opacity-0">
-            <RotateCcw size={12} aria-hidden="true" /> Replay
-          </button>
+      {/* left: the brand, then the build progress and log; on phones the drawing sits between them */}
+      <div className="contents lg:flex lg:flex-col lg:justify-between lg:gap-10">
+        <div className="order-1 lg:order-none">{side}</div>
+        <div className="order-3 grid gap-5 lg:order-none">
+          <div className="flex items-center gap-4">
+            <span className="label tabular-nums text-ink">
+              <span className="text-ink-3">Build </span>
+              {String(pct).padStart(3, "0")} %
+            </span>
+            <span className="relative h-px flex-1 bg-rule" aria-hidden="true">
+              <span className="absolute inset-y-0 left-0 bg-marker" style={{ width: `${pct}%`, height: 1 }} />
+            </span>
+            <button type="button" onClick={play} disabled={playing} className="label flex items-center gap-1.5 text-ink-2 hover:text-marker disabled:opacity-0">
+              <RotateCcw size={12} aria-hidden="true" /> Replay
+            </button>
+          </div>
+          <ol className="font-mono text-[0.68rem] uppercase leading-[1.7] tracking-[0.08em]" aria-label="Build log">
+            {steps.map((s, i) => (
+              <li key={s.code} className={`grid grid-cols-[2.4rem_7.2rem_1fr] transition-colors duration-300 ${i < step ? "text-ink-2" : i === step ? "text-marker" : "text-ink-3/50"}`}>
+                <span>{s.code}</span>
+                <span>{s.title}</span>
+                <span className="truncate">{i <= step ? s.detail : ""}</span>
+              </li>
+            ))}
+          </ol>
         </div>
-        <ol className="bg-paper/85 font-mono text-[0.68rem] uppercase leading-[1.7] tracking-[0.08em]" aria-label="Build log">
-          {steps.map((s, i) => (
-            <li key={s.code} className={`grid grid-cols-[2.4rem_7.5rem_1fr] transition-colors duration-300 ${i < step ? "text-ink-2" : i === step ? "text-marker" : "text-ink-3/50"}`}>
-              <span>{s.code}</span>
-              <span>{s.title}</span>
-              <span className="truncate">{i <= step ? s.detail : ""}</span>
-            </li>
-          ))}
-        </ol>
+      </div>
+
+      <div className="order-2 flex min-w-0 flex-col lg:order-none">
+        <div className="flex items-start justify-between gap-4 pb-2">
+          <span className="label text-ink-3">Fig. 01</span>
+          <span className="label text-right text-ink-2">{caption}</span>
+        </div>
+        <div className="my-auto">
+          <Drawing data={data} els={els} />
+        </div>
       </div>
     </div>
   );
