@@ -21,7 +21,6 @@ export default function PrivacyPage() {
         ],
         ["Accounts", <p key="a">Accounts are coming. When they arrive, your email address and the projects you choose to save will be stored with our database provider and kept private to you. This page will be updated before that happens.</p>],
         ["Cookies and tracking", <p key="c">Clavis sets no advertising or analytics cookies and does not track you across sites. The studio stores a few preferences, such as your layout and assistant mode, in local storage.</p>],
-        ["Contact", <p key="m">Questions about privacy: use the contact details on the About page.</p>],
       ]}
     />
   );
