@@ -9,7 +9,8 @@
 
 import { useEffect, useState } from "react";
 import { App } from "./App";
-import { startProjects } from "./projects";
+import { projectActions, startProjects } from "./projects";
+import { setUi } from "./uiStore";
 import { assistant, session } from "../ai/session";
 import { actions, store } from "../model/store";
 import "./studio.css";
@@ -24,6 +25,16 @@ export default function StudioRoot() {
       started = true;
       startProjects();
       void assistant.checkHosted();
+      // a brief typed on the website: start a fresh project and design it straight away
+      const url = new URL(window.location.href);
+      const brief = url.searchParams.get("brief")?.trim().slice(0, 300);
+      if (brief) {
+        url.searchParams.delete("brief");
+        window.history.replaceState(null, "", url.pathname + url.search);
+        projectActions.newBlank();
+        setUi({ rightTab: "assistant", welcome: false });
+        void assistant.ask(brief);
+      }
       // a console handle for debugging and for the browser tests
       (window as unknown as { __clavis: unknown }).__clavis = { store, actions, session, assistant };
     }
