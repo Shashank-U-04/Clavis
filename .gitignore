@@ -1,0 +1,48 @@
+# ---- dependencies / build output -------------------------------------------
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+coverage/
+
+# ---- secrets ------------------------------------------------------------------
+# Real keys live only in .env.local / .dev.vars (local) or the host's secret store.
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+credentials*.json
+service-account*.json
+
+# ---- hosting tool state -------------------------------------------------------
+.wrangler/
+.netlify/
+.vercel/
+
+# ---- tests / temp ---------------------------------------------------------------
+/tmp/
+test-results/
+playwright-report/
+blob-report/
+*.log
+npm-debug.log*
+
+# ---- editor / OS ------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ---- local-only reference material --------------------------------------------------
+# Local scratch
+.reference/
+shots/
+videos/
+tests/e2e/failure.png
