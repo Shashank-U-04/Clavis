@@ -1,8 +1,14 @@
 /**
- * A tiny isometric drawing engine for explanatory figures.
+ * A tiny axonometric drawing engine for explanatory figures.
  *
- * World: metres, X and Y on the floor, Z up. The viewer looks from the +X/+Y side at 30°
- * above the floor, so of each box we see its top and the faces turned towards +X and +Y.
+ * The projection is a plan oblique, the architect's 30°/60° axonometric: the plan is drawn
+ * true to scale and turned 30°, and heights go straight up. Right angles in plan stay right
+ * angles and every length on the floor is measured at the same scale, so the drawing never
+ * looks squashed the way an isometric diamond does.
+ *
+ * World: metres, X and Y on the floor, Z up. X runs down-right at 30° below the horizontal,
+ * Y down-left at 60°. The viewer looks from the +X/+Y side, so of each box we see its top and
+ * the faces turned towards +X and +Y.
  * Solids are opaque and painted back to front, so nearer parts hide farther ones; there are
  * no wireframes and no hidden lines.
  */
@@ -30,10 +36,15 @@ export interface Face {
 }
 
 const COS30 = Math.cos(Math.PI / 6);
+const SIN30 = 0.5;
+
+/** On-screen angles of the two floor axes, for text set along them (degrees, reading upright). */
+export const AXIS_X_DEG = 30;
+export const AXIS_Y_DEG = -60;
 
 /** World → drawing units (multiply by the figure's scale to get pixels). */
 export function project(x: number, y: number, z: number): P2 {
-  return { x: (x - y) * COS30, y: (x + y) * 0.5 - z };
+  return { x: x * COS30 - y * SIN30, y: x * SIN30 + y * COS30 - z };
 }
 
 const fmt = (pts: P2[], k: number) => pts.map((p) => `${(p.x * k).toFixed(1)},${(p.y * k).toFixed(1)}`).join(" ");

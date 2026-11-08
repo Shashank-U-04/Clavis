@@ -1,5 +1,5 @@
 /**
- * The Sunset Loft as an isometric cutaway, computed from the real design (model/templates.ts)
+ * The Sunset Loft as an axonometric cutaway, computed from the real design (model/templates.ts)
  * on the server. Like an architect's section, everything is cut at CUT metres: walls show
  * their cut tops in solid ink, and furniture taller than the cut is cut too. Every number the
  * figure's readout shows comes from the same analysis the app uses.
@@ -15,7 +15,7 @@ import { openingSpan } from "@/model/issues";
 import { doorLeaves } from "@/model/drawing";
 import { segLen } from "@/model/geometry";
 import { sunsetLoftModel } from "@/model/templates";
-import { boxFaces, flatPolygon, paintOrder, project, type Box3, type Face } from "./iso";
+import { AXIS_X_DEG, AXIS_Y_DEG, boxFaces, flatPolygon, paintOrder, project, type Box3, type Face } from "./iso";
 
 export const CUT = 1.2;
 const SCALE = 40;
@@ -310,11 +310,11 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
   };
   const off = 0.9;
   const dims = [
-    dim([bx0, by1 + off], [bx1, by1 + off], [0.18, 0.18], 30, [
+    dim([bx0, by1 + off], [bx1, by1 + off], [0.18, 0.18], AXIS_X_DEG, [
       [bx0, by1],
       [bx1, by1],
     ]),
-    dim([bx1 + off, by0], [bx1 + off, by1], [0.18, -0.18], -30, [
+    dim([bx1 + off, by0], [bx1 + off, by1], [0.18, -0.18], AXIS_Y_DEG, [
       [bx1, by0],
       [bx1, by1],
     ]),

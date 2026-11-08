@@ -6,11 +6,21 @@ import { sunsetLoftModel } from "../src/model/templates";
 
 const box = (x0: number, y0: number, x1: number, y1: number, z0 = 0, z1 = 1): Box3 => ({ x0, y0, z0, x1, y1, z1 });
 
-describe("isometric projection", () => {
+describe("plan-oblique projection", () => {
   it("puts nearer points lower on the page and height straight up", () => {
     expect(project(1, 1, 0).y).toBeGreaterThan(project(0, 0, 0).y);
     expect(project(0, 0, 1).y).toBeCloseTo(project(0, 0, 0).y - 1);
-    expect(project(2, 0, 0).x).toBeCloseTo(-project(0, 2, 0).x);
+    expect(project(0, 0, 1).x).toBeCloseTo(project(0, 0, 0).x);
+  });
+
+  it("keeps the plan true: every floor length at one scale, right angles square", () => {
+    const len = (x: number, y: number) => Math.hypot(project(x, y, 0).x, project(x, y, 0).y);
+    expect(len(12.2, 0)).toBeCloseTo(12.2);
+    expect(len(0, 10.1)).toBeCloseTo(10.1);
+    expect(len(3, 4)).toBeCloseTo(5);
+    const ex = project(1, 0, 0);
+    const ey = project(0, 1, 0);
+    expect(ex.x * ey.x + ex.y * ey.y).toBeCloseTo(0);
   });
 
   it("draws a block as two sides and a top, a flat slab as a top only", () => {
