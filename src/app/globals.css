@@ -34,6 +34,8 @@
 
 @layer base {
   html {
+    /* drawing-frame crosshairs may poke past the page edge; never scroll sideways for them */
+    overflow-x: clip;
     background: var(--color-paper);
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
