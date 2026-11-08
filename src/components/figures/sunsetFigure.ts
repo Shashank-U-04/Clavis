@@ -32,10 +32,43 @@ export interface FigureRoom {
   windows: number;
 }
 
+export interface FigureSolid {
+  id: string;
+  kind: SolidKind;
+  faces: Face[];
+  /** the solid in world metres, for figures that animate it */
+  box: Box3;
+  /** what it belongs to: a wall, an opening or a piece of furniture */
+  group: string;
+}
+
+export interface FigureLabel {
+  id: string;
+  label: string;
+  area: number;
+  x: number;
+  y: number;
+}
+
+/** An overall dimension along one of the two front edges, drawn on the ground. */
+export interface FigureDim {
+  line: string;
+  /** extension lines from the building to the dimension line */
+  ext: string[];
+  ticks: string[];
+  text: string;
+  x: number;
+  y: number;
+  angle: number;
+}
+
 export interface FigureData {
   viewBox: string;
+  scale: number;
   rooms: FigureRoom[];
-  solids: { id: string; kind: SolidKind; faces: Face[] }[];
+  labels: FigureLabel[];
+  dims: FigureDim[];
+  solids: FigureSolid[];
   arcs: string[];
   halo: { cx: number; cy: number; rx: number; ry: number };
   size: { w: number; h: number };
@@ -245,10 +278,53 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
   // rugs lie on the floor under everything else
   const flat = solids.filter((s) => s.kind === "rug");
   const standing = paintOrder(solids.filter((s) => s.kind !== "rug"));
-  const ordered = [...flat, ...standing].map((s) => ({ id: s.id, kind: s.kind, faces: boxFaces(s.box, k) }));
+  const ordered: FigureSolid[] = [...flat, ...standing].map((s) => ({ id: s.id, kind: s.kind, faces: boxFaces(s.box, k), box: s.box, group: s.id.split(":")[0] }));
 
-  // frame the drawing
-  const all = ordered.flatMap((s) => s.faces.flatMap((f) => f.points.split(" ").map((p) => p.split(",").map(Number))));
+  const labels: FigureLabel[] = model.rooms.map((r, i) => {
+    const c = T.pt(r.x + r.w / 2, r.y + r.h / 2);
+    const s = project(c.x, c.y, 0);
+    return { id: r.id, label: r.label, area: rooms[i].area, x: s.x * k, y: s.y * k };
+  });
+
+  // overall dimensions along the two edges nearest the viewer, set out 0.9 m from the walls
+  const walls = solids.filter((s) => s.kind === "wall").map((s) => s.box);
+  const bx0 = Math.min(...walls.map((b) => b.x0));
+  const bx1 = Math.max(...walls.map((b) => b.x1));
+  const by0 = Math.min(...walls.map((b) => b.y0));
+  const by1 = Math.max(...walls.map((b) => b.y1));
+  const at = (x: number, y: number) => project(x, y, 0);
+  const seg = (a: { x: number; y: number }, b: { x: number; y: number }) => `M ${(a.x * k).toFixed(1)} ${(a.y * k).toFixed(1)} L ${(b.x * k).toFixed(1)} ${(b.y * k).toFixed(1)}`;
+  const dim = (a: [number, number], b: [number, number], tick: [number, number], angle: number, from: [number, number][]): FigureDim => {
+    const pa = at(...a);
+    const pb = at(...b);
+    const tickAt = (q: [number, number]) => seg(at(q[0] - tick[0], q[1] - tick[1]), at(q[0] + tick[0], q[1] + tick[1]));
+    const m = at((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const ext = from.map((f, i) => {
+      const to = i === 0 ? a : b;
+      const dx = Math.sign(to[0] - f[0]) * 0.2;
+      const dy = Math.sign(to[1] - f[1]) * 0.2;
+      return seg(at(f[0] + dx * 0.75, f[1] + dy * 0.75), at(to[0] + dx, to[1] + dy));
+    });
+    return { line: seg(pa, pb), ext, ticks: [tickAt(a), tickAt(b)], text: `${len.toFixed(2)} m`, x: m.x * k, y: m.y * k, angle };
+  };
+  const off = 0.9;
+  const dims = [
+    dim([bx0, by1 + off], [bx1, by1 + off], [0.18, 0.18], 30, [
+      [bx0, by1],
+      [bx1, by1],
+    ]),
+    dim([bx1 + off, by0], [bx1 + off, by1], [0.18, -0.18], -30, [
+      [bx1, by0],
+      [bx1, by1],
+    ]),
+  ];
+
+  // frame the drawing, dimensions included
+  const all = [
+    ...ordered.flatMap((s) => s.faces.flatMap((f) => f.points.split(" ").map((p) => p.split(",").map(Number)))),
+    ...[at(bx0, by1 + off + 0.6), at(bx1, by1 + off + 0.6), at(bx1 + off + 0.6, by0), at(bx1 + off + 0.6, by1)].map((p) => [p.x * k, p.y * k]),
+  ];
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
   const pad = 28;
@@ -260,7 +336,10 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
 
   return {
     viewBox: `${minX.toFixed(1)} ${minY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`,
+    scale: k,
     rooms,
+    labels,
+    dims,
     solids: ordered,
     arcs,
     halo: { cx: centre.x * k, cy: centre.y * k + 6, rx: w * 0.46, ry: h * 0.33 },
