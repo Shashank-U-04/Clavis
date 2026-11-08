@@ -4,7 +4,7 @@ import { applyBatch } from "../src/model/operations";
 import { emptyModel, type PlanModel } from "../src/model/types";
 import { checkModel } from "../src/model/issues";
 import { COMPACT_TWO_BEDROOM } from "../src/model/templates";
-import { templateModel } from "../src/model/templates";
+import { sunsetLoftModel, templateModel } from "../src/model/templates";
 import type { LayoutSpec } from "../src/model/layout";
 
 const ids = () => {
@@ -140,9 +140,19 @@ describe("metrics and regressions", () => {
     expect(a.metrics.efficiency).toBeLessThan(1);
   });
 
-  it("keeps the demo designs free of warnings and errors", () => {
-    for (const m of [template(), templateModel()]) {
+  it("keeps the template and the Sunset Loft free of warnings and errors", () => {
+    for (const m of [templateModel(), sunsetLoftModel()]) {
       expect(checkModel(m).filter((i) => i.severity !== "info")).toEqual([]);
     }
+  });
+
+  it("the Sunset Loft is a generous, fully reachable home", () => {
+    const a = analyzeModel(sunsetLoftModel());
+    expect(a.metrics.carpetArea).toBeGreaterThan(100);
+    expect(a.metrics.bedrooms).toBe(2);
+    expect(a.rooms.every((r) => r.depth !== null)).toBe(true);
+    const living = a.rooms.find((r) => r.label === "Living & Kitchen")!;
+    expect(living.area).toBeGreaterThan(35);
+    expect(living.daylightRatio).toBeGreaterThan(0.2);
   });
 });
