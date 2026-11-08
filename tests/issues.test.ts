@@ -155,3 +155,13 @@ describe("ids", () => {
     expect(codes(m)).toEqual(["invalid_dimension"]);
   });
 });
+
+describe("the published check list", () => {
+  it("matches exactly the codes the engine can emit", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { CHECK_CODES } = await import("../src/model/checks");
+    const source = ["src/model/issues.ts", "src/model/analysis.ts"].map((f) => readFileSync(f, "utf8")).join("\n");
+    const emitted = new Set([...source.matchAll(/code: "([a-z_]+)"/g)].map((m) => m[1]));
+    expect([...emitted].sort()).toEqual([...CHECK_CODES].sort());
+  });
+});
