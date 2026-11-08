@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/*
+ * Clavis site design tokens: a drafting-table palette. Warm paper, black ink, ruled lines and
+ * one orange marker colour. The studio keeps its own dark theme (studio/studio.css).
+ */
+@theme {
+  --color-paper: #f2efe7;
+  --color-paper-2: #e9e5da;
+  --color-paper-3: #dfdacc;
+  --color-ink: #161513;
+  --color-ink-2: #46433d;
+  --color-ink-3: #85817a;
+  --color-rule: #cfc9bb;
+  --color-rule-soft: #e0dbcf;
+  --color-marker: #e0561b;
+  --color-marker-soft: #f6d8c8;
+  --color-night: #0f1215;
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --text-display: clamp(2.6rem, 6.4vw, 6rem);
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.035em;
+
+  --animate-tick: tick 1.2s steps(2) infinite;
+  @keyframes tick {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-marker);
+    color: white;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-marker);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* the small monospaced caps used for labels, nav items and figure captions */
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  /* a hairline ruler: minor ticks every 8 px, major every 64 px */
+  .ruler-x {
+    height: 10px;
+    background:
+      repeating-linear-gradient(90deg, var(--color-rule) 0 1px, transparent 1px 64px) bottom / 100% 10px no-repeat,
+      repeating-linear-gradient(90deg, var(--color-rule) 0 1px, transparent 1px 8px) bottom / 100% 5px no-repeat;
+  }
+  .ruler-y {
+    width: 10px;
+    background:
+      repeating-linear-gradient(180deg, var(--color-rule) 0 1px, transparent 1px 64px) right / 10px 100% no-repeat,
+      repeating-linear-gradient(180deg, var(--color-rule) 0 1px, transparent 1px 8px) right / 5px 100% no-repeat;
+  }
+  /* faint drafting grid for panels */
+  .grid-paper {
+    background-image:
+      linear-gradient(var(--color-rule-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-rule-soft) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
