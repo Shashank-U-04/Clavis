@@ -272,7 +272,7 @@ export class Viewer {
     // far enough that the whole building fits the narrower of the two fields of view
     const vHalf = (this.camera.fov * Math.PI) / 360;
     const hHalf = Math.atan(Math.tan(vHalf) * this.camera.aspect);
-    const distance = (r / Math.sin(Math.min(vHalf, hHalf))) * 0.72;
+    const distance = (r / Math.sin(Math.min(vHalf, hHalf))) * 0.85;
     if (this.mode === "top") {
       this.camera.up.set(0, 0, -1); // north at the top, as in the plan
       this.camera.position.set(c.x, distance, c.z + 0.001);
