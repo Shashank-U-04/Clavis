@@ -8,7 +8,10 @@ before you see it, it is previewed on the plan, and nothing changes until you pr
 **Apply**. Then you can edit it by hand or in words, review daylight and circulation, and
 walk through it in 3D from the front door.
 
-It runs entirely in the browser. You need no account, no API key and no server.
+The design studio runs in your browser at `/studio/try`. You need no account and no API key:
+projects are saved in the browser as you work. Around it is a website: a landing page,
+feature pages, how it works, docs, a projects dashboard, settings and sign-in pages (accounts
+switch on once Supabase is configured).
 
 ## What it does
 
@@ -75,9 +78,9 @@ npm run dev        # http://localhost:5199
 | Command | What it checks |
 |---|---|
 | `npm run typecheck` | TypeScript, strict |
-| `npm test` | 161 unit tests: geometry, constraint engine, analysis, operations, layout builder, local engine, library, export, workflow, server adapter |
+| `npm test` | 170 unit tests: geometry, constraint engine, analysis, operations, layout builder, local engine, library, export, workflow, server adapter, landing figures |
 | `npm run e2e` | Browser smoke test of the whole workflow (needs Chromium or Chrome) |
-| `npm run build` | Production bundle in `dist/` |
+| `npm run build` | Next.js production build in `.next/` |
 
 ## How it is built
 
@@ -91,8 +94,13 @@ npm run dev        # http://localhost:5199
 | Assistant workflow and contract | `src/ai/workflow.ts`, `src/ai/contract.ts`, `src/ai/session.ts` |
 | 2D plan editor | `src/editor/Editor.tsx` |
 | 3D view | `src/three/` |
-| Workspace UI | `src/ui/` |
-| Project library and autosave | `src/model/library.ts`, `src/app/projects.ts` |
+| Studio workspace UI | `src/studio/` |
+| Project library and autosave | `src/model/library.ts`, `src/studio/projects.ts` |
+| Website pages (landing, features, docs, legal) | `src/app/(marketing)/`, `src/components/site/` |
+| Dashboard and settings | `src/app/(app)/`, `src/components/app/` |
+| Sign-in pages and auth helpers | `src/app/(auth)/`, `src/components/auth/`, `src/lib/auth/` |
+| Landing-page isometric figure | `src/components/figures/` |
+| Hosted-model route | `src/app/api/assistant/route.ts`, `server/` |
 
 Units are metres throughout. The plan's x axis points east and y points south.
 
