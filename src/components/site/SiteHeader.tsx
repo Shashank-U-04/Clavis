@@ -45,6 +45,9 @@ export function SiteHeader() {
             ),
           )}
           <span className="flex-1" />
+          <Link href="/dashboard" className="label hidden min-w-32 items-start border-l border-rule px-4 pt-3 text-ink-2 hover:text-ink xl:flex">
+            Projects
+          </Link>
           <Link href="/login" className="label flex min-w-32 items-start border-l border-rule px-4 pt-3 text-ink-2 hover:text-ink">
             Sign in
           </Link>

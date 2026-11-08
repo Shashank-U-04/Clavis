@@ -53,6 +53,9 @@ export function MobileMenu() {
                 </Link>
               ))}
             </div>
+            <Link href="/dashboard" className="border-b border-rule px-5 py-5 text-lg">
+              Your projects
+            </Link>
             <Link href="/login" className="border-b border-rule px-5 py-5 text-lg">
               Sign in
             </Link>
