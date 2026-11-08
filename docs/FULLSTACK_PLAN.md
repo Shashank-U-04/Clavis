@@ -153,6 +153,13 @@ unchanged, with its 164 tests. Only the shell around it changes.
    Lighthouse, accessibility pass.
 8. **Deploy.** Supabase production project + Vercel. Secrets go in Vercel env vars. Preview
    deploys per PR. Optional custom domain.
+9. **Agent tools (later).** Let outside AI agents design in Clavis through the same validated
+   operation pipeline: an **MCP server** at `/api/mcp` (for Claude Desktop, Cursor and other
+   MCP clients; per-user tokens, signed-in projects only) and optionally a **WebMCP** layer for
+   in-browser agents. Destructive operations wait for the owner's approval in the studio.
+
+The landing page and feature pages showcase the **Sunset Loft** (a 110 m² open-plan home,
+`src/model/templates.ts`) as the hero design: plan, 3D and walk-through.
 
 ## Needed from the user (at the right phase, not now)
 
