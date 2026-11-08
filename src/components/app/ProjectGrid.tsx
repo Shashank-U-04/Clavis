@@ -90,10 +90,10 @@ export function ProjectGrid() {
             {shown.map((p) => (
               <li key={p.id} className="group relative border-b border-r border-rule">
                 <Link href={`/studio/try?project=${encodeURIComponent(p.id)}`} className="block hover:bg-paper-2">
-                  <div className="grid aspect-[4/3] place-items-center overflow-hidden border-b border-rule-soft bg-white p-3">
+                  <div className="relative grid aspect-[4/3] place-items-center overflow-hidden border-b border-rule-soft bg-white">
                     {thumbs.get(p.id) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumbs.get(p.id)!} alt="" className="max-h-full max-w-full" />
+                      <img src={thumbs.get(p.id)!} alt="" className="absolute inset-0 h-full w-full object-contain p-3" />
                     ) : (
                       <span className="label text-ink-3">Empty plan</span>
                     )}
@@ -105,7 +105,7 @@ export function ProjectGrid() {
                     </p>
                   </div>
                 </Link>
-                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                <div className="absolute right-2 top-2 flex gap-1 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100">
                   {confirm === p.id ? (
                     <>
                       <button type="button" onClick={() => (deleteProject(browserStorage(), p.id), setConfirm(null), refresh())} className="label bg-marker px-2 py-1 text-paper">
