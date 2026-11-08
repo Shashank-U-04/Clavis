@@ -4,19 +4,19 @@
  *   describe a home → proposal checked by the validator → preview → apply → review is clean
  *   → undo / redo → reload restores the project → a repair → the hosted-model path (MOCKED)
  *
- * Starts its own Vite dev server. The hosted-model step intercepts /api/assistant with a
+ * Starts its own Next.js dev server. The hosted-model step intercepts /api/assistant with a
  * scripted response: it checks the client's error handling, not a real provider.
  *
  * Run: npm run e2e   (needs a Playwright Chromium: npx playwright install chromium)
  */
 
-import { createServer } from "vite";
+import { startServer } from "./server.mjs";
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 
 const PORT = 5298;
-const server = await createServer({ server: { port: PORT, strictPort: true }, logLevel: "error" });
-await server.listen();
+const server = await startServer(PORT);
+const STUDIO = `${server.url}/studio/try`;
 // Playwright's own Chromium if installed, otherwise the system Chrome
 const browser = await chromium.launch().catch(() => chromium.launch({ channel: "chrome" }));
 const page = await browser.newPage({ viewport: { width: 1440, height: 860 } });
@@ -44,7 +44,7 @@ const state = () => page.evaluate(() => {
 try {
   console.log("Clavis e2e smoke");
   await step("opens to the welcome screen", async () => {
-    await page.goto(`http://localhost:${PORT}/`);
+    await page.goto(STUDIO);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
     await page.getByTestId("welcome").waitFor();
@@ -147,5 +147,5 @@ try {
   console.log("All steps passed.");
 } finally {
   await browser.close();
-  await server.close();
+  server.close();
 }

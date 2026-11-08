@@ -4,11 +4,11 @@
  * calls to stay inside a free tier's per-minute token budget (LIVE_PAUSE_MS, default 35 s).
  *
  * Reads MODEL_PROVIDER / MODEL_API_KEY / MODEL_ID / MODEL_BASE_URL from .env.local through
- * Vite's loader, exactly as the dev server does. Never prints the key.
+ * Next's loader, exactly as the dev server does. Never prints the key.
  */
 
 import { describe, it, expect } from "vitest";
-import { loadEnv } from "vite";
+import nextEnv from "@next/env";
 import { handleAssistantRequest } from "../../server/assistant";
 import { applyBatch } from "../../src/model/operations";
 import { checkModel } from "../../src/model/issues";
@@ -18,7 +18,8 @@ import { COMPACT_TWO_BEDROOM } from "../../src/model/templates";
 
 const proc = (globalThis as unknown as { process: { env: Record<string, string | undefined>; cwd(): string } }).process;
 const live = proc.env.LIVE === "1" || proc.env.npm_lifecycle_event === "test:live";
-const env = loadEnv("development", proc.cwd(), "");
+nextEnv.loadEnvConfig(proc.cwd());
+const env = proc.env;
 const providerEnv = { MODEL_PROVIDER: env.MODEL_PROVIDER, MODEL_API_KEY: env.MODEL_API_KEY, MODEL_ID: env.MODEL_ID, MODEL_BASE_URL: env.MODEL_BASE_URL, MODEL_EXPLAIN_ID: env.MODEL_EXPLAIN_ID };
 /** stay inside a free tier's per-minute token budget between calls */
 const pause = () => new Promise((r) => setTimeout(r, Number(proc.env.LIVE_PAUSE_MS ?? 35_000)));
