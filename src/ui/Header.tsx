@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { actions, logActivity, store, useAppStore } from "../model/store";
-import { templateModel } from "../model/templates";
+import { sunsetLoftModel, templateModel } from "../model/templates";
 import { downloadDocument } from "../model/persistence";
 import { downloadText, planToSvg, safeName } from "../export/planSvg";
 import { sendCommand } from "../three/events";
@@ -123,6 +123,7 @@ export function Header() {
           <button onClick={() => projectActions.newFrom(templateModel(), "Started from the compact two-bedroom template (hand-made, not AI output).")}>
             Template: compact two-bedroom
           </button>
+          <button onClick={() => projectActions.newFrom(sunsetLoftModel(), "Opened the Sunset Loft showcase home.")}>Showcase: Sunset Loft</button>
         </Menu>
         <button onClick={() => fileRef.current?.click()} title="Open a .clavis.json design file">
           Open

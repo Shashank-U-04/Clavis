@@ -2,7 +2,7 @@ import { useState } from "react";
 import { assistant, useSession } from "../ai/session";
 import { actions } from "../model/store";
 import { projectActions } from "../app/projects";
-import { templateModel } from "../model/templates";
+import { sunsetLoftModel, templateModel } from "../model/templates";
 import { setUi } from "./uiStore";
 
 const IDEAS = [
@@ -44,6 +44,7 @@ export function Welcome() {
       </div>
       <div className="or">
         <button onClick={() => projectActions.newFrom(templateModel(), "Started from the compact two-bedroom template (hand-made, not AI output).")}>Start from a template</button>
+        <button onClick={() => projectActions.newFrom(sunsetLoftModel(), "Opened the Sunset Loft showcase home.")}>Open the Sunset Loft</button>
         <button
           onClick={() => {
             setUi({ welcome: false });
