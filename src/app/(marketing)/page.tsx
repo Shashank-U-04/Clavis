@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
-import { IsoFigure } from "@/components/figures/IsoFigure";
+import { BuildFigure, type BuildStep } from "@/components/figures/BuildFigure";
 import { buildSunsetFigure } from "@/components/figures/sunsetFigure";
 import { Frame, Section } from "@/components/site/Sheet";
 import { BriefBox } from "@/components/site/BriefBox";
@@ -22,6 +22,23 @@ function sampleResult() {
   const proposal = localProposal({ mode: "design", instruction: SAMPLE_BRIEF, context: { design: {} } }, emptyModel());
   const out = applyBatch(emptyModel(), proposal.operations, (p) => `${p}_${n++}`);
   return { rooms: out.model.rooms.length, items: out.model.items.length };
+}
+
+/** The build log beside the hero drawing, counted from the design it draws. */
+function buildSteps(model: ReturnType<typeof sunsetLoftModel>, overall: string[], errors: number, warnings: number): BuildStep[] {
+  const doors = model.openings.filter((o) => o.kind === "door").length;
+  const windows = model.openings.length - doors;
+  const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
+  return [
+    { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")}` },
+    { code: "002", title: "Set out", detail: overall.join(" × ") },
+    { code: "003", title: "Raise walls", detail: n(model.walls.length, "wall") },
+    { code: "004", title: "Cut openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
+    { code: "005", title: "Furnish", detail: n(model.items.length, "piece") },
+    { code: "006", title: "Render", detail: "section cut at 1.20 m" },
+    { code: "007", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}` },
+    { code: "008", title: "Ready", detail: "walk in at the door" },
+  ];
 }
 
 const CAPABILITIES = [
@@ -67,10 +84,8 @@ export default function Home() {
       {/* ---------------------------------------------------------------- hero */}
       <section className="border-b border-rule">
         <div className="mx-auto max-w-[1440px]">
-          <Frame className="px-5 py-8 md:px-12 md:py-12">
-            <div className="mx-auto max-w-5xl">
-              <IsoFigure data={figure} title="Sunset Loft · cut at 1.20 m" />
-            </div>
+          <Frame className="px-5 py-8 md:px-12 md:py-10">
+            <BuildFigure data={figure} steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)} caption="Sunset Loft · built live from the plan" />
           </Frame>
           <div className="grid border-t border-rule lg:grid-cols-[1fr_minmax(0,24rem)_minmax(0,16rem)]">
             <h1 className="border-b border-rule p-5 text-[clamp(1.9rem,7.6vw,4.4rem)] font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:p-8 lg:border-b-0 lg:border-r">
