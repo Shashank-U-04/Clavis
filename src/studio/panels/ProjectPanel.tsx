@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { actions, logActivity, useAppStore } from "../../model/store";
-import { projectActions, useProjects } from "../../app/projects";
+import { projectActions, useProjects } from "../projects";
 import { assistant, useSession } from "../../ai/session";
 import { tracingFromFile, TRACING_TYPES } from "../tracing";
 

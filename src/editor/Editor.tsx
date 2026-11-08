@@ -13,7 +13,7 @@ import { actions, beginGesture, endGesture, logActivity, store, useAppStore } fr
 import { snap, segLen, pointSegDist, projectT, type Pt } from "../model/geometry";
 import { catalogByKind } from "../model/catalog";
 import { useSession } from "../ai/session";
-import { useUi } from "../ui/uiStore";
+import { useUi } from "../studio/uiStore";
 import { onCommand, sendCommand } from "../three/events";
 import { extentOf, movedFar, useViewport } from "./useViewport";
 import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomsLayer, RouteLayer, TracingLayer, WallsLayer } from "./layers";

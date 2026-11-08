@@ -4,7 +4,7 @@ import { sunsetLoftModel, templateModel } from "../model/templates";
 import { downloadDocument } from "../model/persistence";
 import { downloadText, planToSvg, safeName } from "../export/planSvg";
 import { sendCommand } from "../three/events";
-import { projectActions } from "../app/projects";
+import { projectActions } from "./projects";
 import { setUi, useUi, type Layout } from "./uiStore";
 import { useSession } from "../ai/session";
 

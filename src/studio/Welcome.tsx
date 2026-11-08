@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { assistant, useSession } from "../ai/session";
 import { actions } from "../model/store";
-import { projectActions } from "../app/projects";
+import { projectActions } from "./projects";
 import { sunsetLoftModel, templateModel } from "../model/templates";
 import { setUi } from "./uiStore";
 

@@ -19,7 +19,7 @@ import {
 } from "../model/library";
 import { emptyModel, type Note, type PlanModel } from "../model/types";
 import { session } from "../ai/session";
-import { setUi } from "../ui/uiStore";
+import { setUi } from "./uiStore";
 
 interface ProjectsState {
   currentId: string;
