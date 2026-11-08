@@ -28,8 +28,12 @@ Last updated: 2026-11-08.
 
 ## Website
 
-- Landing page with a live isometric cutaway of the Sunset Loft; every number on it is
-  computed from the engine at build time.
+- Landing page: a title block on the left and, on the right, the Sunset Loft building itself
+  in a plan-oblique drawing (true-scale plan turned 30°): the plan is set out, walls rise,
+  openings and furniture go in, and a scan band shades it. The build log's numbers are
+  computed from the design at build time.
+- Footer: a ruled index of links, a brief box that opens the studio, the mark drawn in depth
+  and a construction-line CLAVIS wordmark that draws on when it comes into view.
 - Feature pages (design by describing, the validator, plan/3D/walk, projects and export),
   how it works, docs, about, privacy and terms.
 - Sign-in, sign-up (password or magic link, GitHub), forgot and reset password. They report
