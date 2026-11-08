@@ -1,12 +1,12 @@
 /**
  * Start the Next.js dev server for a browser test and stop it afterwards, including its child
- * processes (on Windows `kill` alone leaves the compiler running).
+ * processes (killing only the spawned shell leaves the dev server running).
  */
 
 import { spawn, execSync } from "node:child_process";
 
 export async function startServer(port) {
-  const child = spawn("npx", ["next", "dev", "-p", String(port)], { shell: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" } });
+  const child = spawn("npx", ["next", "dev", "-p", String(port)], { shell: true, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" } });
   let log = "";
   child.stdout.on("data", (d) => (log += d));
   child.stderr.on("data", (d) => (log += d));
@@ -27,7 +27,9 @@ export async function startServer(port) {
     close() {
       try {
         if (process.platform === "win32") execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: "ignore" });
-        else child.kill("SIGTERM");
+        // elsewhere the shell, npx and next dev share one process group: stop all of it, or the
+        // dev server keeps the pipes open and the test run never exits
+        else process.kill(-child.pid, "SIGTERM");
       } catch {
         /* already gone */
       }

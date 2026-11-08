@@ -149,3 +149,5 @@ try {
   await browser.close();
   server.close();
 }
+// the result is settled; do not let a leftover handle keep the run alive
+process.exit(process.exitCode ?? 0);
