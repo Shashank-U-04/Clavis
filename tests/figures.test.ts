@@ -58,3 +58,32 @@ describe("the Sunset Loft figure", () => {
     expect(data.arcs.length).toBeGreaterThanOrEqual(7); // one swing per door leaf
   });
 });
+
+describe("the live build figure's data", () => {
+  const model = sunsetLoftModel();
+  const data = buildSunsetFigure(model);
+
+  it("gives the overall outside dimensions: the wall centrelines plus one wall thickness", () => {
+    const xs = model.walls.flatMap((w) => [w.ax, w.bx]);
+    const ys = model.walls.flatMap((w) => [w.ay, w.by]);
+    const t = Math.max(...model.walls.map((w) => w.thickness));
+    const span = (v: number[]) => `${(Math.max(...v) - Math.min(...v) + t).toFixed(2)} m`;
+    expect(data.dims.map((d) => d.text).sort()).toEqual([span(xs), span(ys)].sort());
+    for (const d of data.dims) expect(d.ext).toHaveLength(2);
+  });
+
+  it("labels every room with its measured area", () => {
+    const a = analyzeModel(model);
+    expect(data.labels.map((l) => l.id)).toEqual(model.rooms.map((r) => r.id));
+    for (const l of data.labels) expect(l.area).toBeCloseTo(a.rooms.find((r) => r.id === l.id)!.area, 1);
+  });
+
+  it("keeps each solid's box and the group it is built with", () => {
+    for (const s of data.solids) {
+      expect(s.box.z1).toBeGreaterThanOrEqual(s.box.z0);
+      expect(s.id.startsWith(s.group)).toBe(true);
+    }
+    const items = new Set(data.solids.filter((s) => s.kind === "item" || s.kind === "rug").map((s) => s.group));
+    expect(items.size).toBe(model.items.filter((i) => i.kind).length);
+  });
+});
