@@ -4,14 +4,10 @@
  * Two are drawn by hand (src/model/templates.ts). The rest are laid out by Clavis Local, the
  * rule-based engine, from a one-line brief — deterministic, so the same template always comes
  * out the same, and never the output of a language model. The UI says which is which.
+ *
+ * This file is only the list, so any page can show it cheaply; buildTemplate.ts builds the
+ * designs and pulls in the engine.
  */
-
-import { localProposal } from "@/ai/local/engine";
-import type { AssistantRequest } from "@/ai/contract";
-import { analyzeModel } from "@/model/analysis";
-import { applyBatch } from "@/model/operations";
-import { sunsetLoftModel, templateModel } from "@/model/templates";
-import { emptyModel, type PlanModel } from "@/model/types";
 
 export type TemplateMaker = "hand" | "clavis-local";
 
@@ -77,41 +73,5 @@ export const TEMPLATES: readonly TemplateEntry[] = [
 ];
 
 export const findTemplate = (slug: string | null | undefined): TemplateEntry | undefined => TEMPLATES.find((t) => t.slug === slug);
-
-/** Build a template's design. Unknown slugs fall back to the compact two-bedroom. */
-export function buildTemplate(slug: string): PlanModel {
-  const t = findTemplate(slug);
-  if (!t || t.slug === "compact-two-bedroom") return { ...templateModel(), name: t?.name ?? "Compact two-bedroom" };
-  if (t.slug === "sunset-loft") return sunsetLoftModel();
-  const req: AssistantRequest = { mode: "design", instruction: t.brief!, context: { design: {} } };
-  let n = 0;
-  const out = applyBatch(emptyModel(), localProposal(req, emptyModel()).operations, (p) => `${p}_${(n++).toString(36)}`);
-  return { ...out.model, name: t.name };
-}
-
-export interface TemplateFacts {
-  area: number;
-  bedrooms: number;
-  bathrooms: number;
-  rooms: number;
-  items: number;
-  /** the outer size, metres */
-  width: number;
-  depth: number;
-}
-
-export function templateFacts(m: PlanModel): TemplateFacts {
-  const a = analyzeModel(m);
-  const env = a.metrics.envelope;
-  return {
-    area: Math.round(a.metrics.carpetArea),
-    bedrooms: a.metrics.bedrooms,
-    bathrooms: a.metrics.bathrooms,
-    rooms: m.rooms.length,
-    items: m.items.length,
-    width: env ? Math.round(env.w * 10) / 10 : 0,
-    depth: env ? Math.round(env.h * 10) / 10 : 0,
-  };
-}
 
 export const makerText = (m: TemplateMaker) => (m === "hand" ? "Drawn by hand" : "Laid out by Clavis Local");

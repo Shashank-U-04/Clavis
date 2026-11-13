@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { TEMPLATES, buildTemplate, findTemplate, templateFacts } from "../src/lib/catalogue";
+import { TEMPLATES, findTemplate } from "../src/lib/catalogue";
+import { buildTemplate, templateFacts } from "../src/lib/buildTemplate";
 import { checkModel } from "../src/model/issues";
 
 describe("template catalogue", () => {

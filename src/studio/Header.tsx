@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { actions, logActivity, store, useAppStore } from "../model/store";
-import { buildTemplate, findTemplate, makerText } from "../lib/catalogue";
+import { findTemplate, makerText } from "../lib/catalogue";
+import { buildTemplate } from "../lib/buildTemplate";
 import { downloadDocument } from "../model/persistence";
 import { downloadText, planToSvg, safeName } from "../export/planSvg";
 import { sendCommand } from "../three/events";

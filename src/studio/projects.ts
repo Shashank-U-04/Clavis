@@ -75,8 +75,12 @@ function settle() {
   timer = null;
 }
 
-/** Restore the last open project (or migrate the old autosave) and start autosaving. */
-export function startProjects(): void {
+/**
+ * Restore the last open project (or migrate the old autosave) and start autosaving.
+ * `quiet` restores without recording a visit, for when the URL is about to open or start
+ * another plan straight away.
+ */
+export function startProjects({ quiet = false }: { quiet?: boolean } = {}): void {
   const s = storage();
   migrateLegacyAutosave(s);
   const legacy = restoreFromStorage(s); // reports an unreadable pre-library autosave, if any
@@ -90,7 +94,7 @@ export function startProjects(): void {
       store.setState((st) => ({ model: r.value.model, notes: r.value.notes ?? [], revision: st.revision + 1, undoStack: [], redoStack: [] }));
       setUi({ welcome: false });
       actions.setSaveStatus({ state: "saved", at: r.value.savedAt ? Date.parse(r.value.savedAt) || Date.now() : Date.now(), where: "browser" });
-      markOpened(s, id);
+      if (!quiet) markOpened(s, id);
     } else actions.setRestoreError(r.message);
   }
   refresh();
@@ -122,15 +126,18 @@ function begin(model: PlanModel, notes: Note[] = [], why: string, source: PlanSo
 }
 
 export const projectActions = {
-  newBlank(source: PlanSource = "blank") {
-    begin(emptyModel(), [], "Started a blank project.", source);
+  newBlank(source: PlanSource = "blank", name?: string) {
+    begin(name ? { ...emptyModel(), name } : emptyModel(), [], "Started a blank project.", source);
     setUi({ welcome: true });
   },
   newFrom(model: PlanModel, why: string, source: PlanSource) {
     begin(model, [], why, source);
   },
   open(id: string) {
-    if (id === projects.getState().currentId) return;
+    if (id === projects.getState().currentId) {
+      markOpened(storage(), id); // already restored: still a visit
+      return refresh();
+    }
     if (timer) {
       clearTimeout(timer);
       saveNow();
@@ -165,11 +172,12 @@ export const projectActions = {
   },
   /** Save the design as it is now as a named version of this plan. */
   saveVersion(label: string) {
+    // edits still waiting for autosave go in first; an unchanged design is not saved again
     if (timer) {
       clearTimeout(timer);
       timer = null;
-    }
-    saveNow();
+      saveNow();
+    } else if (pending) saveNow();
     const { model, notes } = store.getState();
     const r = saveVersion(storage(), projects.getState().currentId, model, notes, { label });
     if (r.ok) logActivity("human", "save_version", `Saved the version “${r.value.label}”.`);
