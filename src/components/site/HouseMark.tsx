@@ -1,40 +1,37 @@
 /**
- * The Clavis mark as a solid: the house-shaped keyhole pushed back into depth, drawn in line.
- * Only the side faces turned towards the viewer are drawn, then the front face over them.
+ * The Clavis mark set out as a drawing: the walls and the door at full size, with the
+ * construction lines a draughtsman would leave — wall faces run past their corners, the
+ * door's swing is completed as a dashed circle, and the opening is dimensioned.
  */
 
-type Pt = [number, number];
+import { MARK } from "./Logo";
 
-const FRONT: Pt[] = [
-  [10, 45],
-  [50, 10],
-  [90, 45],
-  [90, 95],
-  [10, 95],
-];
-const DEPTH: Pt = [30, -18];
-
-const pts = (p: Pt[]) => p.map(([x, y]) => `${x},${y}`).join(" ");
+const K = 3; // the 32-unit mark, three times up
+const O = 16; // where it sits on the sheet
 
 export function HouseMark({ className = "" }: { className?: string }) {
-  const sides = FRONT.map((a, i) => {
-    const b = FRONT[(i + 1) % FRONT.length];
-    // outward normal of a clockwise outline on screen (y down) is (dy, -dx)
-    const n: Pt = [b[1] - a[1], -(b[0] - a[0])];
-    return { a, b, seen: n[0] * DEPTH[0] + n[1] * DEPTH[1] > 0 };
-  }).filter((s) => s.seen);
-  const back = (p: Pt): Pt => [p[0] + DEPTH[0], p[1] + DEPTH[1]];
-
+  const at = (v: number) => O + v * K;
+  const faces = [4, 9, 23, 28];
   return (
-    <svg viewBox="0 -14 128 116" className={className} aria-hidden="true">
-      <g fill="var(--color-paper)" stroke="currentColor" strokeWidth={2.6} strokeLinejoin="round">
-        {sides.map((s, i) => (
-          <polygon key={i} points={pts([s.a, s.b, back(s.b), back(s.a)])} />
+    <svg viewBox="0 0 128 128" className={className} aria-hidden="true">
+      <g stroke="var(--color-ink-3)" strokeWidth={0.5} fill="none">
+        {faces.map((f) => (
+          <g key={f}>
+            <path d={`M${at(f)} 6V122`} />
+            <path d={`M6 ${at(f)}H122`} />
+          </g>
         ))}
-        <polygon points={pts(FRONT)} />
+        <circle cx={at(25.5)} cy={at(21)} r={10 * K} strokeDasharray="2 2.5" />
       </g>
-      <circle cx={50} cy={53} r={9} fill="var(--color-marker)" />
-      <path d="M46 60h8l3 20H43z" fill="var(--color-marker)" />
+      <g transform={`translate(${O} ${O}) scale(${K})`}>
+        <path d={MARK.walls} fill="none" stroke="currentColor" strokeWidth={5} />
+        <path d={MARK.door} fill="var(--color-marker)" />
+      </g>
+      {/* the opening, dimensioned on the east side */}
+      <g stroke="var(--color-marker)" strokeWidth={0.7} fill="none">
+        <path d={`M${at(31.2)} ${at(11)}V${at(21)}`} />
+        <path d={`M${at(30.4)} ${at(11.8)}l${1.6 * K} ${-1.6 * K}M${at(30.4)} ${at(21.8)}l${1.6 * K} ${-1.6 * K}`} />
+      </g>
     </svg>
   );
 }
