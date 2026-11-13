@@ -15,13 +15,25 @@ export const INDEX_KEY = "clavis:projects";
 export const CURRENT_KEY = "clavis:current";
 export const projectKey = (id: string) => `clavis:project:${id}`;
 
+/** Where a plan came from: shown on its card and used to filter the library. */
+export type PlanSource = "blank" | "describe" | "import" | "duplicate" | "restore" | `template:${string}`;
+
 export interface ProjectMeta {
   id: string;
   name: string;
   updatedAt: number;
   rooms: number;
   area: number;
+  /** when it was first saved (missing on plans saved before this was tracked) */
+  createdAt?: number;
+  /** when it was last opened in the studio */
+  openedAt?: number;
+  starred?: boolean;
+  source?: PlanSource;
 }
+
+/** The parts of a plan's index entry that are not read off the design itself. */
+export type MetaExtras = Pick<ProjectMeta, "createdAt" | "openedAt" | "starred" | "source">;
 
 export type LibraryResult<T> = { ok: true; value: T } | { ok: false; message: string };
 
@@ -50,10 +62,24 @@ function writeIndex(storage: StorageLike, list: ProjectMeta[]) {
   storage.setItem(INDEX_KEY, JSON.stringify(list));
 }
 
-export function saveProject(storage: StorageLike | null, id: string, model: PlanModel, notes: Note[], now = Date.now()): LibraryResult<ProjectMeta> {
+export function saveProject(
+  storage: StorageLike | null,
+  id: string,
+  model: PlanModel,
+  notes: Note[],
+  now = Date.now(),
+  extras: MetaExtras = {},
+): LibraryResult<ProjectMeta> {
   if (!storage) return fail("Browser storage is unavailable, so designs cannot be saved here. Use Export to keep a copy.");
   const text = serializeDocument(toDocument(model, notes, new Date(now).toISOString()));
+  // what the index already knows about this plan survives the save
+  const prev = listProjects(storage).find((p) => p.id === id);
   const meta: ProjectMeta = {
+    createdAt: prev?.createdAt ?? now,
+    ...(prev?.openedAt !== undefined && { openedAt: prev.openedAt }),
+    ...(prev?.starred && { starred: true }),
+    ...(prev?.source && { source: prev.source }),
+    ...extras,
     id,
     name: model.name,
     updatedAt: now,
@@ -72,6 +98,21 @@ export function saveProject(storage: StorageLike | null, id: string, model: Plan
         ? "Browser storage is full (large tracing images are the usual cause). Delete old projects or use Export."
         : "The browser refused to store the design. Use Export to keep a copy.",
     );
+  }
+}
+
+/** Change index-only fields (starred, opened…) without rewriting the document. */
+export function updateMeta(storage: StorageLike | null, id: string, patch: MetaExtras): boolean {
+  if (!storage) return false;
+  const list = listProjects(storage);
+  const at = list.findIndex((p) => p.id === id);
+  if (at < 0) return false;
+  try {
+    list[at] = { ...list[at], ...patch };
+    writeIndex(storage, list);
+    return true;
+  } catch {
+    return false;
   }
 }
 
