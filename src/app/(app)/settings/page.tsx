@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
 import { SettingsPanel } from "@/components/app/SettingsPanel";
+import { SheetHeader } from "@/components/app/ui";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false } };
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto max-w-[1440px]">
-      <div className="border-x border-b border-rule px-5 py-8 md:px-8">
-        <p className="label text-ink-3">Sheet B · Settings</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em]">Settings</h1>
-      </div>
+    <>
+      <SheetHeader sheet="G · Settings" title="Settings" intro="The assistant, how the studio opens, and the data kept in this browser." />
       <SettingsPanel />
-    </div>
+    </>
   );
 }
