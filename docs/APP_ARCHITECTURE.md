@@ -96,7 +96,7 @@ do not change.
 | Versions | `clavis:versions:<id>`: up to 20 named plus 10 automatic checkpoints | `project_versions` |
 | Activity | `clavis:activity`: the newest 300 events | `activity` (user_id, project_id, kind, at, detail) |
 | Profile | `clavis:profile` | `profiles` |
-| Templates | code: `src/model/catalogue.ts` | the same; templates are part of the app |
+| Templates | code: `src/lib/catalogue.ts` | the same; templates are part of the app |
 
 **Plan sources**: `blank`, `describe`, `template:<slug>`, `import`, `duplicate`, `restore`.
 They are shown on cards and can be filtered.
@@ -107,7 +107,7 @@ into one event with a change count), `renamed`, `duplicated`, `imported`, `versi
 
 **Versions** are snapshots of the document, minus the tracing image, which can run to
 megabytes. The studio's *Save version* names one. While you edit, an automatic checkpoint is
-taken at most every 15 minutes. Restoring first checkpoints the current state, so a restore
+taken at most every 15 minutes (the first one 15 minutes after the plan was made). Restoring first checkpoints the current state, so a restore
 can always be undone.
 
 Storage problems (blocked, full, unreadable) come back as messages, never exceptions. This is
@@ -115,15 +115,20 @@ the same rule the plan library already follows.
 
 ## Templates
 
-| Template | Made by | Size |
+Floor areas are measured from the built designs:
+
+| Template | Made by | Floor area |
 |---|---|---|
-| Compact two-bedroom | hand | ~55 m² |
-| Sunset Loft (showcase) | hand | ~110 m² |
-| Studio apartment | Clavis Local from a brief | ~38 m² |
-| One-bedroom flat | Clavis Local from a brief | ~50 m² |
-| Family house: 3 bedrooms and a study | Clavis Local from a brief | ~120 m² |
-| Four-bedroom home | Clavis Local from a brief | ~150 m² |
-| Five-bedroom villa | Clavis Local from a brief | ~250 m² |
+| Sunset Loft (showcase) | hand | 111 m² |
+| Compact two-bedroom | hand | 69 m² |
+| Studio apartment | Clavis Local, from “studio apartment, 38 m2” | 44 m² |
+| One-bedroom flat | Clavis Local, from “one bedroom flat with an open kitchen, 52 m2” | 47 m² |
+| Family house with a study | Clavis Local, from “3 bedroom house with 2 bathrooms and a study, 120 m2” | 125 m² |
+| Four-bedroom home | Clavis Local, from “4 bedroom home with separate kitchen and laundry, 150 m2” | 161 m² |
+| Five-bedroom villa | Clavis Local, from “5 bedroom villa 250 sqm” | 232 m² |
+
+Each one is tested to build with no validator errors or warnings, and to have the bedroom count
+its description promises.
 
 Templates laid out by the rule-based engine are labelled as such. None of them is the output
 of a language model. The gallery is rendered on the server at build time, so its drawings and
@@ -137,16 +142,20 @@ src/
     layout.tsx               the app shell
     dashboard/  plans/  plans/[id]/  new/  templates/  history/  profile/  settings/
   components/app/
-    AppShell.tsx  Sidebar.tsx  TopBar.tsx       the shell and its navigation
+    AppShell.tsx         the sidebar, the drawer and the top bar
+    destinations.ts      the app's destinations and sheet letters
     Home.tsx  PlansBrowser.tsx  PlanDetail.tsx  NewPlanFlow.tsx
     TemplateGallery.tsx  HistoryTimeline.tsx  ProfileForm.tsx
-    PlanCard.tsx  PlanThumb.tsx  ui.tsx         shared pieces
+    PlanCard.tsx         card, thumbnail and action menu   EventRow.tsx   one line of history
+    templateData.ts      template cards, built on the server   ui.tsx   shared pieces
   lib/workspace/
     types.ts       Plan, Version, ActivityEvent, Profile
     browser.ts     the browser-storage implementation (pure functions over StorageLike)
     useWorkspace.ts  a hook that re-reads on every change, in this tab or another
+  lib/
+    catalogue.ts      the template list (cheap to import anywhere)
+    buildTemplate.ts  builds a template into a design (pulls in Clavis Local)
   model/
-    catalogue.ts   the template catalogue
     library.ts     plan documents and the index (now with created/opened/starred/source)
   studio/
     projects.ts    logs created/opened/edited/… and takes checkpoints
