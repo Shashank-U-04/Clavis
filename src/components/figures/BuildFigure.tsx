@@ -25,7 +25,7 @@ export interface BuildStep {
 }
 
 const RENDER = {
-  wall: { top: "#161513", left: "#d6d0c2", right: "#c4bdad" },
+  wall: { top: "#15171c", left: "#d6d0c2", right: "#c4bdad" },
   item: { top: "#fbfaf6", left: "#e2ddd1", right: "#d2ccbe" },
   leaf: { top: "#fbfaf6", left: "#e9e4d8", right: "#dcd6c8" },
   glass: { top: "#9fb9c6", left: "#c4d8e2", right: "#b6ccd7" },
@@ -92,7 +92,7 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
     <svg viewBox={data.viewBox} className="mx-auto block max-h-[min(72vh,680px)] w-full select-none" role="img" aria-label="An isometric drawing of the Sunset Loft being built: walls, doors, windows and furniture.">
       <defs>
         <pattern id="bf-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="4" stroke="#161513" strokeWidth="0.5" strokeOpacity="0.18" />
+          <line x1="0" y1="0" x2="0" y2="4" stroke="#15171c" strokeWidth="0.5" strokeOpacity="0.18" />
         </pattern>
         <clipPath id="bf-reveal">
           <rect ref={(n) => void (els.clip = n)} x={vx} y={vy} width={vw} height={0} />
@@ -100,20 +100,20 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
       </defs>
 
       {/* ground: room outlines and overall dimensions, drawn on */}
-      <g ref={(n) => void (els.plan = n)} opacity={0} fill="none" stroke="#161513" strokeLinejoin="round">
+      <g ref={(n) => void (els.plan = n)} opacity={0} fill="none" stroke="#15171c" strokeLinejoin="round">
         {data.rooms.map((r, i) => (
-          <polygon key={r.id} ref={(n) => void (els.rooms[i] = n)} points={r.points} pathLength={1} strokeWidth={0.6} fill="#e9e5da" fillOpacity={0} />
+          <polygon key={r.id} ref={(n) => void (els.rooms[i] = n)} points={r.points} pathLength={1} strokeWidth={0.6} fill="#e7e6de" fillOpacity={0} />
         ))}
         {data.dims.map((d, i) => (
-          <g key={i} stroke="#85817a" strokeWidth={0.6}>
+          <g key={i} stroke="#81848b" strokeWidth={0.6}>
             <path d={d.line} />
             {d.ext.map((e, j) => (
               <path key={`e${j}`} d={e} strokeWidth={0.45} />
             ))}
             {d.ticks.map((t, j) => (
-              <path key={j} d={t} strokeWidth={1} stroke="#161513" />
+              <path key={j} d={t} strokeWidth={1} stroke="#15171c" />
             ))}
-            <text x={d.x} y={d.y - 4} transform={`rotate(${d.angle} ${d.x} ${d.y})`} textAnchor="middle" fontSize={8} fill="#46433d" stroke="none" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
+            <text x={d.x} y={d.y - 4} transform={`rotate(${d.angle} ${d.x} ${d.y})`} textAnchor="middle" fontSize={8} fill="#43464d" stroke="none" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
               {d.text}
             </text>
           </g>
@@ -122,7 +122,7 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
 
       <g ref={(n) => void (els.arcs = n)}>
         {data.arcs.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke="#85817a" strokeWidth={0.6} strokeDasharray="2 2" />
+          <path key={i} d={d} fill="none" stroke="#81848b" strokeWidth={0.6} strokeDasharray="2 2" />
         ))}
       </g>
 
@@ -137,8 +137,8 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
                   (els.faces[i] ??= [])[j] = n;
                 }}
                 points={f.points}
-                fill="#f2efe7"
-                stroke="#161513"
+                fill="#f1f0ea"
+                stroke="#15171c"
                 strokeWidth={s.kind === "wall" && f.tone === "top" ? 0.35 : 0.55}
               />
             ))}
@@ -149,15 +149,15 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
       {/* the shaded drawing, revealed by the scan */}
       <g className="bf-render" clipPath="url(#bf-reveal)" strokeLinejoin="round">
         {data.rooms.map((r) => (
-          <polygon key={r.id} points={r.points} fill="#e9e5da" stroke="#161513" strokeWidth={0.6} />
+          <polygon key={r.id} points={r.points} fill="#e7e6de" stroke="#15171c" strokeWidth={0.6} />
         ))}
         {data.arcs.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke="#85817a" strokeWidth={0.6} strokeDasharray="2 2" />
+          <path key={i} d={d} fill="none" stroke="#81848b" strokeWidth={0.6} strokeDasharray="2 2" />
         ))}
         {data.solids.map((s) =>
           s.faces.map((f, j) => (
             <g key={`${s.id}-${j}`}>
-              <polygon points={f.points} fill={RENDER[s.kind][f.tone]} fillOpacity={s.kind === "glass" ? 0.7 : 1} stroke="#161513" strokeWidth={s.kind === "wall" && f.tone === "top" ? 0.3 : 0.6} />
+              <polygon points={f.points} fill={RENDER[s.kind][f.tone]} fillOpacity={s.kind === "glass" ? 0.7 : 1} stroke="#15171c" strokeWidth={s.kind === "wall" && f.tone === "top" ? 0.3 : 0.6} />
               {s.kind === "wall" && f.tone !== "top" && <polygon points={f.points} fill="url(#bf-hatch)" />}
             </g>
           )),
@@ -166,11 +166,11 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
 
       {/* the scan band */}
       <g ref={(n) => void (els.band = n)} opacity={0} pointerEvents="none">
-        <rect x={vx} y={-34} width={vw} height={34} fill="#e0561b" fillOpacity={0.06} />
-        <line x1={vx} x2={vx + vw} y1={0} y2={0} stroke="#e0561b" strokeWidth={0.8} />
-        <line x1={vx} x2={vx + vw} y1={-34} y2={-34} stroke="#e0561b" strokeWidth={0.8} />
-        <rect x={vx + 8} y={-24} width={5} height={5} fill="#e0561b" />
-        <text x={vx + 18} y={-19} fontSize={7} fill="#e0561b" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.12em" }}>
+        <rect x={vx} y={-34} width={vw} height={34} fill="#2747d4" fillOpacity={0.06} />
+        <line x1={vx} x2={vx + vw} y1={0} y2={0} stroke="#2747d4" strokeWidth={0.8} />
+        <line x1={vx} x2={vx + vw} y1={-34} y2={-34} stroke="#2747d4" strokeWidth={0.8} />
+        <rect x={vx + 8} y={-24} width={5} height={5} fill="#2747d4" />
+        <text x={vx + 18} y={-19} fontSize={7} fill="#2747d4" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.12em" }}>
           RENDER
         </text>
       </g>
@@ -179,12 +179,12 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
       <g ref={(n) => void (els.notes = n)} className="bf-notes" opacity={0} pointerEvents="none" style={{ fontFamily: "var(--font-mono)" }}>
         {data.labels.map((l) => (
           <g key={l.id} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)})`}>
-            <rect x={4} y={-8.5} width={Math.max(l.label.length, 7) * 4.9 + 6} height={18} fill="#f2efe7" fillOpacity={0.88} />
-            <rect x={-2.5} y={-2.5} width={5} height={5} fill="#e0561b" />
-            <text x={6} y={-1} fontSize={7} fill="#161513" style={{ letterSpacing: "0.08em" }}>
+            <rect x={4} y={-8.5} width={Math.max(l.label.length, 7) * 4.9 + 6} height={18} fill="#f1f0ea" fillOpacity={0.88} />
+            <rect x={-2.5} y={-2.5} width={5} height={5} fill="#2747d4" />
+            <text x={6} y={-1} fontSize={7} fill="#15171c" style={{ letterSpacing: "0.08em" }}>
               {l.label.toUpperCase()}
             </text>
-            <text x={6} y={7} fontSize={6.5} fill="#85817a" style={{ letterSpacing: "0.06em" }}>
+            <text x={6} y={7} fontSize={6.5} fill="#81848b" style={{ letterSpacing: "0.06em" }}>
               {l.area.toFixed(1)} M²
             </text>
           </g>

@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FigureData } from "./sunsetFigure";
 
 const TONE = {
-  wall: { top: "#161513", left: "#d6d0c2", right: "#c7c0b0" },
+  wall: { top: "#15171c", left: "#d6d0c2", right: "#c7c0b0" },
   item: { top: "#fbfaf6", left: "#e2ddd1", right: "#d2ccbe" },
   leaf: { top: "#fbfaf6", left: "#e9e4d8", right: "#dcd6c8" },
   glass: { top: "#9fb9c6", left: "#c4d8e2", right: "#b6ccd7" },
@@ -74,8 +74,8 @@ export function IsoFigure({ data, fig = "01", title }: { data: FigureData; fig?:
       <svg viewBox={data.viewBox} className="w-full select-none" role="img" aria-hidden="true">
         <defs>
           <radialGradient id="iso-halo">
-            <stop offset="0%" stopColor="#161513" stopOpacity="0.16" />
-            <stop offset="100%" stopColor="#161513" stopOpacity="0" />
+            <stop offset="0%" stopColor="#15171c" stopOpacity="0.16" />
+            <stop offset="100%" stopColor="#15171c" stopOpacity="0" />
           </radialGradient>
         </defs>
         <ellipse cx={data.halo.cx} cy={data.halo.cy} rx={data.halo.rx} ry={data.halo.ry} fill="url(#iso-halo)" />
@@ -83,8 +83,8 @@ export function IsoFigure({ data, fig = "01", title }: { data: FigureData; fig?:
           <polygon
             key={r.id}
             points={r.points}
-            fill={r.id === lit ? "var(--color-marker-soft)" : "#e9e5da"}
-            stroke={r.id === lit ? "var(--color-marker)" : "#161513"}
+            fill={r.id === lit ? "var(--color-marker-soft)" : "#e7e6de"}
+            stroke={r.id === lit ? "var(--color-marker)" : "#15171c"}
             strokeWidth={r.id === lit ? 1.4 : 0.6}
             strokeLinejoin="round"
             className="cursor-crosshair transition-[fill] duration-500"
@@ -92,7 +92,7 @@ export function IsoFigure({ data, fig = "01", title }: { data: FigureData; fig?:
           />
         ))}
         {data.arcs.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke="#85817a" strokeWidth={0.6} strokeDasharray="2 2" pointerEvents="none" />
+          <path key={i} d={d} fill="none" stroke="#81848b" strokeWidth={0.6} strokeDasharray="2 2" pointerEvents="none" />
         ))}
         <g pointerEvents="none" strokeLinejoin="round">
           {data.solids.map((s) =>
@@ -102,7 +102,7 @@ export function IsoFigure({ data, fig = "01", title }: { data: FigureData; fig?:
                 points={f.points}
                 fill={TONE[s.kind][f.tone]}
                 fillOpacity={s.kind === "glass" ? 0.65 : 1}
-                stroke="#161513"
+                stroke="#15171c"
                 strokeWidth={s.kind === "wall" && f.tone === "top" ? 0.3 : 0.6}
               />
             )),

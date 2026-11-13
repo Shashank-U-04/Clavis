@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 /*
- * Clavis site design tokens: a drafting-table palette. Warm paper, black ink, ruled lines and
- * one orange marker colour. The studio keeps its own dark theme (studio/studio.css).
+ * Clavis site design tokens: a drafting-table palette. Cool paper, blue-black ink, ruled lines and
+ * one blueprint-blue marker colour. The studio keeps its own dark theme (studio/studio.css).
  */
 @theme {
-  --color-paper: #f2efe7;
-  --color-paper-2: #e9e5da;
-  --color-paper-3: #dfdacc;
-  --color-ink: #161513;
-  --color-ink-2: #46433d;
-  --color-ink-3: #85817a;
-  --color-rule: #cfc9bb;
-  --color-rule-soft: #e0dbcf;
-  --color-marker: #e0561b;
-  --color-marker-soft: #f6d8c8;
+  --color-paper: #f1f0ea;
+  --color-paper-2: #e7e6de;
+  --color-paper-3: #dbdad0;
+  --color-ink: #15171c;
+  --color-ink-2: #43464d;
+  --color-ink-3: #81848b;
+  --color-rule: #c9c8be;
+  --color-rule-soft: #dddcd3;
+  --color-marker: #2747d4;
+  --color-marker-soft: #d6dcf7;
   --color-night: #0f1215;
 
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
