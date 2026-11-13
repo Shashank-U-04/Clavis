@@ -6,7 +6,7 @@
  * sweeps down the sheet turning the line drawing into a shaded one. Room labels and the
  * build log finish it. Every number on it comes from the real design.
  *
- * It plays once when it comes into view; Replay plays it again. With reduced motion (or
+ * It plays once when it comes into view (after the opening sheet has lifted); Replay plays it again. With reduced motion (or
  * without JavaScript) it shows the finished drawing.
  *
  * The drawing is static markup; the animation writes attributes straight onto it each frame,
@@ -17,6 +17,7 @@ import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "
 import { RotateCcw } from "lucide-react";
 import { boxFaces, type Box3 } from "./iso";
 import type { FigureData, SolidKind } from "./sunsetFigure";
+import { INTRO_DONE } from "@/components/site/Intro";
 
 export interface BuildStep {
   code: string;
@@ -276,8 +277,13 @@ export function BuildFigure({ data, steps, caption, side }: { data: FigureData; 
       },
       { threshold: 0.25 },
     );
-    if (box.current) io.observe(box.current);
+    // while the opening sheet covers the page, wait for it to lift
+    const watch = () => box.current && io.observe(box.current);
+    const covered = document.documentElement.dataset.intro === "on";
+    if (covered) window.addEventListener(INTRO_DONE, watch, { once: true });
+    else watch();
     return () => {
+      window.removeEventListener(INTRO_DONE, watch);
       io.disconnect();
       cancelAnimationFrame(raf.current);
     };

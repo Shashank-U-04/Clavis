@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
 import { BuildFigure, type BuildStep } from "@/components/figures/BuildFigure";
 import { buildSunsetFigure } from "@/components/figures/sunsetFigure";
+import { buildElevation } from "@/components/figures/elevation";
+import { Intro } from "@/components/site/Intro";
 import { Frame, Section } from "@/components/site/Sheet";
 import { LogoMark } from "@/components/site/Logo";
 import { BriefBox } from "@/components/site/BriefBox";
@@ -42,6 +44,34 @@ function buildSteps(model: ReturnType<typeof sunsetLoftModel>, overall: string[]
   ];
 }
 
+/** The title block and log of the opening sheet, read off the elevation it draws. */
+function introSheet(model: ReturnType<typeof sunsetLoftModel>) {
+  const data = buildElevation(model);
+  const f = data.facts;
+  const n = (v: number, one: string) => `${v} ${one}${v === 1 ? "" : "s"}`;
+  const block: [string, string][] = [
+    ["Project", f.name],
+    ["Face", "West · entrance"],
+    ["Width", `${f.width.toFixed(2)} m`],
+    ["Height", `${f.height.toFixed(2)} m to the eave`],
+    ["Openings", `${n(f.doors, "door")} · ${n(f.windows, "window")}`],
+    ["Behind", f.rooms.map((r) => r.replace(/s*&.*/, "")).join(" · ")],
+  ];
+  const log: [string, string][] = [
+    ["001", "Read the plan"],
+    ["002", `Set out ${f.width.toFixed(2)} m`],
+    ["003", "Lay the plinth"],
+    ["004", `Raise walls to ${f.height.toFixed(2)}`],
+    ["005", `Cut ${n(f.doors + f.windows, "opening")}`],
+    ["006", "Hang the door"],
+    ["007", "Glaze"],
+    ["008", "Close the roof"],
+    ["009", `Run ${CHECK_COUNT} checks`],
+    ["010", "Render"],
+  ];
+  return { data, block, log };
+}
+
 const CAPABILITIES = [
   { icon: Sparkles, title: "Design by describing", text: "Bedrooms, bathrooms, a study, an open kitchen, a target area: one sentence becomes a furnished plan.", href: "/features/ai-design" },
   { icon: ScanSearch, title: "A validator on every change", text: "Walls, openings, furniture clearances, daylight, escape windows and the route to every room.", href: "/features/validation" },
@@ -79,9 +109,12 @@ export default function Home() {
   const counts = summarizeIssues(checkModel(model));
   const rooms = analysis.rooms;
   const STEPS = steps(sampleResult());
+  const intro = introSheet(model);
 
   return (
     <>
+      <Intro data={intro.data} block={intro.block} log={intro.log} />
+
       {/* ---------------------------------------------------------------- hero */}
       <section className="border-b border-rule">
         <div className="mx-auto max-w-[1440px]">
