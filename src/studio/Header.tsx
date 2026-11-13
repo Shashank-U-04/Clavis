@@ -97,13 +97,13 @@ export function Header() {
 
   return (
     <header className="hdr">
-      <div className="brand" title="Clavis — design a home in plain language, checked by geometry">
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-          <path d="M3 10.5 12 3l9 7.5V21H3z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-          <circle cx="12" cy="14" r="2.6" fill="currentColor" />
+      <a className="brand" href="/dashboard" title="Back to your plans">
+        <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden>
+          <path d="M25.5 11V6.5H6.5v19h19V21" fill="none" stroke="var(--ink)" strokeWidth="5" />
+          <path d="M25.5 21h-10a10 10 0 0 1 10-10z" fill="currentColor" />
         </svg>
         <span>Clavis</span>
-      </div>
+      </a>
       <PlanName />
       <SaveStatus />
 
