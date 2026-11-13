@@ -35,7 +35,7 @@ export default function AboutPage() {
         </ul>
         <div className="flex flex-wrap items-center justify-between gap-4 p-5 md:p-10">
           <p className="max-w-xl text-ink-2">Clavis is a concept-design tool for anyone planning a home — buyers, renovators, students and the curious. It is not a substitute for an architect or for local building regulations.</p>
-          <ButtonLink href="/studio/try">Open the studio</ButtonLink>
+          <ButtonLink href="/new">Start designing</ButtonLink>
         </div>
       </Section>
     </>

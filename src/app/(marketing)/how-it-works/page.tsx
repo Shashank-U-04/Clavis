@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
           ))}
         </div>
         <div className="flex justify-end border-t border-rule p-5 md:p-8">
-          <ButtonLink href="/studio/try">See it in the studio</ButtonLink>
+          <ButtonLink href="/new">Start a plan</ButtonLink>
         </div>
       </Section>
     </>

@@ -7,7 +7,7 @@ import { Wordmark } from "./Wordmark";
 const COLUMNS = [
   { title: "Product", links: [{ href: "/features", label: "Features" }, ...FEATURES.map((f) => ({ href: f.href, label: f.title }))] },
   { title: "Learn", links: [{ href: "/how-it-works", label: "How it works" }, { href: "/docs", label: "Docs" }, { href: "/docs#shortcuts", label: "Shortcuts" }] },
-  { title: "Clavis", links: [{ href: "/", label: "Home" }, { href: "/about", label: "About" }, { href: "/studio/try", label: "Open the studio" }] },
+  { title: "Clavis", links: [{ href: "/", label: "Home" }, { href: "/about", label: "About" }, { href: "/dashboard", label: "Your plans" }, { href: "/templates", label: "Templates" }] },
 ];
 
 const NOTES = [

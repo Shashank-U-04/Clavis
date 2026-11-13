@@ -78,7 +78,7 @@ export default function ThreeDPage() {
                 </div>
               ))}
             </dl>
-            <ButtonLink href="/studio/try" className="mt-6 w-full">
+            <ButtonLink href="/studio/try?template=sunset-loft" className="mt-6 w-full">
               Walk through a home
             </ButtonLink>
           </div>

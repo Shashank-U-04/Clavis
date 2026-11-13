@@ -56,7 +56,7 @@ export default function FeaturesPage() {
           ))}
         </ul>
         <div className="flex justify-end p-5 md:p-8">
-          <ButtonLink href="/studio/try">Try it now</ButtonLink>
+          <ButtonLink href="/new">Try it now</ButtonLink>
         </div>
       </Section>
     </>

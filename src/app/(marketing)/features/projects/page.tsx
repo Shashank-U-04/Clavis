@@ -60,7 +60,7 @@ export default function ProjectsPage() {
           ))}
         </ul>
         <div className="flex justify-end border-t border-rule p-5 md:p-8">
-          <ButtonLink href="/studio/try">Start a project</ButtonLink>
+          <ButtonLink href="/new">Start a plan</ButtonLink>
         </div>
       </Section>
     </>

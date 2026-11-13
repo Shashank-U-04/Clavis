@@ -49,8 +49,8 @@ export function AuthNotice({ result }: { result: AuthResult | null }) {
       <div>
         <p>{result.message}</p>
         {result.code === "not_configured" && (
-          <Link href="/studio/try" className="label mt-3 inline-block text-ink underline underline-offset-4 hover:text-marker">
-            Open the studio without an account →
+          <Link href="/dashboard" className="label mt-3 inline-block text-ink underline underline-offset-4 hover:text-marker">
+            Continue as a guest →
           </Link>
         )}
       </div>

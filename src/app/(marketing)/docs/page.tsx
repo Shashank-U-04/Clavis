@@ -61,9 +61,19 @@ export default function DocsPage() {
             <section className="space-y-4">
               <H id="start">Getting started</H>
               <p>
-                Open <Link href="/studio/try" className="text-ink underline underline-offset-4 hover:text-marker">the studio</Link> and describe the home you want — for example “a two-bedroom flat with an open kitchen, about 70 m²”. Clavis proposes a furnished plan and shows it on the plan in green. Read the card, then press <b>Apply</b>. Nothing changes until you do.
+                Choose <Link href="/new" className="text-ink underline underline-offset-4 hover:text-marker">New plan</Link> → <b>Describe it</b> and write the home you want — for example “a two-bedroom flat with an open kitchen, about 70 m²”. Clavis proposes a furnished plan and shows it on the plan in green. Read the card, then press <b>Apply</b>. Nothing changes until you do.
               </p>
-              <p>Prefer a starting point? Choose <b>New → Template</b> or the <b>Sunset Loft</b> showcase. Your work saves itself in this browser as you go.</p>
+              <p>
+                Prefer a starting point? Pick one of the seven homes in{" "}
+                <Link href="/templates" className="text-ink underline underline-offset-4 hover:text-marker">
+                  Templates
+                </Link>
+                . Your work saves itself in this browser as you go, and every plan waits for you on{" "}
+                <Link href="/dashboard" className="text-ink underline underline-offset-4 hover:text-marker">
+                  Home
+                </Link>{" "}
+                with its versions and history.
+              </p>
             </section>
             <section className="space-y-4">
               <H id="drawing">Drawing by hand</H>

@@ -24,8 +24,8 @@ export function MobileMenu() {
 
   return (
     <div className="ml-auto flex lg:hidden">
-      <Link href="/studio/try" className="label flex items-center border-l border-rule px-4 text-marker">
-        Studio
+      <Link href="/new" className="label flex items-center border-l border-rule px-4 text-marker">
+        Start
       </Link>
       <button
         type="button"
@@ -54,13 +54,13 @@ export function MobileMenu() {
               ))}
             </div>
             <Link href="/dashboard" className="border-b border-rule px-5 py-5 text-lg">
-              Your projects
+              Your plans
             </Link>
             <Link href="/login" className="border-b border-rule px-5 py-5 text-lg">
               Sign in
             </Link>
-            <Link href="/studio/try" className="label bg-ink px-5 py-6 text-paper">
-              Open the studio →
+            <Link href="/new" className="label bg-ink px-5 py-6 text-paper">
+              Start designing →
             </Link>
           </nav>
         </div>

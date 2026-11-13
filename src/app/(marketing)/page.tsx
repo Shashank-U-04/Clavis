@@ -160,8 +160,8 @@ export default function Home() {
               <p className="label text-ink-3">Free to try · no account · runs in your browser</p>
             </div>
             <div className="flex flex-col">
-              <ButtonLink href="/studio/try" className="flex-1 py-5">
-                Open the studio
+              <ButtonLink href="/new" className="flex-1 py-5">
+                Start designing
               </ButtonLink>
               <ButtonLink href="/how-it-works" variant="ghost" className="flex-1 border-t border-rule py-5">
                 How it works
@@ -308,8 +308,8 @@ export default function Home() {
             <BriefBox dark />
             <p className="label mt-6 text-paper/45">
               Prefer to draw?{" "}
-              <Link href="/studio/try" className="text-paper underline underline-offset-4 hover:text-marker">
-                Open a blank studio
+              <Link href="/new?start=blank" className="text-paper underline underline-offset-4 hover:text-marker">
+                Start from a blank sheet
               </Link>
             </p>
           </div>

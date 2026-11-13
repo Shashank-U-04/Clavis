@@ -46,13 +46,13 @@ export function SiteHeader() {
           )}
           <span className="flex-1" />
           <Link href="/dashboard" className="label hidden min-w-32 items-start border-l border-rule px-4 pt-3 text-ink-2 hover:text-ink xl:flex">
-            Projects
+            Your plans
           </Link>
           <Link href="/login" className="label flex min-w-32 items-start border-l border-rule px-4 pt-3 text-ink-2 hover:text-ink">
             Sign in
           </Link>
-          <Link href="/studio/try" className="label group flex min-w-44 flex-col justify-between border-l border-rule px-4 py-3 text-marker hover:bg-marker hover:text-paper">
-            Open the studio
+          <Link href="/new" className="label group flex min-w-44 flex-col justify-between border-l border-rule px-4 py-3 text-marker hover:bg-marker hover:text-paper">
+            Start designing
             <ArrowUpRight size={15} className="self-end transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
           </Link>
         </nav>
