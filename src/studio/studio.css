@@ -111,6 +111,14 @@
   .menu-pop.right { right: 0; }
   .menu-pop button { text-align: left; background: none; border-color: transparent; }
   .menu-pop button:hover:not(:disabled) { background: #29323c; }
+  .menu-pop a { display: block; padding: 6px 11px; border-radius: 7px; color: var(--ink); text-decoration: none; font-size: 13px; white-space: nowrap; }
+  .menu-pop a:hover { background: #29323c; }
+  .version-pop { min-width: 290px; padding: 12px; gap: 8px; }
+  .version-pop label { font-size: 12px; color: var(--ink-2); }
+  .version-pop button.primary { text-align: center; background: var(--accent); border-color: var(--accent); }
+  .version-pop small { line-height: 1.45; }
+  a.btn { display: inline-flex; align-items: center; font-size: 13px; padding: 6px 11px; border-radius: 7px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); text-decoration: none; }
+  a.btn:hover { border-color: #3a4552; background: #222a33; }
 
   /* left rail */
   .rail { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--panel); }

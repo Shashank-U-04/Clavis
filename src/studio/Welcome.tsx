@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { assistant, useSession } from "../ai/session";
 import { actions } from "../model/store";
-import { projectActions } from "./projects";
-import { sunsetLoftModel, templateModel } from "../model/templates";
+import { startTemplate } from "./Header";
 import { setUi } from "./uiStore";
 
 const IDEAS = [
@@ -43,8 +42,11 @@ export function Welcome() {
         ))}
       </div>
       <div className="or">
-        <button onClick={() => projectActions.newFrom(templateModel(), "Started from the compact two-bedroom template (hand-made, not AI output).")}>Start from a template</button>
-        <button onClick={() => projectActions.newFrom(sunsetLoftModel(), "Opened the Sunset Loft showcase home.")}>Open the Sunset Loft</button>
+        <button onClick={() => startTemplate("compact-two-bedroom")}>Start from a template</button>
+        <button onClick={() => startTemplate("sunset-loft")}>Open the Sunset Loft</button>
+        <a className="btn" href="/templates">
+          Browse all templates
+        </a>
         <button
           onClick={() => {
             setUi({ welcome: false });

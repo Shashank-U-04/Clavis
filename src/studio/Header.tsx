@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { actions, logActivity, store, useAppStore } from "../model/store";
-import { sunsetLoftModel, templateModel } from "../model/templates";
+import { buildTemplate, findTemplate, makerText } from "../lib/catalogue";
 import { downloadDocument } from "../model/persistence";
 import { downloadText, planToSvg, safeName } from "../export/planSvg";
 import { sendCommand } from "../three/events";
-import { projectActions } from "./projects";
+import { projectActions, useProjects } from "./projects";
 import { setUi, useUi, type Layout } from "./uiStore";
 import { useSession } from "../ai/session";
 
@@ -81,7 +81,61 @@ function SaveStatus() {
   return <span className="save">Not saved yet</span>;
 }
 
+/** Start a plan from a catalogue template, saying what made it. */
+export function startTemplate(slug: string) {
+  const t = findTemplate(slug);
+  if (t) projectActions.newFrom(buildTemplate(t.slug), `Started from the ${t.name} template (${makerText(t.maker).toLowerCase()}, not AI output).`, `template:${t.slug}`);
+}
+
+/** Save the design as a named version, from a small form under the button. */
+function SaveVersion() {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [done, setDone] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [open]);
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => setDone(false), 2200);
+    return () => clearTimeout(t);
+  }, [done]);
+  return (
+    <div className="menu" ref={ref}>
+      <button className={open ? "active" : ""} onClick={() => setOpen(!open)} aria-expanded={open} title="Keep the design as it is now, to come back to">
+        {done ? "✓ Version saved" : "Save version"}
+      </button>
+      {open && (
+        <form
+          className="menu-pop left version-pop"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (projectActions.saveVersion(label || `Version of ${new Date().toLocaleString()}`)) {
+              setOpen(false);
+              setLabel("");
+              setDone(true);
+            }
+          }}
+          onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+        >
+          <label htmlFor="version-label">Name this version</label>
+          <input id="version-label" autoFocus value={label} maxLength={80} placeholder="e.g. Before moving the kitchen" onChange={(e) => setLabel(e.target.value)} />
+          <button className="primary" type="submit">
+            Save version
+          </button>
+          <small className="muted">Versions are kept with the plan. Checkpoints are also taken while you work.</small>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export function Header() {
+  const currentId = useProjects((s) => s.currentId);
   const canUndo = useAppStore((s) => s.undoStack.length > 0);
   const canRedo = useAppStore((s) => s.redoStack.length > 0);
   const layout = useUi((s) => s.layout);
@@ -100,7 +154,7 @@ export function Header() {
       <a className="brand" href="/dashboard" title="Back to your plans">
         <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden>
           <path d="M25.5 11V6.5H6.5v19h19V21" fill="none" stroke="var(--ink)" strokeWidth="5" />
-          <path d="M25.5 21h-10a10 10 0 0 1 10-10z" fill="currentColor" />
+          <path d="M25.5 21h-10a10 10 0 0 1 10-10z" fill="#5b78ff" />
         </svg>
         <span>Clavis</span>
       </a>
@@ -108,7 +162,17 @@ export function Header() {
       <SaveStatus />
 
       <div className="hdr-group">
+        <Menu label="Plan">
+          <a href={`/plans/${encodeURIComponent(currentId)}`}>Versions and history</a>
+          <button onClick={() => projectActions.duplicate()}>Duplicate this plan</button>
+          <hr />
+          <a href="/plans">All plans</a>
+          <a href="/dashboard">Home</a>
+        </Menu>
+        <SaveVersion />
         <Menu label="New">
+          <a href="/new">New plan…</a>
+          <hr />
           <button onClick={() => projectActions.newBlank()}>Blank plan</button>
           <button
             onClick={() => {
@@ -120,10 +184,9 @@ export function Header() {
             Describe a home…
           </button>
           <hr />
-          <button onClick={() => projectActions.newFrom(templateModel(), "Started from the compact two-bedroom template (hand-made, not AI output).")}>
-            Template: compact two-bedroom
-          </button>
-          <button onClick={() => projectActions.newFrom(sunsetLoftModel(), "Opened the Sunset Loft showcase home.")}>Showcase: Sunset Loft</button>
+          <button onClick={() => startTemplate("compact-two-bedroom")}>Template: compact two-bedroom</button>
+          <button onClick={() => startTemplate("sunset-loft")}>Showcase: Sunset Loft</button>
+          <a href="/templates">All templates…</a>
         </Menu>
         <button onClick={() => fileRef.current?.click()} title="Open a .clavis.json design file">
           Open
