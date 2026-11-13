@@ -152,11 +152,13 @@ describe("versions", () => {
     const s = memory();
     const p = made(s);
     const m = templateModel();
-    expect(checkpoint(s, p.id, emptyModel(), [], 0)).toBeNull();
-    expect(checkpoint(s, p.id, m, [], 1000)).not.toBeNull();
-    expect(checkpoint(s, p.id, { ...m, name: "Changed" }, [], 1000 + CHECKPOINT_MS - 1)).toBeNull();
-    expect(checkpoint(s, p.id, m, [], 1000 + CHECKPOINT_MS)).toBeNull(); // unchanged
-    expect(checkpoint(s, p.id, { ...m, name: "Changed" }, [], 1000 + CHECKPOINT_MS)).not.toBeNull();
+    const C = CHECKPOINT_MS;
+    expect(checkpoint(s, p.id, emptyModel(), [], 1000 + C)).toBeNull(); // nothing to keep
+    expect(checkpoint(s, p.id, m, [], 1000 + C - 1)).toBeNull(); // too soon after it was made
+    expect(checkpoint(s, p.id, m, [], 1000 + C)).not.toBeNull();
+    expect(checkpoint(s, p.id, { ...m, name: "Changed" }, [], 1000 + 2 * C - 1)).toBeNull(); // too soon after the last
+    expect(checkpoint(s, p.id, m, [], 1000 + 2 * C)).toBeNull(); // unchanged since the last
+    expect(checkpoint(s, p.id, { ...m, name: "Changed" }, [], 1000 + 2 * C)).not.toBeNull();
     expect(listVersions(s, p.id).every((v) => v.auto)).toBe(true);
     // checkpoints are not history events
     expect(listEvents(s).some((e) => e.kind === "version_saved")).toBe(false);

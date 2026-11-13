@@ -227,7 +227,9 @@ export function saveVersion(
 export function checkpoint(s: StorageLike | null, planId: string, model: PlanModel, notes: Note[], now = Date.now()): VersionMeta | null {
   if (model.walls.length + model.rooms.length + model.items.length === 0) return null;
   const last = readVersions(s, planId)[0];
-  if (last && now - last.at < CHECKPOINT_MS) return null;
+  // the first checkpoint waits as long after the plan was made as later ones wait after it
+  const since = last?.at ?? getPlan(s, planId)?.createdAt;
+  if (since !== undefined && now - since < CHECKPOINT_MS) return null;
   if (last) {
     const prev = parseDocument(last.doc);
     if (prev.ok && JSON.stringify({ ...prev.doc.model, underlay: null }) === JSON.stringify({ ...model, underlay: null })) return null;
