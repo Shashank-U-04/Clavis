@@ -18,9 +18,9 @@ const PROVIDERS = [
   { value: "server", label: "Hosted model", text: "Every request goes to the hosted model when it is configured." },
 ] as const;
 const VIEW_OPTIONS: { key: ViewKey; label: string }[] = [
-  { key: "plan", label: "Plan" },
-  { key: "scene", label: "3D" },
-  { key: "side", label: "Chat panel" },
+  { key: "plan", label: "2D plan" },
+  { key: "scene", label: "3D model" },
+  { key: "side", label: "Chat" },
 ];
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: "light", label: "Light" },
@@ -146,7 +146,7 @@ export function SettingsPanel() {
         </fieldset>
       </Row>
 
-      <Row title="Studio views" text="What the studio shows when it opens. You can also switch views inside it, with the buttons in its bar or the keys 1, 2 and 3.">
+      <Row title="Studio views" text="What the studio shows when it opens. You can also switch inside it, with the buttons in its bar or the keys 1 to 4; Walk starts from the 3D model.">
         <fieldset className="grid grid-cols-3 gap-2">
           <legend className="sr-only">Studio views</legend>
           {VIEW_OPTIONS.map((v) => (
