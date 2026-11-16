@@ -6,8 +6,8 @@
  * Hidden views stay mounted, so the 3D scene and the conversation keep their state.
  */
 
-import { useEffect } from "react";
-import { actions, issuesFor, store, useAppStore, type CameraMode } from "../model/store";
+import { useEffect, useRef, useState } from "react";
+import { actions, issuesFor, store, useAppStore } from "../model/store";
 import { analyzeModel } from "../model/analysis";
 import { Editor } from "../editor/Editor";
 import { Scene3D } from "../three/Scene3D";
@@ -19,7 +19,7 @@ import { AssistantPanel } from "./panels/AssistantPanel";
 import { ReviewPanel, routePoints } from "./panels/ReviewPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
 import { ProjectPanel } from "./panels/ProjectPanel";
-import { setUi, ui, useResolvedTheme, useUi, type RightTab } from "./uiStore";
+import { featureActions, setUi, ui, useResolvedTheme, useUi, type RightTab } from "./uiStore";
 import { useSession } from "../ai/session";
 
 const TABS: { id: RightTab; label: string }[] = [
@@ -29,21 +29,54 @@ const TABS: { id: RightTab; label: string }[] = [
   { id: "project", label: "Project" },
 ];
 
-const CAMERAS: { mode: CameraMode; label: string; tip?: string }[] = [
-  { mode: "orbit", label: "Orbit" },
-  { mode: "top", label: "Top" },
-  { mode: "walk", label: "Walk", tip: "Walk through at eye height (WASD)" },
-];
-
+/** The 3D model's cameras, and the way into the walk. */
 function CameraBar() {
   const current = useAppStore((s) => s.editor.camera);
+  if (current === "walk") return null;
   return (
-    <div className="cam-bar" role="group" aria-label="3D camera">
-      {CAMERAS.map((c) => (
-        <button key={c.mode} className={current === c.mode ? "active" : ""} title={c.tip} onClick={() => actions.setCamera(c.mode)}>
-          {c.label}
-        </button>
-      ))}
+    <div className="cam-bar" role="group" aria-label="3D model camera">
+      <button className={current === "orbit" ? "active" : ""} onClick={() => actions.setCamera("orbit")} title="Circle the home and zoom in">
+        Orbit
+      </button>
+      <button className={current === "top" ? "active" : ""} onClick={() => actions.setCamera("top")} title="Straight down, north up">
+        Top
+      </button>
+      <button className="walk-in" onClick={() => featureActions.toggle("walk")} title="Step in at the front door, at eye height (3)">
+        Walk in →
+      </button>
+    </div>
+  );
+}
+
+/** While walking: how to move, full screen for a closer look, and the way out. */
+function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
+  const walking = useAppStore((s) => s.editor.camera === "walk");
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    const on = () => setFull(document.fullscreenElement === pane.current);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, [pane]);
+  useEffect(() => {
+    if (!walking) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.fullscreenElement && featureActions.exitWalk();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [walking]);
+  if (!walking) return null;
+  const toggleFull = () => (document.fullscreenElement ? void document.exitFullscreen() : void pane.current?.requestFullscreen?.());
+  return (
+    <div className="walk-hud" role="group" aria-label="Walk">
+      <div className="walk-text">
+        <span className="walk-title">Walking · eye height 1.60 m</span>
+        <span className="walk-keys">
+          <kbd>W A S D</kbd> move · <kbd>drag</kbd> look · <kbd>click</kbd> a door
+        </span>
+      </div>
+      <button onClick={toggleFull}>{full ? "Exit full screen" : "Full screen"}</button>
+      <button className="primary" onClick={() => (document.fullscreenElement && void document.exitFullscreen(), featureActions.exitWalk())} title="Back to the 3D model (Esc)">
+        Exit walk
+      </button>
     </div>
   );
 }
@@ -104,6 +137,7 @@ function useDerivedSync() {
 export function App() {
   const views = useUi((s) => s.views);
   const theme = useResolvedTheme();
+  const scenePane = useRef<HTMLElement>(null);
   const library = useUi((s) => s.library);
   const tab = useUi((s) => s.rightTab);
   const welcome = useUi((s) => s.welcome);
@@ -150,9 +184,10 @@ export function App() {
             <PaneLabel>Plan</PaneLabel>
             {empty && welcome && !drawing && <Welcome />}
           </section>
-          <section className="pane scene-pane" aria-label="3D view" aria-hidden={!views.scene || undefined}>
+          <section ref={scenePane} className="pane scene-pane" aria-label="3D view" aria-hidden={!views.scene || undefined}>
             <Scene3D theme={theme} />
             <CameraBar />
+            <WalkHud pane={scenePane} />
           </section>
         </main>
         <aside className="side" aria-hidden={!views.side || undefined}>

@@ -129,11 +129,18 @@ try {
     assert.equal((await state()).rooms, before + 1);
   });
 
-  await step("views: hide and show plan, 3D and chat in any mix; switch the theme", async () => {
+  await step("the four features: 2D plan, 3D model, walk and chat in any mix; switch the theme", async () => {
     const widths = () =>
       page.evaluate(() => Object.fromEntries([".plan-pane", ".scene-pane", ".side"].map((s) => [s.slice(1), Math.round(document.querySelector(s).getBoundingClientRect().width)])));
     const view = (label) => page.locator(".views .view", { hasText: label });
-    await view("3D").click();
+    const camera = () => page.evaluate(() => window.__clavis.store.getState().editor.camera);
+    await view("Walk").click();
+    assert.equal(await camera(), "walk");
+    await page.locator(".walk-hud").waitFor();
+    await page.keyboard.press("Escape");
+    assert.equal(await camera(), "orbit");
+    assert.equal(await page.locator(".walk-hud").count(), 0);
+    await view("3D Model").click();
     let w = await widths();
     assert.ok(w["scene-pane"] === 0 && w["plan-pane"] > 400 && w.side > 300, `3D hidden: ${JSON.stringify(w)}`);
     await view("Chat").dblclick();

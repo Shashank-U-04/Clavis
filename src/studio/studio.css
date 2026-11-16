@@ -245,7 +245,7 @@
   .views { display: inline-flex; align-items: stretch; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 3px); background: var(--surface); }
   .view { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px solid transparent; background: transparent; color: var(--ink-3); font-weight: 550; }
   .view:hover:not(:disabled) { background: var(--hover); border-color: transparent; color: var(--ink); }
-  .view.on { background: var(--raised); border-color: var(--line); color: var(--accent); box-shadow: 0 1px 2px rgba(21, 23, 28, 0.08); }
+  .view.on, .view.on:hover:not(:disabled) { background: var(--raised); border-color: var(--line); color: var(--accent); box-shadow: 0 1px 2px rgba(21, 23, 28, 0.08); }
   .view.all { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; }
   .view.all:disabled { opacity: 0.35; }
 
@@ -324,6 +324,25 @@
   .cam-bar button { border: 0; border-radius: 0; background: transparent; }
   .cam-bar button + button { border-left: 1px solid var(--line); }
   .cam-bar button.active { background: var(--accent-soft); }
+  .cam-bar .walk-in { color: var(--accent); font-weight: 600; }
+
+  /* walking: the guide along the foot of the view */
+  .scene-pane { container-type: inline-size; }
+  .walk-hud {
+    position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5;
+    display: flex; align-items: center; gap: 12px; white-space: nowrap;
+    max-width: calc(100% - 24px); padding: 8px 8px 8px 14px; border-radius: 12px;
+    background: var(--overlay); border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: blur(6px);
+  }
+  .walk-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .walk-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+  .walk-keys { font-size: 12px; color: var(--ink-2); }
+  .walk-hud kbd { font-family: var(--mono); font-size: 11px; padding: 1px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--raised); color: var(--ink); }
+  .walk-hud button { padding: 6px 12px; }
+  @container (max-width: 520px) {
+    .walk-keys { display: none; }
+  }
+  .scene-pane:fullscreen { background: var(--bg); }
 
   /* welcome */
   .welcome { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 6% 8%; gap: 14px; background: radial-gradient(1000px 420px at 15% 0%, var(--accent-soft), transparent 60%), var(--scrim); }

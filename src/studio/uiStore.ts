@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { createStore } from "zustand/vanilla";
 import { useStore } from "zustand";
 import type { Pt } from "../model/geometry";
-import { ALL_VIEWS, readTheme, readViews, soloView, toggleView, type ThemePref, type ViewKey, type Views } from "./views";
+import { actions, store } from "../model/store";
+import { ALL_VIEWS, readTheme, readViews, soloFeature, soloView, toggleFeature, toggleView, type Feature, type Screen, type ThemePref, type ViewKey, type Views } from "./views";
 
 export type RightTab = "assistant" | "review" | "inspect" | "project";
 
@@ -71,6 +72,31 @@ export const viewActions = {
   solo: (k: ViewKey) => setUi({ views: soloView(ui.getState().views, k) }),
   all: () => setUi({ views: { ...ALL_VIEWS } }),
   show: (k: ViewKey) => !ui.getState().views[k] && setUi({ views: { ...ui.getState().views, [k]: true } }),
+};
+
+/** What is on screen now: the views, and whether the 3D view is walking. */
+const screen = (): Screen => ({ views: ui.getState().views, walk: store.getState().editor.camera === "walk" });
+
+function applyScreen(next: Screen) {
+  const cur = screen();
+  if (next.views !== cur.views) setUi({ views: next.views });
+  if (next.walk !== cur.walk) actions.setCamera(next.walk ? "walk" : "orbit");
+}
+
+/** The bar's four features: 2D plan, 3D model, walk and chat. */
+export const featureActions = {
+  toggle: (f: Feature) => {
+    // the chat button brings the chat forward when the panel shows another tab
+    if (f === "chat" && ui.getState().views.side && ui.getState().rightTab !== "assistant") return setUi({ rightTab: "assistant" });
+    applyScreen(toggleFeature(screen(), f));
+  },
+  solo: (f: Feature) => {
+    applyScreen(soloFeature(screen(), f));
+    if (f === "chat") setUi({ rightTab: "assistant" });
+  },
+  all: () => applyScreen({ views: { ...ALL_VIEWS }, walk: false }),
+  /** leave the walk for the 3D model, keeping whatever else is on screen */
+  exitWalk: () => applyScreen({ views: { ...ui.getState().views, scene: true }, walk: false }),
 };
 
 /** The theme actually in use: a saved choice, or the system's when set to follow it. */

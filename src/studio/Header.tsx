@@ -12,8 +12,8 @@ import { downloadDocument } from "../model/persistence";
 import { downloadText, planToSvg, safeName } from "../export/planSvg";
 import { sendCommand } from "../three/events";
 import { projectActions, useProjects } from "./projects";
-import { setUi, ui, useResolvedTheme, useUi, viewActions } from "./uiStore";
-import { countViews, type ViewKey } from "./views";
+import { featureActions, setUi, ui, useResolvedTheme, useUi } from "./uiStore";
+import { countViews, featureOn, type Feature } from "./views";
 import { useSession } from "../ai/session";
 
 /** A popover that closes on outside click and Escape. */
@@ -205,36 +205,40 @@ function FileMenu() {
   );
 }
 
-const VIEWS: { key: ViewKey; label: string; n: string; icon: string }[] = [
-  { key: "plan", label: "Plan", n: "1", icon: "M4 4h16v16H4zM4 11h8M12 4v16" },
-  { key: "scene", label: "3D", n: "2", icon: "M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5" },
-  { key: "side", label: "Chat", n: "3", icon: "M4 5h16v11H9l-5 4z" },
+const FEATURE_BUTTONS: { f: Feature; label: string; n: string; icon: string; tip: string }[] = [
+  { f: "plan", label: "2D Plan", n: "1", icon: "M4 4h16v16H4zM4 11h8M12 4v16", tip: "the 2D layout builder" },
+  { f: "model", label: "3D Model", n: "2", icon: "M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5", tip: "the 3D model (orbit or top view)" },
+  { f: "walk", label: "Walk", n: "3", icon: "M13 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM10 22l2-7 3 3v4M8 12l2-4h4l2 4 3 1M12 8l-1 5", tip: "the first-person walk-through" },
+  { f: "chat", label: "Chat", n: "4", icon: "M4 5h16v11H9l-5 4z", tip: "the chat with the assistant" },
 ];
 
-/** Which views are on screen: any mix, from all three down to one. */
+/** The studio's four features: any mix on screen, from all of them down to one. */
 function ViewSwitch() {
   const views = useUi((s) => s.views);
-  const all = countViews(views) === 3;
+  const walking = useAppStore((s) => s.editor.camera === "walk");
+  const screen = { views, walk: walking };
+  const all = countViews(views) === 3 && !walking;
   return (
-    <div className="views" role="group" aria-label="Views on screen">
-      {VIEWS.map((v) => {
-        const on = views[v.key];
+    <div className="views" role="group" aria-label="What is on screen">
+      {FEATURE_BUTTONS.map((b) => {
+        const on = featureOn(screen, b.f);
         const last = on && countViews(views) === 1;
+        const shared = b.f === "model" || b.f === "walk" ? " The 3D model and the walk share the 3D view." : "";
         return (
           <button
-            key={v.key}
+            key={b.f}
             className={`view ${on ? "on" : ""}`}
             aria-pressed={on}
-            onClick={() => viewActions.toggle(v.key)}
-            onDoubleClick={() => viewActions.solo(v.key)}
-            title={`${on ? (last ? `${v.label} is the only view on screen` : `Hide ${v.label}`) : `Show ${v.label}`} (${v.n}) · double-click to show ${v.label} alone`}
+            onClick={() => featureActions.toggle(b.f)}
+            onDoubleClick={() => featureActions.solo(b.f)}
+            title={`${on ? (last ? `${b.label} is the only view on screen` : `Hide ${b.tip}`) : `Show ${b.tip}`} (${b.n}). Double-click to show it alone.${shared}`}
           >
-            <Icon d={v.icon} />
-            <span>{v.label}</span>
+            <Icon d={b.icon} />
+            <span>{b.label}</span>
           </button>
         );
       })}
-      <button className="view all" disabled={all} onClick={viewActions.all} title="Show plan, 3D and chat together (0)">
+      <button className="view all" disabled={all} onClick={featureActions.all} title="Show the 2D plan, the 3D model and the chat together (0)">
         All
       </button>
     </div>
@@ -255,8 +259,8 @@ function ThemeButton() {
 }
 
 const SHORTCUTS: [string, string][] = [
-  ["1 · 2 · 3", "Show or hide plan, 3D, chat"],
-  ["0", "Show all three"],
+  ["1 · 2 · 3 · 4", "2D plan, 3D model, walk, chat"],
+  ["0", "Plan, model and chat together"],
   ["V W M D N", "Select, wall, room, door, window"],
   ["L", "Furniture drawer"],
   ["F", "Fit the plan to the window"],
@@ -264,8 +268,8 @@ const SHORTCUTS: [string, string][] = [
   ["Arrows", "Nudge the selected piece"],
   ["Delete", "Remove the selection"],
   ["Ctrl Z · Ctrl Y", "Undo · redo"],
-  ["W A S D", "Walk, in 3D walk mode"],
-  ["Esc", "Back to Select"],
+  ["W A S D · drag", "Walk and look, in Walk"],
+  ["Esc", "Leave the walk; back to Select"],
 ];
 
 function Shortcuts() {
@@ -354,11 +358,11 @@ export function Header() {
   );
 }
 
-/** The views as keys: 1 2 3 toggle plan, 3D and chat; 0 shows them all; L opens furniture. */
+/** The features as keys: 1 2 3 4 for plan, model, walk and chat; 0 for all; L for furniture. */
 export function viewKey(key: string): boolean {
-  const map: Record<string, ViewKey> = { "1": "plan", "2": "scene", "3": "side" };
-  if (map[key]) return viewActions.toggle(map[key]), true;
-  if (key === "0") return viewActions.all(), true;
+  const map: Record<string, Feature> = { "1": "plan", "2": "model", "3": "walk", "4": "chat" };
+  if (map[key]) return featureActions.toggle(map[key]), true;
+  if (key === "0") return featureActions.all(), true;
   if (key === "l" || key === "L") return setUi({ library: !ui.getState().library }), true;
   return false;
 }

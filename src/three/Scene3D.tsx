@@ -97,7 +97,7 @@ export function Scene3D({ theme = "light" }: { theme?: SceneTheme }) {
           Click the floor to place <strong>{catalogByKind(placingKind)?.label ?? placingKind}</strong> · Esc cancels
         </div>
       )}
-      <div className="camera-hint">{HINTS[camera]}</div>
+      {camera !== "walk" && <div className="camera-hint">{HINTS[camera]}</div>}
     </div>
   );
 }
