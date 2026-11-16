@@ -25,8 +25,13 @@ switch on once Supabase is configured).
 - **Edit in words or by hand.** Add, move or remove furniture, add doors and windows,
   add or remove bedrooms, bathrooms or a study, make rooms bigger or smaller, open or
   separate the kitchen,
-  change floors and rename rooms. Or draw walls, rooms, doors and windows directly, with a
-  5 cm snap.
+  change floors and rename rooms.
+- **Build it yourself.** Ready-made rooms (bedroom, kitchen, bathroom, hall and more) arrive
+  with their walls, snap flush to their neighbours and share walls with them; then doors,
+  windows and one-click furnishing, with a guide that ticks off each step. Or draw walls,
+  rooms, doors and windows directly, with a 5 cm snap.
+- **Describe it with buttons.** Bedrooms, bathrooms, kitchen and size as counters and
+  switches, read back exactly as Clavis Local will lay them out, or typed in your own words.
 - **Validate everything.** The constraint engine checks:
   - walls: short, loose, crossing or overlapping;
   - openings: orphaned, overflowing or overlapping;

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const TOC = [
   ["start", "Getting started"],
-  ["drawing", "Drawing by hand"],
+  ["drawing", "Building by hand"],
   ["assistant", "The assistant"],
   ["review", "Reading the review"],
   ["views", "Plan, model, walk and chat"],
@@ -21,7 +21,7 @@ const TOC = [
 const SHORTCUTS = [
   ["1 / 2 / 3 / 4", "Show or hide the 2D plan, the 3D model, the walk and the chat"],
   ["0", "Plan, model and chat together; double-click a button to show one alone"],
-  ["L", "Open or close the furniture drawer"],
+  ["L", "Open or close the library (rooms and furniture)"],
   ["V", "Select"],
   ["W", "Draw walls (click to chain, Esc to stop)"],
   ["M", "Draw a room (drag a rectangle)"],
@@ -72,10 +72,10 @@ export default function DocsPage() {
             <section className="space-y-4">
               <H id="start">Getting started</H>
               <p>
-                Choose <Link href="/new" className="text-ink underline underline-offset-4 hover:text-marker">New plan</Link> → <b>Describe it</b> and write the home you want — for example “a two-bedroom flat with an open kitchen, about 70 m²”. Clavis proposes a furnished plan and shows it on the plan in green. Read the card, then press <b>Apply</b>. Nothing changes until you do.
+                A new plan opens with two ways in. <b>Describe it</b>: set the bedrooms, bathrooms, kitchen and size with a few buttons, read back exactly what Clavis will lay out, and press <b>Design from these choices</b> — or type it in your own words. Clavis proposes a furnished plan and shows it on the plan in green; nothing changes until you press <b>Apply</b>.
               </p>
               <p>
-                Prefer a starting point? Pick one of the seven homes in{" "}
+                <b>Build it yourself</b>: place ready-made rooms, then add doors, windows and furniture, with a guide on the plan ticking off each step. Prefer a starting point? Pick one of the seven homes in{" "}
                 <Link href="/templates" className="text-ink underline underline-offset-4 hover:text-marker">
                   Templates
                 </Link>
@@ -87,9 +87,9 @@ export default function DocsPage() {
               </p>
             </section>
             <section className="space-y-4">
-              <H id="drawing">Drawing by hand</H>
-              <p>Pick a tool from the strip down the left of the studio. Walls chain from click to click; rooms are dragged out as rectangles; doors and windows go wherever you click on a wall. Everything snaps to 5 cm. Select anything to edit its exact numbers in the <b>Details</b> tab.</p>
-              <p>For furniture, press <b>Furniture</b> at the foot of the strip (or <b>L</b>) to open the catalogue: pick a piece, then click the plan or the 3D floor. Drag pieces to move them; a whole drag is one undo step.</p>
+              <H id="drawing">Building by hand</H>
+              <p>Press <b>Rooms</b> in the strip down the left of the studio (or <b>L</b>) and pick a ready-made room — bedroom, kitchen, bathroom, hall and more — then click on the plan. Each room arrives with its walls; dropped beside another it snaps flush and the two share a wall, and it is never left on top of another room. The <b>Room</b> tool does the same for a rectangle you drag out yourself.</p>
+              <p>Then use <b>Door</b> and <b>Window</b> and click on walls. Press <b>Furniture</b> for the catalogue — pick a piece, then click the plan or the 3D floor — or let the guide's <b>Furnish rooms</b> fill every empty room, keeping only pieces the validator accepts. The <b>Guide</b> button shows the steps and ticks them off. Everything snaps to 5 cm; select anything to edit its exact numbers in the <b>Details</b> tab, and drag pieces to move them (a whole drag is one undo step).</p>
             </section>
             <section className="space-y-4">
               <H id="views">Plan, model, walk and chat</H>

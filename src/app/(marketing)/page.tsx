@@ -45,7 +45,7 @@ function buildSteps(model: ReturnType<typeof sunsetLoftModel>, overall: string[]
 const CAPABILITIES = [
   { icon: Sparkles, title: "Design by describing", text: "Bedrooms, bathrooms, a study, an open kitchen, a target area: one sentence becomes a furnished plan.", href: "/features/ai-design" },
   { icon: ScanSearch, title: "A validator on every change", text: "Walls, openings, furniture clearances, daylight, escape windows and the route to every room.", href: "/features/validation" },
-  { icon: Compass, title: "Edit in words or by hand", text: "Add a bedroom, make the kitchen bigger, move the sofa — or draw walls, doors and windows yourself.", href: "/features/ai-design" },
+  { icon: Compass, title: "Edit in words or by hand", text: "Add a bedroom, make the kitchen bigger, move the sofa — or build it yourself from ready-made rooms that bring their walls.", href: "/features/ai-design" },
   { icon: Box, title: "Plan and 3D side by side", text: "The 3D model follows every edit. Orbit around it or look straight down like a plan.", href: "/features/3d" },
   { icon: Footprints, title: "Walk through it", text: "Step in at the front door at eye height. Walls stop you; doorways let you through.", href: "/features/3d" },
   { icon: FileDown, title: "Keep and share", text: "Projects save as you work. Export a printable plan, the design file or a 3D model.", href: "/features/projects" },
