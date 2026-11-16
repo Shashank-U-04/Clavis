@@ -193,6 +193,27 @@
       display: none;
     }
   }
+
+  /* the mark beside the index: set out, walls drawn, then the door swings open */
+  .hm-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.3, 0.6, 0.2, 1);
+  }
+  .hm-on .hm-draw {
+    stroke-dashoffset: 0;
+  }
+  .hm-fade {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .hm-on .hm-fade {
+    opacity: 1;
+  }
+  .hm-still .hm-draw,
+  .hm-still .hm-fade {
+    transition: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
