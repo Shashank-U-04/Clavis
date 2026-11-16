@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ALL_VIEWS, readTheme, readViews, soloView, toggleView, type Views } from "../src/studio/views";
+import { ALL_VIEWS, featureOn, readTheme, readViews, soloFeature, soloView, toggleFeature, toggleView, type Screen, type Views } from "../src/studio/views";
 
 const v = (plan: boolean, scene: boolean, side: boolean): Views => ({ plan, scene, side });
 
@@ -33,5 +33,39 @@ describe("studio views", () => {
     expect(readTheme("dark")).toBe("dark");
     expect(readTheme("system")).toBe("system");
     expect(readTheme("sepia")).toBeUndefined();
+  });
+
+  describe("the four features: plan, 3D model, walk, chat", () => {
+    const all: Screen = { views: ALL_VIEWS, walk: false };
+    const on = (s: Screen) => (["plan", "model", "walk", "chat"] as const).filter((f) => featureOn(s, f));
+
+    it("shows the 3D model and the walk as two uses of the one 3D view", () => {
+      expect(on(all)).toEqual(["plan", "model", "chat"]);
+      const walking = toggleFeature(all, "walk");
+      expect(walking).toEqual({ views: ALL_VIEWS, walk: true });
+      expect(on(walking)).toEqual(["plan", "walk", "chat"]);
+      expect(on(toggleFeature(walking, "model"))).toEqual(["plan", "model", "chat"]);
+    });
+
+    it("turning the model or the walk off hides the 3D view", () => {
+      expect(toggleFeature(all, "model")).toEqual({ views: v(true, false, true), walk: false });
+      const walking: Screen = { views: ALL_VIEWS, walk: true };
+      expect(toggleFeature(walking, "walk")).toEqual({ views: v(true, false, true), walk: false });
+    });
+
+    it("never hides the last view, walk included", () => {
+      const onlyWalk: Screen = { views: v(false, true, false), walk: true };
+      expect(toggleFeature(onlyWalk, "walk")).toBe(onlyWalk);
+      const onlyChat: Screen = { views: v(false, false, true), walk: false };
+      expect(toggleFeature(onlyChat, "chat")).toBe(onlyChat);
+    });
+
+    it("shows one feature alone, and everything again from there", () => {
+      const walkAlone = soloFeature(all, "walk");
+      expect(walkAlone).toEqual({ views: v(false, true, false), walk: true });
+      expect(soloFeature(walkAlone, "walk")).toEqual(all);
+      expect(soloFeature(walkAlone, "model")).toEqual({ views: v(false, true, false), walk: false });
+      expect(soloFeature(all, "chat")).toEqual({ views: v(false, false, true), walk: false });
+    });
   });
 });
