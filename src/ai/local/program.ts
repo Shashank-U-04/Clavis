@@ -77,7 +77,8 @@ export function parseBrief(text: string): Brief {
   return {
     bedrooms,
     bathrooms,
-    ensuite: /\ben-?suite\b/.test(t) || (bathrooms >= 2 && bedrooms >= 2 && !/\bno en-?suite\b/.test(t)),
+    // "no en-suite" names one too, so the refusal has to be read before the word itself
+    ensuite: !/\b(no|without( an?)?) en-?suite\b/.test(t) && (/\ben-?suite\b/.test(t) || (bathrooms >= 2 && bedrooms >= 2)),
     study: /\b(study|office|home office|work ?space|den)\b/.test(t),
     dining: /\b(dining|separate kitchen|closed kitchen)\b/.test(t) || bedrooms >= 3,
     openKitchen: !/\b(separate|closed|enclosed) kitchen\b/.test(t),
