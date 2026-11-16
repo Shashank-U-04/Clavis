@@ -83,14 +83,115 @@
       linear-gradient(90deg, var(--color-rule-soft) 1px, transparent 1px);
     background-size: 32px 32px;
   }
-  /* construction lines that draw themselves on (see Wordmark) */
-  .wm-line {
+  /*
+   * The footer wordmark, set out like a title block (see Wordmark.tsx). Lines draw on by
+   * dash offset, notes fade in, and every delay is set inline from the component's timeline.
+   */
+  .wm-draw {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
-    transition: stroke-dashoffset 1.1s cubic-bezier(0.3, 0.6, 0.2, 1);
+    transition:
+      stroke-dashoffset 0.75s cubic-bezier(0.3, 0.6, 0.2, 1),
+      stroke 0.2s ease;
   }
-  .wm-on .wm-line {
+  .wm-on .wm-draw {
     stroke-dashoffset: 0;
+  }
+  .wm-fade {
+    opacity: 0;
+    transition: opacity 0.45s ease;
+  }
+  .wm-on .wm-fade {
+    opacity: 1;
+  }
+  .wm-still .wm-draw,
+  .wm-still .wm-fade {
+    transition: none !important;
+  }
+  .wm-guide {
+    stroke: var(--color-rule);
+    stroke-width: 0.5;
+    transition-duration: 1s;
+  }
+  .wm-guide-mid {
+    stroke: var(--color-rule);
+    stroke-width: 0.4;
+    stroke-dasharray: 3 3;
+  }
+  .wm-text {
+    font-family: var(--font-mono);
+    font-size: 6px;
+    letter-spacing: 0.08em;
+    fill: var(--color-ink-3);
+    stroke: none;
+  }
+  .wm-ext line {
+    stroke: var(--color-rule);
+    stroke-width: 0.4;
+  }
+  .wm-dim line,
+  .wm-dim path {
+    stroke-width: 0.5;
+    fill: none;
+  }
+  .wm-dim-marker line,
+  .wm-dim-marker path {
+    stroke: var(--color-marker);
+  }
+  .wm-dim-marker .wm-text {
+    fill: var(--color-marker);
+  }
+  .wm-dim-soft line,
+  .wm-dim-soft path {
+    stroke: var(--color-ink-3);
+  }
+  .wm-dim-marker.is-hot .wm-text {
+    font-weight: 700;
+  }
+  .wm-edges line {
+    stroke: currentColor;
+    stroke-width: 0.7;
+    stroke-linecap: square;
+  }
+  .wm-tint {
+    fill: var(--color-marker-soft);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .wm-letter.is-hot .wm-tint {
+    opacity: 1;
+  }
+  .wm-letter.is-hot .wm-edges line {
+    stroke: var(--color-marker);
+  }
+  .wm-head {
+    stroke: var(--color-marker);
+    stroke-width: 0.9;
+    opacity: 0;
+  }
+  .wm-cursor {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  .wm-cursor line {
+    stroke: var(--color-marker);
+    stroke-width: 0.35;
+  }
+  .wm-cursor rect {
+    fill: none;
+    stroke: var(--color-marker);
+    stroke-width: 0.6;
+  }
+  .wm-cursor .wm-text {
+    fill: var(--color-marker);
+  }
+  /* on a phone the notes would be specks; keep the letters and their guide lines */
+  @media (max-width: 640px) {
+    .wm-text,
+    .wm-dims {
+      display: none;
+    }
   }
 }
 
