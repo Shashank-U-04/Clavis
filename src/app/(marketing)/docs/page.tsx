@@ -18,6 +18,9 @@ const TOC = [
 ];
 
 const SHORTCUTS = [
+  ["1 / 2 / 3", "Show or hide the plan, the 3D view and the chat panel"],
+  ["0", "Show all three; double-click a view's button to show it alone"],
+  ["L", "Open or close the furniture drawer"],
   ["V", "Select"],
   ["W", "Draw walls (click to chain, Esc to stop)"],
   ["M", "Draw a room (drag a rectangle)"],
