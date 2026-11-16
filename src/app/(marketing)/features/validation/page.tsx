@@ -24,7 +24,7 @@ export default function ValidationPage() {
           { href: "/features/validation", label: "The validator" },
         ]}
         title={`${CHECK_COUNT} checks, on every change, from every source.`}
-        intro="A drag in the plan, an inspector field, a proposal from Clavis Local or from a hosted AI model: all of it goes through one pipeline and one referee. The engine never guesses and never edits; it measures and reports."
+        intro="A drag in the plan, a number typed in Details, a proposal from Clavis Local or from a hosted AI model: all of it goes through one pipeline and one referee. The engine never guesses and never edits; it measures and reports."
       />
 
       <Section sheet="01" title="How a finding works." intro="Each finding names the walls, openings, rooms or pieces involved and carries the numbers behind it. Its id comes from the finding itself, so Clavis can say exactly which findings a change resolved, kept or introduced.">
