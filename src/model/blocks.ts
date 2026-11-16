@@ -4,8 +4,12 @@
  *
  * A block becomes one batch of operations: the room, plus walls on its four sides wherever
  * there is not already a wall on that line. Two blocks placed side by side therefore share
- * one wall instead of stacking two, and the validator sees a clean junction. Rooms sit on
- * wall centrelines, as everywhere else in Clavis.
+ * one wall instead of stacking two, and the validator sees a clean junction.
+ *
+ * As everywhere in Clavis, walls run on the centrelines and a room is the clear floor inside
+ * the wall faces. Block walls are 10 cm partitions, so that floor sits 5 cm in from each
+ * centreline — on the 5 cm grid the operations snap to — and furniture set against a room's
+ * edge stands against the wall face, not inside the wall.
  */
 
 import type { PlanModel } from "./types";
@@ -22,7 +26,7 @@ export interface RoomBlock {
   note: string;
 }
 
-/** Typical concept-design sizes; each clears the validator's minimum for its room type. */
+/** Typical concept-design sizes, centreline to centreline; each clears the validator's minimum. */
 export const ROOM_BLOCKS: RoomBlock[] = [
   { id: "bedroom", label: "Bedroom", w: 3.4, h: 3.6, floor: "carpet", note: "a double bed" },
   { id: "main-bedroom", label: "Main bedroom", w: 4.0, h: 4.2, floor: "carpet", note: "king bed and wardrobe" },
@@ -47,6 +51,10 @@ export interface Rect {
 }
 
 const EPS = 0.01;
+/** a block's walls: a 10 cm partition, so half of it (5 cm) stays on the 5 cm grid */
+export const BLOCK_WALL = 0.1;
+const HALF = BLOCK_WALL / 2;
+
 /** shorter leftovers than this are not worth a wall (the validator calls them too short) */
 const MIN_WALL = 0.2;
 /** how close, in metres, an edge must come to another room's edge to snap flush to it */
@@ -80,11 +88,37 @@ export function uncovered(model: PlanModel, axis: "h" | "v", at: number, a: numb
   return gaps.filter(([s, e]) => e - s >= MIN_WALL);
 }
 
-/** Pull a rectangle's edges flush with nearby room edges and wall lines, if any are close. */
+/** A room's footprint to its walls' centrelines (rooms are stored as the clear floor). */
+const footprint = (room: Rect): Rect => ({ x: room.x - HALF, y: room.y - HALF, w: room.w + BLOCK_WALL, h: room.h + BLOCK_WALL });
+
+const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w - EPS && a.x + a.w > b.x + EPS && a.y < b.y + b.h - EPS && a.y + a.h > b.y + EPS;
+
+/**
+ * Where a new room should land: its edges pulled flush with nearby room edges and wall lines,
+ * and, if it would sit on top of a room, pushed out to the nearest free side of that room.
+ */
 export function snapRect(model: PlanModel, r: Rect): Rect {
+  const placed = alignEdges(model, r);
+  const prints = model.rooms.map(footprint);
+  const hit = prints.find((room) => overlaps(placed, room));
+  if (!hit) return placed;
+  const candidates = [
+    { x: hit.x - placed.w, y: placed.y },
+    { x: hit.x + hit.w, y: placed.y },
+    { x: placed.x, y: hit.y - placed.h },
+    { x: placed.x, y: hit.y + hit.h },
+  ]
+    .map((p) => alignEdges(model, { ...placed, ...p }))
+    .filter((c) => !prints.some((room) => overlaps(c, room)));
+  const away = (c: Rect) => Math.hypot(c.x - placed.x, c.y - placed.y);
+  return candidates.sort((a, b) => away(a) - away(b))[0] ?? placed;
+}
+
+/** Pull a rectangle's edges flush with nearby room edges and wall lines, if any are close. */
+function alignEdges(model: PlanModel, r: Rect): Rect {
   const xs = new Set<number>();
   const ys = new Set<number>();
-  for (const room of model.rooms) {
+  for (const room of model.rooms.map(footprint)) {
     xs.add(room.x).add(room.x + room.w);
     ys.add(room.y).add(room.y + room.h);
   }
@@ -108,14 +142,17 @@ export function snapRect(model: PlanModel, r: Rect): Rect {
   return { ...r, x: round(r.x + shift(r.x, r.w, xs)), y: round(r.y + shift(r.y, r.h, ys)) };
 }
 
-/** The operations that add a room with walls round it, sharing walls already there. */
+/**
+ * The operations that add a room with walls round it, sharing walls already there. `r` is the
+ * room's footprint on the wall centrelines; the room itself is the clear floor inside.
+ */
 export function roomBlockOps(model: PlanModel, r: Rect, label: string, floor: Finish): unknown[] {
   const x0 = round(r.x);
   const y0 = round(r.y);
   const x1 = round(r.x + r.w);
   const y1 = round(r.y + r.h);
-  const ops: unknown[] = [{ op: "add_room", x: x0, y: y0, w: round(x1 - x0), h: round(y1 - y0), label, floor }];
-  const wall = (ax: number, ay: number, bx: number, by: number) => ops.push({ op: "add_wall", ax: round(ax), ay: round(ay), bx: round(bx), by: round(by), thickness: 0.15, height: 2.7 });
+  const ops: unknown[] = [{ op: "add_room", x: round(x0 + HALF), y: round(y0 + HALF), w: round(x1 - x0 - BLOCK_WALL), h: round(y1 - y0 - BLOCK_WALL), label, floor }];
+  const wall = (ax: number, ay: number, bx: number, by: number) => ops.push({ op: "add_wall", ax: round(ax), ay: round(ay), bx: round(bx), by: round(by), thickness: BLOCK_WALL, height: 2.7 });
   for (const y of [y0, y1]) for (const [s, e] of uncovered(model, "h", y, x0, x1)) wall(s, y, e, y);
   for (const x of [x0, x1]) for (const [s, e] of uncovered(model, "v", x, y0, y1)) wall(x, s, x, e);
   return ops;
