@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * Preferences that live in this browser: which assistant the studio uses, the layout it
- * opens in, and the data itself (download it all, or clear it). The account section waits
+ * Preferences that live in this browser: which assistant the studio uses, the views and theme
+ * it opens with, and the data itself (download it all, or clear it). The account section waits
  * for accounts to be switched on.
  */
 
 import { useEffect, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { authConfigured } from "@/lib/auth/config";
+import { ALL_VIEWS, countViews, readTheme, readViews, toggleView, type ThemePref, type ViewKey, type Views } from "@/studio/views";
 
 const PREFIX = "clavis:";
 const PROVIDERS = [
@@ -16,11 +17,16 @@ const PROVIDERS = [
   { value: "local", label: "Clavis Local", text: "Rule-based, runs in your browser, nothing leaves it." },
   { value: "server", label: "Hosted model", text: "Every request goes to the hosted model when it is configured." },
 ] as const;
-const LAYOUTS = [
-  { value: "split", label: "Plan and 3D" },
-  { value: "plan", label: "Plan only" },
-  { value: "3d", label: "3D only" },
-] as const;
+const VIEW_OPTIONS: { key: ViewKey; label: string }[] = [
+  { key: "plan", label: "Plan" },
+  { key: "scene", label: "3D" },
+  { key: "side", label: "Chat panel" },
+];
+const THEMES: { value: ThemePref; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "Match this device" },
+];
 
 const read = (k: string) => {
   try {
@@ -58,7 +64,8 @@ function Row({ title, text, children }: { title: string; text: string; children:
 
 export function SettingsPanel() {
   const [provider, setProvider] = useState("auto");
-  const [layout, setLayout] = useState("split");
+  const [views, setViews] = useState<Views>(ALL_VIEWS);
+  const [theme, setTheme] = useState<ThemePref>("light");
   const [keys, setKeys] = useState<string[]>([]);
   const [confirm, setConfirm] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -67,25 +74,33 @@ export function SettingsPanel() {
     const p = read(`${PREFIX}provider`);
     setProvider(p === "local" || p === "server" ? p : "auto");
     try {
-      const l = JSON.parse(read(`${PREFIX}ui`) ?? "{}").layout;
-      if (l === "plan" || l === "3d") setLayout(l);
+      const u = JSON.parse(read(`${PREFIX}ui`) ?? "{}");
+      setViews(readViews(u.views, u.layout) ?? ALL_VIEWS);
+      setTheme(readTheme(u.theme) ?? "light");
     } catch {
-      /* keep the default */
+      /* keep the defaults */
     }
     setKeys(ownKeys());
   }, []);
 
   const pickProvider = (v: string) => (setProvider(v), write(`${PREFIX}provider`, v));
-  const pickLayout = (v: string) => {
-    setLayout(v);
+  /** Merge one preference into what the studio saved, leaving the rest as it was. */
+  const saveUi = (patch: Record<string, unknown>) => {
     let cur: Record<string, unknown> = {};
     try {
       cur = JSON.parse(read(`${PREFIX}ui`) ?? "{}");
     } catch {
       /* start fresh */
     }
-    write(`${PREFIX}ui`, JSON.stringify({ ...cur, layout: v }));
+    delete cur.layout;
+    write(`${PREFIX}ui`, JSON.stringify({ ...cur, ...patch }));
   };
+  const flipView = (k: ViewKey) => {
+    const next = toggleView(views, k);
+    setViews(next);
+    saveUi({ views: next });
+  };
+  const pickTheme = (t: ThemePref) => (setTheme(t), saveUi({ theme: t }));
 
   const download = () => {
     const data = Object.fromEntries(ownKeys().map((k) => [k, read(k)]));
@@ -107,7 +122,8 @@ export function SettingsPanel() {
     setKeys(ownKeys());
     setConfirm(false);
     setProvider("auto");
-    setLayout("split");
+    setViews(ALL_VIEWS);
+    setTheme("light");
     setDone("Everything Clavis kept in this browser has been removed.");
   };
 
@@ -130,13 +146,26 @@ export function SettingsPanel() {
         </fieldset>
       </Row>
 
-      <Row title="Studio layout" text="The view the studio opens in.">
+      <Row title="Studio views" text="What the studio shows when it opens. You can also switch views inside it, with the buttons in its bar or the keys 1, 2 and 3.">
         <fieldset className="grid grid-cols-3 gap-2">
-          <legend className="sr-only">Studio layout</legend>
-          {LAYOUTS.map((l) => (
-            <label key={l.value} className={`${radio} items-center`}>
-              <input type="radio" name="layout" value={l.value} checked={layout === l.value} onChange={() => pickLayout(l.value)} className="accent-ink" />
-              <span className="text-sm font-semibold">{l.label}</span>
+          <legend className="sr-only">Studio views</legend>
+          {VIEW_OPTIONS.map((v) => (
+            <label key={v.key} className={`${radio} items-center`}>
+              <input type="checkbox" checked={views[v.key]} disabled={views[v.key] && countViews(views) === 1} onChange={() => flipView(v.key)} className="accent-ink" />
+              <span className="text-sm font-semibold">{v.label}</span>
+            </label>
+          ))}
+        </fieldset>
+        <p className="mt-3 text-sm text-ink-3">At least one view stays on.</p>
+      </Row>
+
+      <Row title="Studio theme" text="The studio is light like this site, or dark for long evenings at the drawing board.">
+        <fieldset className="grid grid-cols-3 gap-2">
+          <legend className="sr-only">Studio theme</legend>
+          {THEMES.map((t) => (
+            <label key={t.value} className={`${radio} items-center`}>
+              <input type="radio" name="theme" value={t.value} checked={theme === t.value} onChange={() => pickTheme(t.value)} className="accent-ink" />
+              <span className="text-sm font-semibold">{t.label}</span>
             </label>
           ))}
         </fieldset>
