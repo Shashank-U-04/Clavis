@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { App } from "./App";
 import { projectActions, startProjects } from "./projects";
-import { setUi } from "./uiStore";
+import { setUi, useResolvedTheme } from "./uiStore";
 import { findTemplate, makerText } from "../lib/catalogue";
 import { buildTemplate } from "../lib/buildTemplate";
 import { assistant, session } from "../ai/session";
@@ -21,6 +21,7 @@ let started = false;
 
 export default function StudioRoot() {
   const [ready, setReady] = useState(false);
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     if (!started) {
@@ -57,5 +58,5 @@ export default function StudioRoot() {
     setReady(true);
   }, []);
 
-  return <div className="studio">{ready ? <App /> : <div className="studio-loading">Opening the studio…</div>}</div>;
+  return <div className="studio" data-theme={theme}>{ready ? <App /> : <div className="studio-loading">Opening the studio…</div>}</div>;
 }

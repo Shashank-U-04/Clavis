@@ -107,7 +107,7 @@ try {
       }),
     );
     await page.evaluate(() => window.__clavis.assistant.setProvider("server"));
-    await page.getByRole("tab", { name: "Assistant" }).click();
+    await page.getByRole("tab", { name: "Chat" }).click();
     await page.locator("#assistant-input").fill("add a plant to the study");
     await page.locator("#assistant-input").press("Enter");
     await page.getByText("The hosted model is not set up").waitFor();
@@ -116,7 +116,7 @@ try {
   });
 
   await step("a structural edit needs explicit confirmation before it can replace the layout", async () => {
-    await page.getByRole("tab", { name: "Assistant" }).click();
+    await page.getByRole("tab", { name: "Chat" }).click();
     const before = (await state()).rooms;
     await page.locator("#assistant-input").fill("add another bedroom");
     await page.locator("#assistant-input").press("Enter");
@@ -127,6 +127,27 @@ try {
     await apply.click();
     await page.getByText(/Measured after applying: 0 errors, 0 warnings/).last().waitFor();
     assert.equal((await state()).rooms, before + 1);
+  });
+
+  await step("views: hide and show plan, 3D and chat in any mix; switch the theme", async () => {
+    const widths = () =>
+      page.evaluate(() => Object.fromEntries([".plan-pane", ".scene-pane", ".side"].map((s) => [s.slice(1), Math.round(document.querySelector(s).getBoundingClientRect().width)])));
+    const view = (label) => page.locator(".views .view", { hasText: label });
+    await view("3D").click();
+    let w = await widths();
+    assert.ok(w["scene-pane"] === 0 && w["plan-pane"] > 400 && w.side > 300, `3D hidden: ${JSON.stringify(w)}`);
+    await view("Chat").dblclick();
+    w = await widths();
+    assert.ok(w["plan-pane"] === 0 && w["scene-pane"] === 0 && w.side > 700, `chat alone: ${JSON.stringify(w)}`);
+    await view("Chat").click(); // the last view on screen can't be turned off
+    assert.ok((await widths()).side > 700);
+    await page.keyboard.press("0");
+    w = await widths();
+    assert.ok(w["plan-pane"] > 200 && w["scene-pane"] > 200 && w.side > 300, `all three: ${JSON.stringify(w)}`);
+    await page.getByRole("button", { name: "Switch to the dark theme" }).click();
+    await page.locator('.studio[data-theme="dark"]').waitFor();
+    await page.getByRole("button", { name: "Switch to the light theme" }).click();
+    await page.locator('.studio[data-theme="light"]').waitFor();
   });
 
   await step("phone and tablet widths: no sideways scrolling, plan and panels visible", async () => {
