@@ -13,13 +13,14 @@ const TOC = [
   ["drawing", "Drawing by hand"],
   ["assistant", "The assistant"],
   ["review", "Reading the review"],
+  ["views", "Plan, model, walk and chat"],
   ["shortcuts", "Shortcuts"],
   ["limits", "Limits"],
 ];
 
 const SHORTCUTS = [
-  ["1 / 2 / 3", "Show or hide the plan, the 3D view and the chat panel"],
-  ["0", "Show all three; double-click a view's button to show it alone"],
+  ["1 / 2 / 3 / 4", "Show or hide the 2D plan, the 3D model, the walk and the chat"],
+  ["0", "Plan, model and chat together; double-click a button to show one alone"],
   ["L", "Open or close the furniture drawer"],
   ["V", "Select"],
   ["W", "Draw walls (click to chain, Esc to stop)"],
@@ -31,7 +32,14 @@ const SHORTCUTS = [
   ["F", "Fit the plan to the window"],
   ["Ctrl Z / Ctrl Y", "Undo / redo"],
   ["Esc", "Back to Select, clear highlights"],
-  ["W A S D (3D walk)", "Walk; drag to look"],
+  ["W A S D (in Walk)", "Walk; drag to look; Esc to leave"],
+];
+
+const VIEWS = [
+  ["1", "2D Plan", "The layout builder: draw walls, rooms, doors and windows, and arrange furniture, all in metres."],
+  ["2", "3D Model", "The same design standing up. Orbit around it or look straight down; it follows every edit."],
+  ["3", "Walk", "Step in at the front door at eye height and walk through, room by room. Full screen for a closer look."],
+  ["4", "Chat", "Ask for a home, a change or a check. Every answer is a checked preview until you press Apply."],
 ];
 
 function H({ id, children }: { id: string; children: React.ReactNode }) {
@@ -80,8 +88,21 @@ export default function DocsPage() {
             </section>
             <section className="space-y-4">
               <H id="drawing">Drawing by hand</H>
-              <p>Pick a tool on the left. Walls chain from click to click; rooms are dragged out as rectangles; doors and windows go wherever you click on a wall. Everything snaps to 5 cm. Select anything to edit its exact numbers in the <b>Inspect</b> tab.</p>
-              <p>Furniture comes from the catalog on the left: pick a piece, then click the plan or the 3D floor. Drag pieces to move them; a whole drag is one undo step.</p>
+              <p>Pick a tool from the strip down the left of the studio. Walls chain from click to click; rooms are dragged out as rectangles; doors and windows go wherever you click on a wall. Everything snaps to 5 cm. Select anything to edit its exact numbers in the <b>Details</b> tab.</p>
+              <p>For furniture, press <b>Furniture</b> at the foot of the strip (or <b>L</b>) to open the catalogue: pick a piece, then click the plan or the 3D floor. Drag pieces to move them; a whole drag is one undo step.</p>
+            </section>
+            <section className="space-y-4">
+              <H id="views">Plan, model, walk and chat</H>
+              <p>The studio does four things, and the bar along its top has a button for each. Show any mix of them, or double-click one to give it the whole screen; <b>All</b> brings back the plan, the model and the chat together.</p>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {VIEWS.map(([k, t, d]) => (
+                  <li key={t} className="border border-rule bg-paper-2 px-3 py-2 text-sm">
+                    <span className="font-mono text-marker">{k}</span> <b>{t}</b>
+                    <span className="mt-1 block text-ink-2">{d}</span>
+                  </li>
+                ))}
+              </ul>
+              <p>The 3D model and the walk share one 3D view, so choosing one switches it from the other.</p>
             </section>
             <section className="space-y-4">
               <H id="assistant">The assistant</H>

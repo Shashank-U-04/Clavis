@@ -42,8 +42,10 @@ switch on once Supabase is configured).
   reports what needs a human decision.
 - **Review.** See clear floor area, envelope, efficiency, room counts, daylight per room,
   and the route from the entrance to any room drawn on the plan.
-- **Plan and 3D side by side.** The 3D view updates in place as you edit. Choose Orbit, Top,
-  or Walk mode with collision and doors that open.
+- **2D plan, 3D model, walk and chat.** Four buttons in the studio's bar show them in any
+  mix, side by side or one at a time. The 3D model updates in place as you edit (orbit or
+  top view); Walk steps in at the front door at eye height, with collision, doors that
+  open and a full-screen option.
 - **Projects.** A library of projects in this browser with autosave. Files can be
   exported as `.json`, a printable `.svg` plan drawing, a 3D `.png` snapshot or a 3D `.obj`.
 

@@ -12,13 +12,14 @@ export const metadata: Metadata = {
 };
 
 const VIEWS = [
-  ["Orbit", "Circle the home and zoom in on a room. Click a door to swing it open, click furniture to select it."],
-  ["Top", "Straight down with north at the top, like the plan — useful for checking furniture against walls."],
-  ["Walk", "Start just inside the front door at 1.60 m eye height. Walls stop you; doorways let you through."],
+  ["2D Plan", "The layout builder: walls, rooms, doors, windows and furniture, drawn in metres and snapped to 5 cm."],
+  ["3D Model", "The same design standing up. Orbit around it, or look straight down from the top. Click a door to swing it open."],
+  ["Walk", "Step in just inside the front door at 1.60 m eye height, full screen if you like. Walls stop you; doorways let you through."],
 ];
 
 const KEYS = [
-  ["W A S D / arrows", "walk"],
+  ["W A S D / arrows", "walk (in Walk)"],
+  ["Esc", "leave the walk"],
   ["drag", "look around"],
   ["click a door", "open or close it"],
   ["F (plan)", "fit the plan to the window"],
@@ -38,7 +39,7 @@ export default function ThreeDPage() {
         intro="The plan and the 3D model sit side by side and follow the same design: move a sofa in the plan and it moves in the room. Only what changed is rebuilt, so the view keeps up with you."
       />
 
-      <Section sheet="01" title="Three ways to look." intro="Switch views without losing your place. Each one is the same model, drawn from a different camera.">
+      <Section sheet="01" title="Three ways to see one home." intro="Each has its own button in the studio's bar. Show them side by side or one at a time, alongside the chat; they all follow the same design.">
         <ol className="grid md:grid-cols-3">
           {VIEWS.map(([t, d], i) => (
             <li key={t} className={`border-b border-rule p-5 md:border-b-0 md:p-8 ${i < 2 ? "md:border-r" : ""}`}>

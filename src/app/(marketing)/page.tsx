@@ -67,7 +67,7 @@ const steps = (sample: { rooms: number; items: number }) => [
   {
     n: "03",
     title: "Walk",
-    text: "Open the 3D view and walk in from the front door. Change something in the plan and the house changes around you.",
+    text: "Press Walk and step in at the front door, at eye height. Change something in the plan and the house changes around you.",
     specimen: ["  eye height   1.60 m", "  move         W A S D", "  look         drag", "  doors        click to open"],
   },
 ];

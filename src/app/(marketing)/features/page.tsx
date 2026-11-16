@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 const ALSO = [
   ["Draw by hand", "Walls that chain, rooms you drag out, doors and windows clicked onto walls, all snapping to 5 cm."],
-  ["Inspector", "Exact numbers for any wall, opening, room or piece, edited through the same checked pipeline."],
+  ["Details", "Exact numbers for any wall, opening, room or piece, edited through the same checked pipeline."],
   ["Undo and redo", "Every change, including a drag or an applied proposal, is one step back."],
   ["Tracing", "Lay a photo or scan of a plan under the drawing, set its real width and trace over it."],
   ["Route on the plan", "See the path from the front door to any room drawn on the plan."],
