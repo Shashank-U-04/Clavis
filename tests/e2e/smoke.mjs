@@ -51,6 +51,7 @@ try {
   });
 
   await step("a brief becomes a validated proposal", async () => {
+    await page.getByRole("button", { name: "Or type it in your own words" }).click();
     await page.getByLabel("Describe a home").fill("A three-bedroom house with two bathrooms and a study, 120 m2");
     await page.getByRole("button", { name: "Design it" }).click();
     await page.getByText("Checked by the validator").waitFor();
@@ -155,6 +156,28 @@ try {
     await page.locator('.studio[data-theme="dark"]').waitFor();
     await page.getByRole("button", { name: "Switch to the light theme" }).click();
     await page.locator('.studio[data-theme="light"]').waitFor();
+  });
+
+  await step("build by hand: ready-made rooms arrive with their walls and never overlap", async () => {
+    await page.goto(`${STUDIO}?new=blank`);
+    await page.getByRole("button", { name: "Start building" }).click();
+    await page.locator(".guide").waitFor();
+    const plan = await page.locator(".plan-pane").boundingBox();
+    const at = (dx) => page.mouse.click(plan.x + plan.width * 0.5 + dx, plan.y + plan.height * 0.6);
+    await page.locator('[data-block="bedroom"]').click();
+    await at(0);
+    await page.locator('[data-block="bathroom"]').click();
+    await at(30); // dropped partly over the bedroom: it must be pushed out beside it
+    await page.keyboard.press("Escape");
+    const m = await page.evaluate(() => {
+      const { rooms, walls } = window.__clavis.store.getState().model;
+      const [a, b] = rooms;
+      const overlap = a && b && a.x < b.x + b.w - 0.01 && b.x < a.x + a.w - 0.01 && a.y < b.y + b.h - 0.01 && b.y < a.y + a.h - 0.01;
+      return { rooms: rooms.map((r) => r.label), walls: walls.length, overlap };
+    });
+    assert.deepEqual(m.rooms, ["Bedroom", "Bathroom"]);
+    assert.equal(m.overlap, false, "the bathroom was dropped on top of the bedroom");
+    assert.ok(m.walls >= 5 && m.walls <= 8, `walls: ${m.walls}`);
   });
 
   await step("phone and tablet widths: no sideways scrolling, plan and panels visible", async () => {

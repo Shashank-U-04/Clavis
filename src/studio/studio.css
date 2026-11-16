@@ -284,6 +284,11 @@
   .library { display: flex; flex-direction: column; gap: 9px; min-height: 0; padding: 10px 10px 0; background: var(--panel); border-right: 1px solid var(--line); }
   .library-head { display: flex; align-items: center; justify-content: space-between; }
   .library-head .icon-btn { width: 28px; height: 28px; }
+  .library-tabs { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: calc(var(--radius) + 2px); background: var(--surface); }
+  .library-tabs button { padding: 4px 10px; font-size: 12px; border: 1px solid transparent; background: transparent; color: var(--ink-3); }
+  .library-tabs button.active { background: var(--raised); border-color: var(--line); color: var(--accent); }
+  .room-glyph { flex: 0 0 auto; border-radius: var(--radius); background: var(--plan-paper); }
+  .room-glyph rect { fill: var(--plan-oak); stroke: var(--plan-wall); stroke-width: 2.5; }
   .library-hint { margin: 0; font-size: 12px; color: var(--ink-3); line-height: 1.4; }
   .search { width: 100%; }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -296,7 +301,7 @@
   .cat-text small { color: var(--ink-3); font-size: 11px; }
 
   /* stage: plan | 3D, either alone or both */
-  .stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; background: var(--bg); }
+  .stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; background: var(--bg); }
   .no-plan .stage { grid-template-columns: 0 minmax(0, 1fr); }
   .no-scene .stage { grid-template-columns: minmax(0, 1fr) 0; }
   .pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
@@ -344,16 +349,62 @@
   }
   .scene-pane:fullscreen { background: var(--bg); }
 
-  /* welcome */
-  .welcome { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 6% 8%; gap: 14px; background: radial-gradient(1000px 420px at 15% 0%, var(--accent-soft), transparent 60%), var(--scrim); }
-  .welcome h1 { font-size: clamp(26px, 3.4vw, 40px); letter-spacing: -0.03em; }
-  .welcome p { color: var(--ink-2); max-width: 560px; line-height: 1.5; margin: 0; }
-  .welcome form { display: flex; gap: 8px; max-width: 620px; }
-  .welcome form input { flex: 1 1 auto; font-size: 15px; padding: 10px 12px; background: var(--raised); }
-  .welcome form button { padding: 10px 16px; font-size: 14px; }
-  .ideas { display: flex; flex-wrap: wrap; gap: 6px; max-width: 640px; }
-  .or { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .fine { font-size: 12px; color: var(--ink-3) !important; }
+  /* welcome: two ways in */
+  .welcome { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; gap: 14px; padding: 4% 5%; overflow-y: auto; background: radial-gradient(1000px 420px at 15% 0%, var(--accent-soft), transparent 60%), var(--scrim); }
+  .welcome h1 { font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.03em; }
+  .welcome > p { color: var(--ink-2); max-width: 620px; line-height: 1.5; margin: 0; }
+  .ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; max-width: 980px; }
+  .way { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--raised); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); box-shadow: 0 1px 2px rgba(21, 23, 28, 0.05); }
+  .way h2 { font-size: 16px; letter-spacing: -0.015em; }
+  .way > .eyebrow { color: var(--accent); }
+  .way > .primary { align-self: flex-start; padding: 8px 16px; font-size: 14px; }
+  .way > .link { align-self: flex-start; font-size: 13px; }
+  .way-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+  .builder { display: flex; flex-direction: column; gap: 10px; }
+  .builder-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stepper { display: flex; flex-direction: column; gap: 4px; }
+  .stepper > span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .stepper > div { display: flex; align-items: center; gap: 4px; }
+  .stepper output { min-width: 58px; text-align: center; font-weight: 650; font-size: 15px; }
+  .stepper button { width: 32px; height: 32px; padding: 0; font-size: 16px; }
+  .stepper .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .stepper .seg button { width: auto; height: 32px; padding: 0 12px; font-size: 13px; border: 0; border-radius: 0; }
+  .stepper .seg button + button { border-left: 1px solid var(--line); }
+  .stepper .area { display: flex; align-items: center; gap: 6px; }
+  .stepper .area input { width: 88px; height: 32px; }
+  .stepper .area em { font-style: normal; color: var(--ink-3); }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .check { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; background: var(--surface); }
+  .check.on { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+  .check input { margin: 0; }
+  .readback { margin: 0; padding: 8px 10px; border-left: 2px solid var(--accent); background: var(--surface); font-size: 13px; line-height: 1.5; color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+  .builder > .primary { align-self: flex-start; padding: 8px 16px; font-size: 14px; }
+  .typed { display: flex; gap: 6px; }
+  .typed input { flex: 1 1 auto; padding: 8px 10px; background: var(--surface); }
+  .or { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .fine { font-size: 12px; color: var(--ink-3) !important; margin: 0; }
+
+  /* the build guide, pinned to the plan */
+  .guide { position: absolute; left: 12px; top: 30px; z-index: 4; width: min(300px, calc(100% - 24px)); padding: 10px 12px 12px; background: var(--overlay); border: 1px solid var(--line); border-radius: calc(var(--radius) + 2px); box-shadow: var(--shadow); backdrop-filter: blur(6px); }
+  .guide-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+  .guide.folded { width: auto; padding: 4px 6px 4px 8px; }
+  .guide.folded .guide-head { margin: 0; }
+  .guide-fold { display: inline-flex; align-items: center; gap: 8px; padding: 2px 4px; border: 0; background: none; min-width: 0; }
+  .guide-fold:hover:not(:disabled) { background: none; }
+  .guide-next { font-size: 12.5px; font-weight: 600; color: var(--accent); }
+  .guide-head .icon-btn { width: 24px; height: 24px; }
+  .guide ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .guide li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+  .guide-mark { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; border: 1px solid var(--line); color: var(--ink-3); background: var(--surface); }
+  .guide li.done .guide-mark { background: var(--green); border-color: var(--green); color: #fff; }
+  .guide li.now .guide-mark { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .guide-title { margin: 1px 0 0; font-size: 13px; font-weight: 600; }
+  .guide-title small { font-weight: 400; color: var(--ink-3); margin-left: 4px; }
+  .guide li.done .guide-title { color: var(--ink-3); }
+  .guide-how { margin: 4px 0 6px; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+  .guide-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .guide-done { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .guide-done p { margin: 0; font-size: 12.5px; color: var(--green); }
 
   /* side panel */
   .side { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-left: 1px solid var(--line); background: var(--panel); }
@@ -513,9 +564,9 @@
     .side { border-left: 0; border-top: 1px solid var(--line); height: 85vh; }
     .no-side .side, .chat-only .stage, .chat-only .strip { display: none; }
     .chat-only .side { height: calc(100vh - 100px); }
-    .welcome { justify-content: flex-start; padding: 16px; gap: 10px; overflow-y: auto; }
+    .welcome { padding: 16px; gap: 10px; }
     .welcome h1 { font-size: 24px; }
-    .welcome form { flex-direction: column; }
+    .guide { top: 8px; }
     .metrics { grid-template-columns: repeat(2, 1fr); }
     .tabs button { padding: 10px 2px; font-size: 13px; }
   }

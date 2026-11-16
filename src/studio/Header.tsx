@@ -262,7 +262,7 @@ const SHORTCUTS: [string, string][] = [
   ["1 · 2 · 3 · 4", "2D plan, 3D model, walk, chat"],
   ["0", "Plan, model and chat together"],
   ["V W M D N", "Select, wall, room, door, window"],
-  ["L", "Furniture drawer"],
+  ["L", "Library: rooms and furniture"],
   ["F", "Fit the plan to the window"],
   ["R · Shift R", "Turn the selected piece"],
   ["Arrows", "Nudge the selected piece"],

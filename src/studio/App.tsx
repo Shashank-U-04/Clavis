@@ -15,6 +15,7 @@ import { Header, viewKey } from "./Header";
 import { Library, ToolStrip } from "./ToolStrip";
 import { ActivityFeed } from "./ActivityFeed";
 import { Welcome } from "./Welcome";
+import { BuildGuide } from "./BuildGuide";
 import { AssistantPanel } from "./panels/AssistantPanel";
 import { ReviewPanel, routePoints } from "./panels/ReviewPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
@@ -139,6 +140,7 @@ export function App() {
   const theme = useResolvedTheme();
   const scenePane = useRef<HTMLElement>(null);
   const library = useUi((s) => s.library);
+  const guide = useUi((s) => s.guide);
   const tab = useUi((s) => s.rightTab);
   const welcome = useUi((s) => s.welcome);
   const feedOpen = useUi((s) => s.feedOpen);
@@ -182,13 +184,14 @@ export function App() {
           <section className="pane plan-pane" aria-label="Plan" aria-hidden={!views.plan || undefined}>
             <Editor />
             <PaneLabel>Plan</PaneLabel>
-            {empty && welcome && !drawing && <Welcome />}
+            {guide && !(empty && welcome && !drawing) && <BuildGuide />}
           </section>
           <section ref={scenePane} className="pane scene-pane" aria-label="3D view" aria-hidden={!views.scene || undefined}>
             <Scene3D theme={theme} />
             <CameraBar />
             <WalkHud pane={scenePane} />
           </section>
+          {empty && welcome && !drawing && <Welcome />}
         </main>
         <aside className="side" aria-hidden={!views.side || undefined}>
           <nav className="tabs" role="tablist" aria-label="Panel">
