@@ -14,8 +14,11 @@ interface UiState {
   views: Views;
   theme: ThemePref;
   rightTab: RightTab;
-  /** the furniture drawer beside the tool strip */
+  /** the library drawer beside the tool strip, and which shelf it shows */
   library: boolean;
+  libraryTab: "rooms" | "furniture";
+  /** the step-by-step guide for building a plan by hand */
+  guide: boolean;
   /** a circulation route drawn over the plan: entrance → room, through door centres */
   route: { roomId: string; points: Pt[] } | null;
   feedOpen: boolean;
@@ -32,6 +35,8 @@ const saved = (): Partial<UiState> => {
       theme: readTheme(v.theme),
       feedOpen: typeof v.feedOpen === "boolean" ? v.feedOpen : undefined,
       library: typeof v.library === "boolean" ? v.library : undefined,
+      libraryTab: v.libraryTab === "rooms" || v.libraryTab === "furniture" ? v.libraryTab : undefined,
+      guide: typeof v.guide === "boolean" ? v.guide : undefined,
     };
   } catch {
     return {};
@@ -45,6 +50,8 @@ export const ui = createStore<UiState>(() => ({
   theme: "light",
   rightTab: "assistant",
   library: false,
+  libraryTab: "rooms",
+  guide: false,
   route: null,
   feedOpen: false,
   welcome: true,
@@ -53,7 +60,7 @@ export const ui = createStore<UiState>(() => ({
 
 ui.subscribe((s) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ views: s.views, theme: s.theme, feedOpen: s.feedOpen, library: s.library }));
+    localStorage.setItem(KEY, JSON.stringify({ views: s.views, theme: s.theme, feedOpen: s.feedOpen, library: s.library, libraryTab: s.libraryTab, guide: s.guide }));
   } catch {
     /* per-viewer convenience only */
   }
@@ -66,6 +73,14 @@ export const setUi = (p: Partial<UiState>) => {
   const views = p.rightTab && !p.views && !ui.getState().views.side ? { ...ui.getState().views, side: true } : p.views;
   ui.setState(views ? { ...p, views } : p);
 };
+
+/** Open the library on a shelf, or close it when that shelf is already showing. */
+export function openLibrary(tab: "rooms" | "furniture", toggle = true) {
+  const s = ui.getState();
+  if (toggle && s.library && s.libraryTab === tab) return setUi({ library: false });
+  if (!s.views.plan && !s.views.scene) setUi({ views: { ...s.views, plan: true } });
+  setUi({ library: true, libraryTab: tab });
+}
 
 export const viewActions = {
   toggle: (k: ViewKey) => setUi({ views: toggleView(ui.getState().views, k) }),

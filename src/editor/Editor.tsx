@@ -1,6 +1,7 @@
 /**
  * The plan editor. Tools: select (click, drag to move), wall (click to chain), room (drag a
- * rectangle), door / window (click a wall), place (click to drop a catalog piece).
+ * rectangle: the room and its walls), block (click to drop a ready-made room, which snaps flush
+ * to its neighbours), door / window (click a wall), place (click to drop a catalog piece).
  * Every change is a store action, so it runs through the operation pipeline; a drag is a
  * single undo step.
  *
@@ -12,6 +13,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { actions, beginGesture, endGesture, logActivity, store, useAppStore } from "../model/store";
 import { snap, segLen, pointSegDist, projectT, type Pt } from "../model/geometry";
 import { catalogByKind } from "../model/catalog";
+import { blockById, nextLabel, snapRect } from "../model/blocks";
 import { useSession } from "../ai/session";
 import { useUi } from "../studio/uiStore";
 import { onCommand, sendCommand } from "../three/events";
@@ -165,6 +167,12 @@ export function Editor() {
       case "room":
         svg.current?.setPointerCapture(e.pointerId);
         return setDrag({ kind: "room", from: p });
+      case "block": {
+        const ghost = blockGhost(p);
+        if (!ghost) return;
+        const r = actions.addRoomBlock(ghost.x, ghost.y, ghost.w, ghost.h, ghost.label, ghost.floor);
+        return logActivity("human", "add_room", r.summary, r.ok);
+      }
       case "place": {
         if (!editor.placingKind) return;
         const r = actions.placeItem(editor.placingKind, p.x, p.y, 0);
@@ -215,14 +223,23 @@ export function Editor() {
       const w = Math.abs(p.x - d.from.x);
       const h = Math.abs(p.y - d.from.y);
       if (w >= 0.5 && h >= 0.5) {
-        const r = actions.addRoom(Math.min(p.x, d.from.x), Math.min(p.y, d.from.y), w, h, `Room ${live.rooms.length + 1}`);
+        const r = actions.addRoomBlock(Math.min(p.x, d.from.x), Math.min(p.y, d.from.y), w, h, nextLabel(live, "Room"));
         logActivity("human", "add_room", r.summary, r.ok);
       }
     }
   };
 
+  /** Where a ready-made room would land with its centre at p: snapped flush to its neighbours. */
+  function blockGhost(p: Pt) {
+    const b = editor.drawMode === "block" ? blockById(editor.placingKind) : null;
+    if (!b) return null;
+    const r = snapRect(live, { x: snap(p.x - b.w / 2), y: snap(p.y - b.h / 2), w: b.w, h: b.h });
+    return { ...r, label: nextLabel(live, b.label), floor: b.floor };
+  }
+
   // ---- drawing ----
   const k = view.scale;
+  const ghost = cursor && !previewing ? blockGhost(cursor) : null;
   const flagged = new Set(editor.highlightIds);
   const selected = new Set([editor.selectedItemId, editor.selectedWallId, editor.selectedRoomId, editor.selectedOpeningId]);
   const mark = (id: string) => (flagged.has(id) ? INK.flagged : selected.has(id) ? INK.selected : previewing && proposed.has(id) ? INK.proposed : null);
@@ -230,7 +247,8 @@ export function Editor() {
   const start = editor.pendingWallStart;
   const help: Partial<Record<typeof editor.drawMode, string>> = {
     wall: " · click to chain walls · Esc to stop",
-    room: " · drag to draw a room",
+    room: " · drag to draw a room; its walls come with it",
+    block: editor.placingKind ? ` · click to place a ${blockById(editor.placingKind)?.label ?? "room"}; it snaps to its neighbours · Esc to stop` : "",
     door: " · click a wall to add a door",
     window: " · click a wall to add a window",
     place: editor.placingKind ? ` · click to place ${catalogByKind(editor.placingKind)?.label ?? ""} · Esc to stop` : "",
@@ -282,7 +300,18 @@ export function Editor() {
             strokeDasharray="6 4"
           />
         )}
-        {cursor && editor.drawMode !== "select" && !previewing && <circle cx={cursor.x * k} cy={cursor.y * k} r={4} fill={INK.selected} pointerEvents="none" />}
+        {ghost && (
+          <g pointerEvents="none">
+            <rect x={ghost.x * k} y={ghost.y * k} width={ghost.w * k} height={ghost.h * k} fill={INK.selectedSoft} stroke={INK.selected} strokeWidth={Math.max(2, 0.15 * k)} strokeDasharray="8 5" />
+            <text x={(ghost.x + ghost.w / 2) * k} y={(ghost.y + ghost.h / 2) * k} textAnchor="middle" fontSize={13} fontWeight={600} fill={INK.selected}>
+              {ghost.label}
+              <tspan x={(ghost.x + ghost.w / 2) * k} dy={16} fontSize={11} fontWeight={400}>
+                {ghost.w} × {ghost.h} m
+              </tspan>
+            </text>
+          </g>
+        )}
+        {cursor && editor.drawMode !== "select" && editor.drawMode !== "block" && !previewing && <circle cx={cursor.x * k} cy={cursor.y * k} r={4} fill={INK.selected} pointerEvents="none" />}
       </svg>
 
       {previewing && (

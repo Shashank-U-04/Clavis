@@ -16,6 +16,7 @@ import type { ActivityEntry, ActorSource, Issue, Note, PlanModel, Underlay } fro
 import { emptyModel } from "./types";
 import { checkModel, diffIssues } from "./issues";
 import { applyBatch, type DesignOperation, type StepResult } from "./operations";
+import { roomBlockOps } from "./blocks";
 
 // ---------------------------------------------------------------------------
 // State
@@ -23,7 +24,8 @@ import { applyBatch, type DesignOperation, type StepResult } from "./operations"
 
 export type CameraMode = "orbit" | "top" | "walk";
 export type ViewMode = "2d" | "3d";
-export type DrawMode = "select" | "wall" | "room" | "place" | "door" | "window";
+/** "block" places a ready-made room (placingKind is its block id); "place" places furniture. */
+export type DrawMode = "select" | "wall" | "room" | "block" | "place" | "door" | "window";
 
 export interface EditorState {
   view: ViewMode;
@@ -312,6 +314,15 @@ export const actions = {
 
   // rooms
   addRoom: (x: number, y: number, w: number, h: number, label: string, floor: Finish = "oak") => apply({ op: "add_room", x, y, w, h, label, floor }),
+  /** A room with walls round it, sharing walls already on its sides; one undo step. */
+  addRoomBlock(x: number, y: number, w: number, h: number, label: string, floor: Finish = "oak"): ActionResult {
+    const r = dispatch(roomBlockOps(store.getState().model, { x, y, w, h }, label, floor));
+    const walls = r.steps.filter((s) => s.created?.startsWith("wall")).length;
+    const id = r.steps.find((s) => s.created?.startsWith("room"))?.created;
+    const summary = r.ok ? `Added ${label} (${w} × ${h} m) with ${walls === 0 ? "no new walls" : `${walls} new wall${walls === 1 ? "" : "s"}`}.` : r.summary;
+    if (r.ok && id) editor({ selectedRoomId: id, selectedItemId: null, selectedWallId: null, selectedOpeningId: null });
+    return { ok: r.ok, summary, id, revision: r.revision, changedEntityIds: r.changedEntityIds };
+  },
   updateRoom: (id: string, patch: { x?: number; y?: number; w?: number; h?: number; label?: string; floor?: Finish }) => apply({ op: "update_room", id, ...patch }),
   removeRoom: (id: string) => apply({ op: "remove_room", id }),
 
