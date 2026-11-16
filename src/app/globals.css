@@ -41,10 +41,6 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  /* the opening sheet covers the page; nothing underneath scrolls until it lifts */
-  html[data-intro="on"] {
-    overflow: hidden;
-  }
   ::selection {
     background: var(--color-marker);
     color: white;

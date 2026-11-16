@@ -17,7 +17,6 @@ import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "
 import { RotateCcw } from "lucide-react";
 import { boxFaces, type Box3 } from "./iso";
 import type { FigureData, SolidKind } from "./sunsetFigure";
-import { INTRO_DONE } from "@/components/site/Intro";
 
 export interface BuildStep {
   code: string;
@@ -277,13 +276,8 @@ export function BuildFigure({ data, steps, caption, side }: { data: FigureData; 
       },
       { threshold: 0.25 },
     );
-    // while the opening sheet covers the page, wait for it to lift
-    const watch = () => box.current && io.observe(box.current);
-    const covered = document.documentElement.dataset.intro === "on";
-    if (covered) window.addEventListener(INTRO_DONE, watch, { once: true });
-    else watch();
+    if (box.current) io.observe(box.current);
     return () => {
-      window.removeEventListener(INTRO_DONE, watch);
       io.disconnect();
       cancelAnimationFrame(raf.current);
     };

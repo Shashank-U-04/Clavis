@@ -60,7 +60,7 @@ a redirect for old links.
 
 ## The four shells
 
-1. **Site** (`(marketing)/layout.tsx`): the ruled header, the footer, and the opening sheet on `/`.
+1. **Site** (`(marketing)/layout.tsx`): the ruled header and the footer.
 2. **Auth** (`(auth)/layout.tsx`): a single centred sheet.
 3. **App** (`(app)/layout.tsx`, which renders `AppShell`):
    - a **sidebar** on wide screens: the mark, **New plan**, then *Home · Plans · Templates · History*,
