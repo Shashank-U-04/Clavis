@@ -10,25 +10,34 @@ import { segLen, type Pt } from "../model/geometry";
 import { catalogByKind } from "../model/catalog";
 import { doorLeaves, leafPath, openingEnds } from "../model/drawing";
 
+/**
+ * The plan's colours, as the studio theme's CSS variables (studio.css), so the drawing follows
+ * the light or dark theme without re-rendering. Exported drawings use their own fixed palette.
+ */
 export const INK = {
-  paper: "#101317",
-  grid: "#1a1f25",
-  gridStrong: "#222831",
-  wall: "#d8dde4",
-  dim: "#8d96a3",
-  label: "#c9d0d9",
-  door: "#f0a04b",
-  window: "#6aa6e0",
-  selected: "#f0a04b",
-  flagged: "#ff6b5a",
-  proposed: "#7fd18b",
+  paper: "var(--plan-paper)",
+  grid: "var(--plan-grid)",
+  gridStrong: "var(--plan-grid-strong)",
+  wall: "var(--plan-wall)",
+  dim: "var(--plan-dim)",
+  label: "var(--plan-label)",
+  door: "var(--plan-door)",
+  window: "var(--plan-window)",
+  selected: "var(--plan-selected)",
+  selectedSoft: "var(--plan-selected-soft)",
+  flagged: "var(--plan-flagged)",
+  proposed: "var(--plan-proposed)",
+  furniture: "var(--plan-furniture)",
+  rug: "var(--plan-rug)",
+  glint: "var(--plan-glint)",
+  furnitureLabel: "var(--plan-furniture-label)",
 };
 
 export const FLOOR_TINT: Record<string, string> = {
-  oak: "#3a3328",
-  tile: "#2c3337",
-  carpet: "#2f3830",
-  concrete: "#333539",
+  oak: "var(--plan-oak)",
+  tile: "var(--plan-tile)",
+  carpet: "var(--plan-carpet)",
+  concrete: "var(--plan-concrete)",
 };
 
 /** The outline colour for an entity, or null when it is not marked. */
@@ -99,13 +108,13 @@ function Piece({ item, k, mark, onPress, movable }: { item: Item; k: number; mar
         rx={0.05 * k}
         fill={c.isRug ? "none" : c.color}
         fillOpacity={0.55}
-        stroke={m ?? (c.isRug ? "#6c7480" : "#9aa3ad")}
+        stroke={m ?? (c.isRug ? INK.rug : INK.furniture)}
         strokeDasharray={c.isRug ? "5 4" : undefined}
         strokeWidth={m ? 2.5 : 1}
       />
-      {!c.isRug && <line x1={-w * 0.3} y1={d / 2 - 2} x2={w * 0.3} y2={d / 2 - 2} stroke="#ffffff55" strokeWidth={1.5} />}
+      {!c.isRug && <line x1={-w * 0.3} y1={d / 2 - 2} x2={w * 0.3} y2={d / 2 - 2} stroke={INK.glint} strokeWidth={1.5} />}
       {!c.isRug && k > 70 && (
-        <text transform={`rotate(${item.rotation})`} textAnchor="middle" dominantBaseline="middle" fontSize={Math.max(8, Math.min(12, 0.16 * k))} fill="#eef2f6" pointerEvents="none">
+        <text transform={`rotate(${item.rotation})`} textAnchor="middle" dominantBaseline="middle" fontSize={Math.max(8, Math.min(12, 0.16 * k))} fill={INK.furnitureLabel} pointerEvents="none">
           {c.label}
         </text>
       )}

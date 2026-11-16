@@ -277,7 +277,7 @@ export function Editor() {
             y={Math.min(drag.from.y, cursor.y) * k}
             width={Math.abs(cursor.x - drag.from.x) * k}
             height={Math.abs(cursor.y - drag.from.y) * k}
-            fill="#f0a04b22"
+            fill={INK.selectedSoft}
             stroke={INK.selected}
             strokeDasharray="6 4"
           />

@@ -21,6 +21,7 @@ import { boxesOverlap, segLen, wallBox, type Box } from "../model/geometry";
 import { itemBox, openingSpan } from "../model/issues";
 import { catalogByKind } from "../model/catalog";
 import { buildContent, disposeGroup } from "./content";
+import { groundMaterial } from "./materials";
 
 const EYE = 1.6;
 const STEP = 2.1; // metres per second
@@ -98,6 +99,14 @@ function entryPose(m: PlanModel): { x: number; z: number; yaw: number } | null {
   return { x: c.x + n.x * 0.7, z: c.y + n.y * 0.7, yaw: Math.atan2(dir.x, dir.y) };
 }
 
+export type SceneTheme = "light" | "dark";
+
+/** The sky and ground behind the model, per studio theme; the house itself does not change. */
+export const SCENE_THEMES: Record<SceneTheme, { sky: string; ground: string }> = {
+  light: { sky: "#dcdbd2", ground: "#bcbfb3" },
+  dark: { sky: "#11151c", ground: "#3a403d" },
+};
+
 export class Viewer {
   readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -131,8 +140,8 @@ export class Viewer {
     this.renderer.domElement.dataset.testid = "scene3d-canvas";
     mount.appendChild(this.renderer.domElement);
 
-    this.scene.background = new THREE.Color("#14181d");
-    this.scene.fog = new THREE.Fog("#14181d", 50, 140);
+    this.scene.background = new THREE.Color(SCENE_THEMES.light.sky);
+    this.scene.fog = new THREE.Fog(SCENE_THEMES.light.sky, 50, 140);
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
     this.scene.environment = env.texture;
@@ -168,6 +177,14 @@ export class Viewer {
     this.pendingModel = model;
   }
 
+  /** Match the studio's theme: the sky behind the model and the ground under it. */
+  setTheme(theme: SceneTheme) {
+    const t = SCENE_THEMES[theme];
+    (this.scene.background as THREE.Color).set(t.sky);
+    this.scene.fog?.color.set(t.sky);
+    groundMaterial.color.set(t.ground);
+  }
+
   setMode(mode: CameraMode) {
     this.mode = mode;
     this.keys.clear();
@@ -182,7 +199,7 @@ export class Viewer {
       ((child as THREE.Box3Helper).material as THREE.Material)?.dispose();
     }
     if (!this.content) return;
-    const colour = (id: string) => (flagged.includes(id) ? 0xff6b5a : selected.includes(id) ? 0xf0a04b : null);
+    const colour = (id: string) => (flagged.includes(id) ? 0xff6b5a : selected.includes(id) ? 0x4a63ff : null);
     for (const child of this.content.children) {
       const id = child.userData.entityId as string | undefined;
       const c = id ? colour(id) : null;

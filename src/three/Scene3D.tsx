@@ -5,7 +5,7 @@ import { actions, logActivity, store, useAppStore } from "../model/store";
 import { catalogByKind } from "../model/catalog";
 import { downloadText, safeName } from "../export/planSvg";
 import { onCommand } from "./events";
-import { Viewer } from "./viewer";
+import { Viewer, type SceneTheme } from "./viewer";
 
 const HINTS = {
   orbit: "Drag to orbit · scroll to zoom · click furniture to select, doors to open",
@@ -13,8 +13,10 @@ const HINTS = {
   walk: "WASD or arrows to walk · drag to look around · click a door to open it",
 };
 
-export function Scene3D() {
+export function Scene3D({ theme = "light" }: { theme?: SceneTheme }) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Viewer | null>(null);
+  const themeRef = useRef(theme);
   const [failed, setFailed] = useState<string | null>(null);
   const camera = useAppStore((s) => s.editor.camera);
   const placingKind = useAppStore((s) => (s.editor.drawMode === "place" ? s.editor.placingKind : null));
@@ -47,6 +49,8 @@ export function Scene3D() {
       const selected = [editor.selectedItemId, editor.selectedWallId, editor.selectedRoomId, editor.selectedOpeningId].filter((x): x is string => !!x);
       requestAnimationFrame(() => viewer.mark(selected, editor.highlightIds));
     };
+    viewerRef.current = viewer;
+    viewer.setTheme(themeRef.current);
     sync();
     viewer.setMode(store.getState().editor.camera);
     const unsubscribe = store.subscribe((s, prev) => {
@@ -73,8 +77,14 @@ export function Scene3D() {
       unsubscribe();
       for (const stop of stops) stop();
       viewer.dispose();
+      viewerRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    themeRef.current = theme;
+    viewerRef.current?.setTheme(theme);
+  }, [theme]);
 
   return (
     <div className="scene3d-wrap">
