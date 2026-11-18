@@ -15,6 +15,8 @@ import { useStore } from "zustand";
 import { applyChecked, explain, httpTransport, propose, type AppliedOutcome, type ProposalCheck, type Transport } from "./workflow";
 import { localTransport } from "./local/transport";
 import { HOSTED_DAILY_CAP, NOT_COUNTED, hostedQuota } from "./hostedQuota";
+import { readAccount } from "../model/account";
+import { baseStorage } from "../model/persistence";
 import type { Explanation } from "./contract";
 import { actions, logActivity, store } from "../model/store";
 
@@ -53,8 +55,10 @@ interface SessionState {
   previewTurnId: string | null;
   /** null until the server has been asked */
   hosted: HostedStatus | null;
-  /** hosted requests this browser may still make today */
+  /** hosted requests this browser may still make today (guests) */
   browserLeft: number;
+  /** a signed-in person's hosted requests left today, from the server; null until first asked */
+  accountLeft: number | null;
   /** requests the hosted model has left today for everyone, from the last answer (Groq) */
   sharedLeft: number | null;
 }
@@ -76,6 +80,7 @@ export const session = createStore<SessionState>(() => ({
   previewTurnId: null,
   hosted: null,
   browserLeft: typeof window === "undefined" ? HOSTED_DAILY_CAP : hostedQuota.remaining(),
+  accountLeft: null,
   sharedLeft: null,
 }));
 
@@ -88,24 +93,27 @@ const tid = () => `turn_${Date.now().toString(36)}_${(n++).toString(36)}`;
  * model (busy, unreachable) is not counted.
  */
 const hostedTransport: Transport = async (req, signal) => {
-  if (hostedQuota.remaining() <= 0) {
+  // a signed-in person's allowance is counted on the server; a guest's in this browser
+  const signedIn = !!readAccount(baseStorage());
+  if (!signedIn && hostedQuota.remaining() <= 0) {
     session.setState({ browserLeft: 0 });
     return {
       ok: false,
       error: {
         code: "daily_cap",
-        message: `This browser has used today's ${HOSTED_DAILY_CAP} hosted-model requests. Clavis Local still answers everything it knows, and the allowance resets at midnight.`,
+        message: `This browser has used today's ${HOSTED_DAILY_CAP} hosted-model requests. Clavis Local still answers everything it knows, and the allowance resets at midnight. Signed in, you get more.`,
         retryable: false,
       },
     };
   }
-  hostedQuota.record();
+  if (!signedIn) hostedQuota.record();
   const res = await httpTransport(req, signal);
-  if (!res.ok && NOT_COUNTED.has(res.error.code)) hostedQuota.refund();
-  session.setState({
+  if (!signedIn && !res.ok && NOT_COUNTED.has(res.error.code)) hostedQuota.refund();
+  session.setState((st) => ({
     browserLeft: hostedQuota.remaining(),
+    accountLeft: !signedIn ? st.accountLeft : res.ok && res.meta.accountLeft !== undefined ? res.meta.accountLeft : !res.ok && res.error.code === "daily_cap" ? 0 : st.accountLeft,
     ...(res.ok && res.meta.remainingToday !== undefined ? { sharedLeft: res.meta.remainingToday } : {}),
-  });
+  }));
   return res;
 };
 

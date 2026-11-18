@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { assistant, useSession, type Turn } from "../../ai/session";
 import { EXAMPLES, LOCAL_MODEL } from "../../ai/local/engine";
-import { HOSTED_DAILY_CAP } from "../../ai/hostedQuota";
+import { ACCOUNT_DAILY_CAP, HOSTED_DAILY_CAP } from "../../ai/hostedQuota";
+import { useAccount } from "../../lib/account/bridge";
 import { actions, issuesFor, useAppStore } from "../../model/store";
 import type { Issue } from "../../model/types";
 import { summarizeIssues } from "../../model/issues";
@@ -241,12 +242,13 @@ function ErrorCard({ turn }: { turn: Turn }) {
 function HostedNote() {
   const hosted = useSession((s) => s.hosted);
   const provider = useSession((s) => s.provider);
+  const { account } = useAccount();
   if (!hosted?.configured || provider === "local") return null;
   return (
     <p className="muted small hosted-note">
-      The hosted model runs on a small free allowance shared by everyone using Clavis, so each browser gets {HOSTED_DAILY_CAP} hosted
-      requests a day. Clavis Local is unlimited: ask for rooms, sizes and fixes in plain words, and keep the hosted model for what Local
-      does not understand.
+      The hosted model runs on a small free allowance shared by everyone using Clavis, so{" "}
+      {account ? `your account gets ${ACCOUNT_DAILY_CAP}` : `each browser gets ${HOSTED_DAILY_CAP} (${ACCOUNT_DAILY_CAP} when signed in)`} hosted requests a day. Clavis Local is
+      unlimited: ask for rooms, sizes and fixes in plain words, and keep the hosted model for what Local does not understand.
     </p>
   );
 }
@@ -256,13 +258,18 @@ function HostedAllowance() {
   const hosted = useSession((s) => s.hosted);
   const provider = useSession((s) => s.provider);
   const browserLeft = useSession((s) => s.browserLeft);
+  const accountLeft = useSession((s) => s.accountLeft);
   const sharedLeft = useSession((s) => s.sharedLeft);
+  const { account } = useAccount();
   if (!hosted?.configured || provider === "local") return null;
+  const left = account ? accountLeft : browserLeft;
+  const cap = account ? ACCOUNT_DAILY_CAP : HOSTED_DAILY_CAP;
+  const where = account ? "in your account" : "on this browser";
   return (
-    <div className={`hosted-allowance ${browserLeft === 0 ? "out" : browserLeft <= 3 ? "low" : ""}`} data-testid="hosted-allowance">
-      {hosted.label ?? "Hosted model"}: {browserLeft} of {HOSTED_DAILY_CAP} requests left today on this browser
+    <div className={`hosted-allowance ${left === 0 ? "out" : left !== null && left <= 3 ? "low" : ""}`} data-testid="hosted-allowance">
+      {hosted.label ?? "Hosted model"}: {left === null ? `${cap} requests a day ${where}` : `${left} of ${cap} requests left today ${where}`}
       {sharedLeft !== null ? ` · about ${sharedLeft} left for everyone` : ""}
-      {browserLeft === 0 ? " · Clavis Local still works" : ""}
+      {left === 0 ? " · Clavis Local still works" : ""}
     </div>
   );
 }
