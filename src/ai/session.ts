@@ -14,6 +14,7 @@ import { createStore } from "zustand/vanilla";
 import { useStore } from "zustand";
 import { applyChecked, explain, httpTransport, propose, type AppliedOutcome, type ProposalCheck, type Transport } from "./workflow";
 import { localTransport } from "./local/transport";
+import { HOSTED_DAILY_CAP, NOT_COUNTED, hostedQuota } from "./hostedQuota";
 import type { Explanation } from "./contract";
 import { actions, logActivity, store } from "../model/store";
 
@@ -52,6 +53,10 @@ interface SessionState {
   previewTurnId: string | null;
   /** null until the server has been asked */
   hosted: HostedStatus | null;
+  /** hosted requests this browser may still make today */
+  browserLeft: number;
+  /** requests the hosted model has left today for everyone, from the last answer (Groq) */
+  sharedLeft: number | null;
 }
 
 const PROVIDER_KEY = "clavis:provider";
@@ -70,13 +75,41 @@ export const session = createStore<SessionState>(() => ({
   busy: false,
   previewTurnId: null,
   hosted: null,
+  browserLeft: typeof window === "undefined" ? HOSTED_DAILY_CAP : hostedQuota.remaining(),
+  sharedLeft: null,
 }));
 
 export const useSession = <T>(sel: (s: SessionState) => T): T => useStore(session, sel);
 
 let n = 0;
 const tid = () => `turn_${Date.now().toString(36)}_${(n++).toString(36)}`;
-const transportFor = (p: Provider): Transport => (p === "server" ? httpTransport : localTransport);
+/**
+ * The hosted model, within this browser's daily allowance. A request that never reached the
+ * model (busy, unreachable) is not counted.
+ */
+const hostedTransport: Transport = async (req, signal) => {
+  if (hostedQuota.remaining() <= 0) {
+    session.setState({ browserLeft: 0 });
+    return {
+      ok: false,
+      error: {
+        code: "daily_cap",
+        message: `This browser has used today's ${HOSTED_DAILY_CAP} hosted-model requests. Clavis Local still answers everything it knows, and the allowance resets at midnight.`,
+        retryable: false,
+      },
+    };
+  }
+  hostedQuota.record();
+  const res = await httpTransport(req, signal);
+  if (!res.ok && NOT_COUNTED.has(res.error.code)) hostedQuota.refund();
+  session.setState({
+    browserLeft: hostedQuota.remaining(),
+    ...(res.ok && res.meta.remainingToday !== undefined ? { sharedLeft: res.meta.remainingToday } : {}),
+  });
+  return res;
+};
+
+const transportFor = (p: Provider): Transport => (p === "server" ? hostedTransport : localTransport);
 const hostedReady = () => !!session.getState().hosted?.configured;
 
 function patch(id: string, p: Partial<Turn>) {
@@ -135,7 +168,7 @@ export const assistant = {
     if (provider === "auto" && hostedReady() && r.ok && r.check.proposal.intent === "unsupported" && !controller.signal.aborted) {
       // Local could not help, so the hosted answer is the one that matters: if it fails (a busy
       // free tier, a timeout), say so plainly rather than showing Local's "did not understand"
-      r = await propose(mode, trimmed, { ...opts2, transport: httpTransport });
+      r = await propose(mode, trimmed, { ...opts2, transport: hostedTransport });
     }
     controller = null;
     if (!r.ok) {
@@ -194,7 +227,7 @@ export const assistant = {
     if (!turn) return;
     patch(id, { explanation: null });
     const local = turn.check?.model === "clavis-local" || !hostedReady();
-    const r = await explain("Explain what changed and what still needs attention.", turn.outcome ?? null, { transport: local ? localTransport : httpTransport });
+    const r = await explain("Explain what changed and what still needs attention.", turn.outcome ?? null, { transport: local ? localTransport : hostedTransport });
     if (r.ok) patch(id, { explanation: { value: r.explanation, unverified: r.unverified } });
     else patch(id, { explanation: undefined, applyError: `Explanation failed: ${r.message}` });
   },

@@ -141,7 +141,9 @@ export type AssistantErrorCode =
   | "provider_timeout"
   | "provider_rejected"
   | "malformed_output"
-  | "truncated_output";
+  | "truncated_output"
+  /** client-side: this browser has used today's hosted allowance (src/ai/hostedQuota.ts) */
+  | "daily_cap";
 
 export interface AssistantMeta {
   model: string;

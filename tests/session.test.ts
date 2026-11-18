@@ -3,12 +3,20 @@ import { assistant, session } from "../src/ai/session";
 import { dispatch, store } from "../src/model/store";
 import { emptyModel } from "../src/model/types";
 import { COMPACT_TWO_BEDROOM } from "../src/model/templates";
+import { HOSTED_DAILY_CAP } from "../src/ai/hostedQuota";
+
+/** an in-memory localStorage, so the daily allowance can be exercised in node */
+function stubStorage() {
+  const data = new Map<string, string>();
+  vi.stubGlobal("localStorage", { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v) });
+  return data;
+}
 
 const hostedReply = {
   ok: true,
   mode: "design",
   proposal: { intent: "query", reply: "From the hosted model.", operations: [], clarifying_questions: [], rationale: "", expected_checks: [] },
-  meta: { model: "openai/gpt-oss-120b", latencyMs: 5, attempts: 1 },
+  meta: { model: "openai/gpt-oss-120b", latencyMs: 5, attempts: 1, remainingToday: 640 },
 };
 
 /** fetch stub: GET → status; POST → the hosted reply. Records POSTs. */
@@ -88,6 +96,37 @@ describe("assistant providers", () => {
     await assistant.ask("make the kitchen feel more Scandinavian");
     expect(posts).toHaveLength(0);
     expect(lastReply().check?.proposal.intent).toBe("unsupported");
+  });
+
+  it("hosted requests come out of a daily allowance per browser; Local never does", async () => {
+    stubStorage();
+    const posts = stubFetch(true);
+    await assistant.checkHosted();
+    for (let i = 0; i < HOSTED_DAILY_CAP; i++) await assistant.ask("make the kitchen feel more Scandinavian");
+    expect(posts).toHaveLength(HOSTED_DAILY_CAP);
+    expect(session.getState()).toMatchObject({ browserLeft: 0, sharedLeft: 640 });
+
+    await assistant.ask("make the kitchen feel more Scandinavian");
+    expect(posts).toHaveLength(HOSTED_DAILY_CAP);
+    expect(lastReply().error).toMatchObject({ code: "daily_cap", retryable: false });
+
+    await assistant.ask("how many bedrooms?");
+    expect(lastReply().check?.model).toBe("clavis-local");
+  });
+
+  it("a request the busy model never answered is not counted", async () => {
+    stubStorage();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) =>
+        !init || init.method === "GET"
+          ? new Response(JSON.stringify({ configured: true, label: "Groq", model: "m" }))
+          : new Response(JSON.stringify({ ok: false, error: { code: "provider_rate_limited", message: "busy", retryable: true } }), { status: 503 }),
+      ),
+    );
+    await assistant.checkHosted();
+    await assistant.ask("make the kitchen feel more Scandinavian");
+    expect(session.getState().browserLeft).toBe(HOSTED_DAILY_CAP);
   });
 
   it("an unreachable server counts as not configured", async () => {
