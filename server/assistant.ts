@@ -29,7 +29,7 @@ import {
   type AssistantResponse,
 } from "../src/ai/contract";
 import { systemPrompt, userContent } from "../src/ai/prompts";
-import { assistantStatus, resolveProvider, type ProviderConfig, type ProviderEnv } from "./providers";
+import { assistantStatus, modelChain, resolveProvider, type ProviderConfig, type ProviderEnv } from "./providers";
 
 export type AssistantEnv = ProviderEnv;
 
@@ -108,10 +108,10 @@ interface ChatCompletion {
   usage?: AssistantMeta["usage"];
 }
 
-function buildBody(req: AssistantRequest, cfg: ProviderConfig) {
+function buildBody(req: AssistantRequest, cfg: ProviderConfig, model: string) {
   const name = req.mode === "explain" ? "clavis_explanation" : "clavis_proposal";
   return {
-    model: req.mode === "explain" ? cfg.explainModel : cfg.model,
+    model,
     messages: [
       { role: "system", content: systemPrompt(req.mode, { compact: cfg.compactPrompt }) },
       ...(req.history ?? []).map((t) => ({ role: t.role, content: t.text })),
@@ -127,8 +127,20 @@ function buildBody(req: AssistantRequest, cfg: ProviderConfig) {
   };
 }
 
+/** Groq's x-ratelimit-remaining-requests counts the model's requests left today (RPD). */
+function remainingToday(res: Response): number | undefined {
+  const raw = res.headers.get("x-ratelimit-remaining-requests");
+  const n = raw === null ? NaN : Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
 /** One call to the provider, mapped to typed errors. */
-async function callProvider(env: AssistantEnv, cfg: ProviderConfig, body: unknown, deps: AssistantDeps): Promise<ChatCompletion> {
+async function callProvider(
+  env: AssistantEnv,
+  cfg: ProviderConfig,
+  body: unknown,
+  deps: AssistantDeps,
+): Promise<{ completion: ChatCompletion; remainingToday?: number }> {
   const base = cfg.baseUrl;
   const who = cfg.label;
   let res: Response;
@@ -147,7 +159,7 @@ async function callProvider(env: AssistantEnv, cfg: ProviderConfig, body: unknow
   }
   if (res.ok) {
     try {
-      return (await res.json()) as ChatCompletion;
+      return { completion: (await res.json()) as ChatCompletion, remainingToday: remainingToday(res) };
     } catch {
       throw new ProviderError("malformed_output", `${who} returned an unreadable response.`, 502, true);
     }
@@ -218,21 +230,30 @@ export async function handleAssistantRequest(
     return failure("not_configured", `No hosted model is configured on this server (MODEL_API_KEY is missing for ${cfg.label}).`, 503);
   }
 
-  const model = req.mode === "explain" ? cfg.explainModel : cfg.model;
-  const body = buildBody(req, cfg);
+  const chain = modelChain(cfg, req.mode);
+  let step = 0;
+  let model = chain[0];
   let attempts = 0;
   let completion: ChatCompletion | undefined;
+  let left: number | undefined;
   let lastError: ProviderError | undefined;
 
-  // One retry for transient provider failures; never retry auth or request errors.
-  while (attempts < 2) {
+  // One retry for transient failures, and a hand-over to the next model in the chain when one
+  // is rate-limited (each has its own limit on Groq). Never retry auth or request errors.
+  const maxAttempts = 2 + (chain.length - 1);
+  while (attempts < maxAttempts) {
     attempts++;
     try {
-      completion = await callProvider(env, cfg, body, deps);
+      ({ completion, remainingToday: left } = await callProvider(env, cfg, buildBody(req, cfg, model), deps));
       break;
     } catch (err) {
       lastError = err instanceof ProviderError ? err : new ProviderError("provider_unavailable", "Unexpected provider failure.", 502, true);
-      if (!lastError.retryable || attempts >= 2) break;
+      if (!lastError.retryable || attempts >= maxAttempts) break;
+      if (lastError.code === "provider_rate_limited" && step + 1 < chain.length) {
+        model = chain[++step];
+        continue;
+      }
+      if (attempts - step >= 2) break; // this model already had its retry
       // honour a short retry-after (free tiers refill per minute); give up on long waits
       if (lastError.retryAfterMs !== undefined && lastError.retryAfterMs > MAX_RETRY_WAIT_MS) break;
       await deps.sleep(lastError.retryAfterMs ?? 1500);
@@ -247,7 +268,7 @@ export async function handleAssistantRequest(
   }
 
   const choice = completion.choices?.[0];
-  const meta: AssistantMeta = { model: completion.model ?? model, latencyMs, attempts, usage: completion.usage };
+  const meta: AssistantMeta = { model: completion.model ?? model, latencyMs, attempts, usage: completion.usage, ...(left !== undefined ? { remainingToday: left } : {}) };
   const logMeta = { mode: req.mode, attempts, latencyMs, model: meta.model, finish: choice?.finish_reason, usage: completion.usage };
 
   if (choice?.finish_reason === "length") {

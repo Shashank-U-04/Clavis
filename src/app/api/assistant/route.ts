@@ -15,6 +15,7 @@ const env = (): AssistantEnv => ({
   MODEL_ID: process.env.MODEL_ID,
   MODEL_BASE_URL: process.env.MODEL_BASE_URL,
   MODEL_EXPLAIN_ID: process.env.MODEL_EXPLAIN_ID,
+  MODEL_FALLBACK_IDS: process.env.MODEL_FALLBACK_IDS,
   META_API_BASE_URL: process.env.META_API_BASE_URL,
   META_MODEL_ID: process.env.META_MODEL_ID,
 });

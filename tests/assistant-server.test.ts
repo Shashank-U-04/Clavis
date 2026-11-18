@@ -125,16 +125,35 @@ describe("assistant handler — providers", () => {
 
   it("waits as long as a 429 retry-after asks (up to 30 s) and retries once", async () => {
     const limited = (after: string) => new Response("{}", { status: 429, headers: { "retry-after": after } });
+    const noFallback = { ...groq, MODEL_FALLBACK_IDS: "" };
     const waits: number[] = [];
     const h = harness([limited("4.2"), completion(proposal)]);
-    const res = await handleAssistantRequest(post(body()), groq, { ...h.deps, sleep: async (ms) => void waits.push(ms) });
+    const res = await handleAssistantRequest(post(body()), noFallback, { ...h.deps, sleep: async (ms) => void waits.push(ms) });
     expect(res.status).toBe(200);
     expect(waits).toEqual([4200]);
     const long = harness([limited("90")]);
-    const out = await (await handleAssistantRequest(post(body()), groq, long.deps)).json();
+    const out = await (await handleAssistantRequest(post(body()), noFallback, long.deps)).json();
     expect(long.calls).toHaveLength(1);
     expect(out.error).toMatchObject({ code: "provider_rate_limited", retryable: true });
     expect(out.error.message).toMatch(/about 90 s/);
+  });
+
+  it("hands a rate-limited Groq model over to the next one at once, and reports requests left today", async () => {
+    const limited = new Response("{}", { status: 429, headers: { "retry-after": "40" } });
+    const ok = completion(proposal);
+    ok.headers.set("x-ratelimit-remaining-requests", "812");
+    const waits: number[] = [];
+    const h = harness([limited, ok]);
+    const out = await (await handleAssistantRequest(post(body()), groq, { ...h.deps, sleep: async (ms) => void waits.push(ms) })).json();
+    expect(out.ok).toBe(true);
+    expect(waits).toEqual([]);
+    expect(h.calls.map((c) => JSON.parse(String(c.init.body)).model)).toEqual(["openai/gpt-oss-120b", "openai/gpt-oss-20b"]);
+    expect(out.meta).toMatchObject({ attempts: 2, remainingToday: 812 });
+
+    // an explicit MODEL_ID has no fallback unless one is named
+    const pinned = harness([new Response("{}", { status: 429, headers: { "retry-after": "90" } })]);
+    await handleAssistantRequest(post(body()), { ...groq, MODEL_ID: "openai/gpt-oss-20b" }, pinned.deps);
+    expect(pinned.calls).toHaveLength(1);
   });
 
   it("tidies an off-shape explanation from a best-effort provider, but never invents one", async () => {

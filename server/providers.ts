@@ -7,6 +7,8 @@
  *   MODEL_API_KEY    the provider's key — server-side only, never sent to the browser
  *   MODEL_ID         optional model override
  *   MODEL_BASE_URL   optional base URL override (required for openai-compatible)
+ *   MODEL_FALLBACK_IDS optional comma-separated models to try, in order, when the main one is
+ *                    rate-limited (empty = none). Groq rate-limits each model separately.
  *
  * The older META_API_BASE_URL / META_MODEL_ID variables still work and imply provider "meta".
  */
@@ -18,6 +20,8 @@ export interface ProviderEnv {
   MODEL_BASE_URL?: string;
   /** optional model for explanations (cheap, and on Groq a separate rate-limit pool) */
   MODEL_EXPLAIN_ID?: string;
+  /** optional comma-separated fallback models for when the main one is rate-limited */
+  MODEL_FALLBACK_IDS?: string;
   /** legacy (session 1) */
   META_API_BASE_URL?: string;
   META_MODEL_ID?: string;
@@ -33,6 +37,8 @@ export interface ProviderConfig {
   model: string;
   /** model used for explanations; defaults to `model` */
   explainModel: string;
+  /** models tried in order when the one asked is rate-limited (same key, separate limits) */
+  fallbackModels: string[];
   /** strict JSON-schema decoding; off where the provider requires every field to be required */
   strictSchema: boolean;
   /** whether the model accepts `reasoning_effort` */
@@ -55,6 +61,8 @@ const PRESETS: Record<ProviderName, Omit<ProviderConfig, "name">> = {
     model: "openai/gpt-oss-120b",
     // each Groq model has its own per-minute token budget; explanations are short and simple
     explainModel: "openai/gpt-oss-20b",
+    // Groq limits each model separately, so a busy 120b can hand over to 20b on the same key
+    fallbackModels: ["openai/gpt-oss-20b"],
     strictSchema: false,
     compactPrompt: true,
     reasoningEffort: true,
@@ -66,6 +74,7 @@ const PRESETS: Record<ProviderName, Omit<ProviderConfig, "name">> = {
     baseUrl: "https://api.meta.ai/v1",
     model: "muse-spark-1.3",
     explainModel: "",
+    fallbackModels: [],
     strictSchema: true,
     compactPrompt: false,
     reasoningEffort: true,
@@ -76,6 +85,7 @@ const PRESETS: Record<ProviderName, Omit<ProviderConfig, "name">> = {
     baseUrl: "",
     model: "",
     explainModel: "",
+    fallbackModels: [],
     strictSchema: false,
     compactPrompt: true,
     reasoningEffort: false,
@@ -97,7 +107,20 @@ export function resolveProvider(env: ProviderEnv): ResolvedProvider {
   if (!model) return { ok: false, message: "MODEL_ID is required when MODEL_PROVIDER is openai-compatible." };
   // an explicit MODEL_ID applies to explanations too unless MODEL_EXPLAIN_ID says otherwise
   const explainModel = env.MODEL_EXPLAIN_ID || (env.MODEL_ID ? model : preset.explainModel) || model;
-  return { ok: true, config: { name, ...preset, baseUrl, model, explainModel } };
+  // fallbacks: as configured; otherwise the preset's, unless MODEL_ID picked a different model
+  const fallbackModels =
+    env.MODEL_FALLBACK_IDS !== undefined
+      ? env.MODEL_FALLBACK_IDS.split(",").map((m) => m.trim()).filter(Boolean)
+      : env.MODEL_ID
+        ? []
+        : preset.fallbackModels;
+  return { ok: true, config: { name, ...preset, baseUrl, model, explainModel, fallbackModels } };
+}
+
+/** The models to try for a request, in order, without repeats. */
+export function modelChain(cfg: ProviderConfig, mode: "design" | "repair" | "explain"): string[] {
+  const chain = mode === "explain" ? [cfg.explainModel, cfg.model, ...cfg.fallbackModels] : [cfg.model, ...cfg.fallbackModels];
+  return [...new Set(chain.filter(Boolean))];
 }
 
 /** What the browser may know about the server's assistant: never the key. */

@@ -148,6 +148,8 @@ export interface AssistantMeta {
   latencyMs: number;
   attempts: number;
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+  /** requests the answering model has left today, when the provider says (Groq does) */
+  remainingToday?: number;
 }
 
 export type AssistantResponse =
