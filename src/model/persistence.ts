@@ -9,6 +9,7 @@
 
 import { parseDocument, serializeDocument, toDocument, MAX_DOCUMENT_BYTES, type DesignDocument } from "./document";
 import type { Note, PlanModel } from "./types";
+import { ScopedStorage, readAccount } from "./account";
 
 export const AUTOSAVE_KEY = "clavis:autosave";
 export const BACKUP_KEY = "clavis:autosave:unreadable";
@@ -19,13 +20,22 @@ export interface StorageLike {
   removeItem(key: string): void;
 }
 
-export function browserStorage(): StorageLike | null {
+/** The browser's own storage, unscoped: guest data, settings, and the remembered account. */
+export function baseStorage(): Storage | null {
   try {
     if (typeof window !== "undefined" && window.localStorage) return window.localStorage;
   } catch {
     /* some browsers throw on the getter itself when site data is blocked */
   }
   return null;
+}
+
+/** The workspace storage: a signed-in person's own space, or the guest's (see account.ts). */
+export function browserStorage(): StorageLike | null {
+  const base = baseStorage();
+  if (!base) return null;
+  const account = readAccount(base);
+  return account ? new ScopedStorage(base, account.id) : base;
 }
 
 export type SaveOutcome = { ok: true; bytes: number } | { ok: false; message: string };
