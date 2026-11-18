@@ -5,6 +5,13 @@ accounts after implementation, so the code reads them from environment variables
 “not configured” until they exist. Guest mode: yes. Sign-in: email + password, magic link and GitHub
 (Google later).
 
+> **Update 2026-11-18:** live on Vercel (clavisstudio.vercel.app) with Supabase. Sign-in is
+> **Google only**, plus one email + password demo account for hackathon judges
+> (`npm run judges`). Email sign-up, magic links and password resets were dropped: the free
+> plan's built-in email allows only a few messages an hour. The schema is in
+> `supabase/migrations`; cloud saving is a sync layer under the browser workspace
+> (`src/lib/account`).
+
 ## Why change the hosting suggestion
 
 Cloudflare Pages was suggested while Clavis was a static Vite app with one server function.

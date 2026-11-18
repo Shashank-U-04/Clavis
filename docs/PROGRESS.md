@@ -36,8 +36,9 @@ Last updated: 2026-11-08.
   and a construction-line CLAVIS wordmark that draws on when it comes into view.
 - Feature pages (design by describing, the validator, plan/3D/walk, projects and export),
   how it works, docs, about, privacy and terms.
-- Sign-in, sign-up (password or magic link, GitHub), forgot and reset password. They report
-  that accounts are off until Supabase is configured.
+- Sign-in with Google (and a demo account for hackathon judges). Until Supabase is configured
+  it reports that accounts are off. (Email sign-up, magic links and password resets were
+  dropped on 2026-11-18.)
 - Dashboard: projects in this browser as plan cards, with search, duplicate and delete, and
   links that open the studio on a project or start a new one (`?project=`, `?new=`, `?brief=`).
 - Settings: assistant mode, studio layout, download or remove everything kept in the browser.
