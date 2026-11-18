@@ -110,12 +110,4 @@ export const auth = {
       const { error } = await sb.auth.updateUser({ password });
       return error ? explain(error) : { ok: true, message: "Your password is changed.", redirect: "/dashboard" };
     }),
-
-  signOut: () =>
-    attempt(async () => {
-      const sb = supabaseBrowser();
-      if (!sb) return NOT_CONFIGURED;
-      const { error } = await sb.auth.signOut();
-      return error ? explain(error) : { ok: true, redirect: "/" };
-    }),
 };
