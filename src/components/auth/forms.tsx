@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { auth, type AuthResult } from "@/lib/auth/client";
 import { errorsOf, MagicLinkSchema, passwordStrength, ResetSchema, SignInSchema, SignUpSchema, type FieldErrors } from "@/lib/auth/validate";
-import { AuthNotice, Divider, Field, GitHubButton } from "./fields";
+import { AuthNotice, Divider, Field, GoogleButton } from "./fields";
 
 /** Shared submit plumbing: validate, call, show the answer. */
 function useAuthForm() {
@@ -18,12 +18,19 @@ function useAuthForm() {
     if (Object.keys(check).length) return;
     setBusy(true);
     try {
-      setResult(await action());
+      const out = await action();
+      // a full page load, so the whole app picks up the new session (and this person's plans)
+      if (out.ok && out.redirect) {
+        if (out.message) setResult(out);
+        window.location.assign(out.redirect);
+        return;
+      }
+      setResult(out);
     } finally {
       setBusy(false);
     }
   };
-  return { busy, errors, result, run, github: () => run({}, auth.signInWithGitHub) };
+  return { busy, errors, result, setResult, run, google: () => run({}, () => auth.signInWithGoogle()) };
 }
 
 const values = (e: FormEvent<HTMLFormElement>) => Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
@@ -31,9 +38,15 @@ const values = (e: FormEvent<HTMLFormElement>) => Object.fromEntries(new FormDat
 export function LoginForm() {
   const [mode, setMode] = useState<"password" | "link">("password");
   const f = useAuthForm();
+  const { setResult } = f;
+  // back from /auth/callback with a link that no longer works
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("error") === "link")
+      setResult({ ok: false, code: "invalid", message: "That sign-in link has expired or was already used. Ask for a new one below." });
+  }, [setResult]);
   return (
     <div className="space-y-6">
-      <GitHubButton onClick={f.github} busy={f.busy} />
+      <GoogleButton onClick={f.google} busy={f.busy} />
       <Divider>or with email</Divider>
       <div className="grid grid-cols-2 border border-rule" role="tablist" aria-label="Sign-in method">
         {(["password", "link"] as const).map((m) => (
@@ -92,7 +105,7 @@ export function SignupForm() {
   const strength = passwordStrength(pw);
   return (
     <div className="space-y-6">
-      <GitHubButton onClick={f.github} busy={f.busy} />
+      <GoogleButton onClick={f.google} busy={f.busy} />
       <Divider>or with email</Divider>
       <form
         noValidate
