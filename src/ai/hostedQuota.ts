@@ -3,11 +3,14 @@
  * tier (Groq: a few hundred design requests a day for everyone), so one visitor should not use it
  * all. Clavis Local, which answers in the browser, is never limited.
  *
- * This is a courtesy limit kept in localStorage; the real per-account limit lives on the server
- * once accounts exist.
+ * For guests this is a courtesy limit kept in localStorage. A signed-in person's allowance is
+ * larger and counted on the server, in the database (src/app/api/assistant/route.ts), so it
+ * holds whichever browser they use.
  */
 
 export const HOSTED_DAILY_CAP = 10;
+/** Hosted requests a signed-in person may make per day (UTC), counted on the server. */
+export const ACCOUNT_DAILY_CAP = 25;
 
 const KEY = "clavis:hosted-usage";
 

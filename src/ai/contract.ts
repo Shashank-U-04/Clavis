@@ -152,6 +152,8 @@ export interface AssistantMeta {
   usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   /** requests the answering model has left today, when the provider says (Groq does) */
   remainingToday?: number;
+  /** a signed-in person's hosted requests left today, counted on the server */
+  accountLeft?: number;
 }
 
 export type AssistantResponse =
