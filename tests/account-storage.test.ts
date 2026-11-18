@@ -2,21 +2,7 @@ import { describe, it, expect } from "vitest";
 import { ScopedStorage, clearScope, readAccount, writeAccount } from "../src/model/account";
 import { listProjects, saveProject } from "../src/model/library";
 import { emptyModel } from "../src/model/types";
-
-/** a Storage-shaped map, enumerable like localStorage */
-export function memoryStorage() {
-  const data = new Map<string, string>();
-  return {
-    data,
-    getItem: (k: string) => data.get(k) ?? null,
-    setItem: (k: string, v: string) => void data.set(k, String(v)),
-    removeItem: (k: string) => void data.delete(k),
-    get length() {
-      return data.size;
-    },
-    key: (i: number) => [...data.keys()][i] ?? null,
-  };
-}
+import { memoryStorage } from "./helpers/memoryStorage";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
