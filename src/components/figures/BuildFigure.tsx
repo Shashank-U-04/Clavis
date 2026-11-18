@@ -87,7 +87,7 @@ interface Els {
 }
 
 const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: Els }) {
-  const [vx, vy, vw, vh] = data.viewBox.split(" ").map(Number);
+  const [vx, vy, vw] = data.viewBox.split(" ").map(Number);
   return (
     <svg viewBox={data.viewBox} className="mx-auto block max-h-[min(72vh,680px)] w-full select-none" role="img" aria-label="An isometric drawing of the Sunset Loft being built: walls, doors, windows and furniture.">
       <defs>

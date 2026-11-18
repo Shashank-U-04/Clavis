@@ -356,4 +356,3 @@ export function buildFurniture(kind: string): THREE.Group | null {
   return g;
 }
 
-export const hasModel = (kind: string) => kind in BUILDERS;

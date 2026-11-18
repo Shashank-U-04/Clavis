@@ -81,4 +81,3 @@ export function designSummary(model: PlanModel, revision: number, issues: Issue[
   };
 }
 
-export type DesignSummary = ReturnType<typeof designSummary>;

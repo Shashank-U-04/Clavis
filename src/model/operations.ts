@@ -183,8 +183,6 @@ export const OPERATION_SCHEMAS = {
 } as const;
 
 export type OperationName = keyof typeof OPERATION_SCHEMAS;
-export const OPERATION_NAMES = Object.keys(OPERATION_SCHEMAS) as OperationName[];
-
 export const OperationSchema = z.discriminatedUnion(
   "op",
   Object.values(OPERATION_SCHEMAS) as unknown as [
@@ -194,7 +192,6 @@ export const OperationSchema = z.discriminatedUnion(
 );
 
 export type DesignOperation = z.infer<typeof OperationSchema>;
-type OpOf<K extends OperationName> = z.infer<(typeof OPERATION_SCHEMAS)[K]>;
 
 /** Operations that delete user work. They always need explicit human confirmation. */
 export function isDestructive(op: DesignOperation, model?: PlanModel): boolean {

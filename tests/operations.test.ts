@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { applyBatch, isDestructive, type DesignOperation } from "../src/model/operations";
 import { emptyModel, type PlanModel } from "../src/model/types";
 import { checkModel } from "../src/model/issues";
-import { catalogByKind } from "../src/model/catalog";
 import { boxesOverlap, wallBox } from "../src/model/geometry";
 import { itemBox } from "../src/model/issues";
 

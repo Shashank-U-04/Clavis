@@ -75,15 +75,3 @@ export const CATEGORIES: readonly CatalogCategory[] = ["living", "bedroom", "kit
 const byKind = new Map(CATALOG.map((c) => [c.kind, c]));
 
 export const catalogByKind = (kind: string): CatalogEntry | undefined => byKind.get(kind);
-
-/** Case-insensitive search over label, kind, category and tags; optional footprint limits in metres. */
-export function searchCatalog(q: { text?: string; category?: CatalogCategory; maxWidth?: number; maxDepth?: number }): CatalogEntry[] {
-  const text = q.text?.trim().toLowerCase();
-  return CATALOG.filter((c) => {
-    if (q.category && c.category !== q.category) return false;
-    if (q.maxWidth !== undefined && c.w > q.maxWidth) return false;
-    if (q.maxDepth !== undefined && c.d > q.maxDepth) return false;
-    if (!text) return true;
-    return [c.label, c.kind, c.category, ...(c.tags ?? [])].some((s) => s.toLowerCase().includes(text));
-  });
-}

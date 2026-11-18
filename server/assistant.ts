@@ -2,8 +2,8 @@
  * Server-side model adapter for the Clavis assistant (Groq, Meta, or any OpenAI-compatible
  * chat-completions provider — see providers.ts).
  *
- * Runtime-agnostic: it takes a web-standard Request and returns a Response, so the same code
- * serves the Vite dev server today (vite.config.ts) and a Next.js route handler later. The API
+ * Runtime-agnostic: it takes a web-standard Request and returns a Response; the Next.js route
+ * handler (src/app/api/assistant) wraps it with the per-account allowance. The API
  * key never leaves the server.
  *
  * Every provider is called the same way:

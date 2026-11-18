@@ -122,8 +122,6 @@ export const store = createStore<AppState>(() => ({
 }));
 
 export const useAppStore = <T>(selector: (s: AppState) => T): T => useStore(store, selector);
-export const getModel = (): PlanModel => store.getState().model;
-
 let counter = 0;
 /** Unique, sortable-enough ids: prefix + time + a counter. */
 export const uid = (prefix: string): string => `${prefix}_${Date.now().toString(36)}${(counter++).toString(36).padStart(2, "0")}`;
