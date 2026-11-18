@@ -1,0 +1,59 @@
+/**
+ * Plans made as a guest, before signing in, live in the guest's part of this browser. On the
+ * first visit after signing in they are offered to the account: copied across (with their
+ * versions), so sync takes them to the cloud. The guest's copies are left where they were.
+ */
+
+import { INDEX_KEY, listProjects, newProjectId, projectKey, type ProjectMeta } from "@/model/library";
+import type { StorageLike } from "@/model/persistence";
+import { logEvent, versionsKey } from "@/lib/workspace/browser";
+
+export const GUEST_IMPORT_KEY = "clavis:guest-import";
+
+/** Guest plans not yet brought into this account, or [] once the offer was taken or declined. */
+export function guestPlansToOffer(guest: StorageLike | null, mine: StorageLike | null): ProjectMeta[] {
+  if (!guest || !mine) return [];
+  try {
+    if (mine.getItem(GUEST_IMPORT_KEY)) return [];
+  } catch {
+    return [];
+  }
+  // a plan the account already has (brought along before, maybe on another device) is not offered again
+  const have = new Set(listProjects(mine).map((p) => p.id));
+  return listProjects(guest).filter((p) => !have.has(p.id) && !!guest.getItem(projectKey(p.id)));
+}
+
+export function declineGuestPlans(mine: StorageLike | null): void {
+  try {
+    mine?.setItem(GUEST_IMPORT_KEY, "declined");
+  } catch {
+    /* best effort */
+  }
+}
+
+/** Copy the guest's plans into this account. Returns how many came across. */
+export function importGuestPlans(guest: StorageLike, mine: StorageLike, now = Date.now()): number {
+  const index = listProjects(mine);
+  let moved = 0;
+  for (const p of listProjects(guest)) {
+    const text = guest.getItem(projectKey(p.id));
+    if (!text) continue;
+    // already here, unchanged: nothing to bring
+    if (index.some((x) => x.id === p.id && x.updatedAt === p.updatedAt)) continue;
+    // an id already used in this account (the same plan imported before, or a clash) gets a new one
+    const id = index.some((x) => x.id === p.id) ? newProjectId() : p.id;
+    try {
+      mine.setItem(projectKey(id), text);
+      const versions = guest.getItem(versionsKey(p.id));
+      if (versions) mine.setItem(versionsKey(id), versions);
+      index.push({ ...p, id });
+      logEvent(mine, { at: now, kind: "imported", planId: id, planName: p.name, detail: "from this browser, made before signing in" });
+      moved++;
+    } catch {
+      break; // storage full: stop here, keep what came across
+    }
+  }
+  mine.setItem(INDEX_KEY, JSON.stringify(index.sort((a, b) => b.updatedAt - a.updatedAt)));
+  mine.setItem(GUEST_IMPORT_KEY, "done");
+  return moved;
+}

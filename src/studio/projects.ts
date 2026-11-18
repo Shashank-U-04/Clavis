@@ -24,6 +24,7 @@ import {
   type ProjectMeta,
 } from "../model/library";
 import { checkpoint, logEvent, markOpened, recordEdit, saveVersion, sourceText } from "../lib/workspace/browser";
+import { notifySaved } from "../lib/workspace/useWorkspace";
 import { emptyModel, type Note, type PlanModel } from "../model/types";
 import { session } from "../ai/session";
 import { setUi } from "./uiStore";
@@ -60,6 +61,7 @@ export function saveNow(): void {
       recordEdit(s, id, model.name, now);
       checkpoint(s, id, model, notes, now);
     }
+    notifySaved();
   }
   refresh();
 }

@@ -9,7 +9,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { browserStorage, type StorageLike } from "@/model/persistence";
 
-const CHANGED = "clavis:workspace-changed";
+export const CHANGED = "clavis:workspace-changed";
+/** The studio saved the plan it is editing (it does not re-render workspace readers). */
+export const SAVED = "clavis:plan-saved";
+
+export function notifySaved(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(SAVED));
+}
 
 /** Tell every reader in this tab that the workspace changed. */
 export function notifyWorkspace(): void {
