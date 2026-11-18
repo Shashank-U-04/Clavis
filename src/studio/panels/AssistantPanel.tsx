@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { assistant, useSession, type Turn } from "../../ai/session";
-import { EXAMPLES } from "../../ai/local/engine";
+import { EXAMPLES, LOCAL_MODEL } from "../../ai/local/engine";
 import { actions, issuesFor, useAppStore } from "../../model/store";
 import type { Issue } from "../../model/types";
 import { summarizeIssues } from "../../model/issues";
@@ -102,9 +102,26 @@ function ProposalCard({ turn }: { turn: Turn }) {
       {turn.applyError && <div className="warn-line">{turn.applyError}</div>}
       {turn.state === "discarded" && <div className="muted small">Discarded — nothing was changed.</div>}
       {turn.state === "applied" && turn.outcome && <Outcome turn={turn} />}
-      <div className="meta">
-        {check.model} · {check.latencyMs} ms{check.attempts > 1 ? ` · ${check.attempts} attempts` : ""}
-      </div>
+      <EngineMeta check={check} />
+    </div>
+  );
+}
+
+/** Which engine answered: Clavis Local in the browser, or the hosted model on the server. */
+function EngineMeta({ check }: { check: { model: string; latencyMs: number; attempts: number } }) {
+  const hostedLabel = useSession((s) => s.hosted?.label);
+  const local = check.model === LOCAL_MODEL;
+  return (
+    <div className="meta">
+      <span
+        className={`engine ${local ? "local" : "hosted"}`}
+        title={local ? "Answered in your browser by Clavis Local. Nothing left this device." : `Answered on the server by ${hostedLabel ?? "the hosted model"} (${check.model}).`}
+        data-testid="answered-by"
+      >
+        {local ? "Clavis Local" : `${hostedLabel ?? "Hosted"} · ${check.model}`}
+      </span>
+      {" · "}
+      {check.latencyMs} ms{check.attempts > 1 ? ` · ${check.attempts} attempts` : ""}
     </div>
   );
 }
@@ -281,7 +298,7 @@ export function AssistantPanel() {
                   ))}
                 </ul>
               )}
-              {t.check && <div className="meta">{t.check.model} · {t.check.latencyMs} ms</div>}
+              {t.check && <EngineMeta check={t.check} />}
             </div>
           ) : (
             <ProposalCard key={t.id} turn={t} />
