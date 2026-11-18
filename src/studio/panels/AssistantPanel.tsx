@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { assistant, useSession, type Turn } from "../../ai/session";
 import { EXAMPLES, LOCAL_MODEL } from "../../ai/local/engine";
+import { HOSTED_DAILY_CAP } from "../../ai/hostedQuota";
 import { actions, issuesFor, useAppStore } from "../../model/store";
 import type { Issue } from "../../model/types";
 import { summarizeIssues } from "../../model/issues";
@@ -207,7 +208,9 @@ function ErrorCard({ turn }: { turn: Turn }) {
   const title =
     err.code === "not_configured"
       ? "The hosted model is not set up"
-      : err.code === "provider_rate_limited" || err.code === "rate_limited"
+      : err.code === "daily_cap"
+        ? "Today's hosted allowance is used up"
+        : err.code === "provider_rate_limited" || err.code === "rate_limited"
         ? "The hosted model is busy"
         : "The assistant could not answer";
   return (
@@ -230,6 +233,36 @@ function ErrorCard({ turn }: { turn: Turn }) {
           </button>
         </p>
       )}
+    </div>
+  );
+}
+
+/** Why to use the hosted model sparingly: it is a shared free allowance. */
+function HostedNote() {
+  const hosted = useSession((s) => s.hosted);
+  const provider = useSession((s) => s.provider);
+  if (!hosted?.configured || provider === "local") return null;
+  return (
+    <p className="muted small hosted-note">
+      The hosted model runs on a small free allowance shared by everyone using Clavis, so each browser gets {HOSTED_DAILY_CAP} hosted
+      requests a day. Clavis Local is unlimited: ask for rooms, sizes and fixes in plain words, and keep the hosted model for what Local
+      does not understand.
+    </p>
+  );
+}
+
+/** How much of the hosted allowance is left: this browser's, and the model's for everyone. */
+function HostedAllowance() {
+  const hosted = useSession((s) => s.hosted);
+  const provider = useSession((s) => s.provider);
+  const browserLeft = useSession((s) => s.browserLeft);
+  const sharedLeft = useSession((s) => s.sharedLeft);
+  if (!hosted?.configured || provider === "local") return null;
+  return (
+    <div className={`hosted-allowance ${browserLeft === 0 ? "out" : browserLeft <= 3 ? "low" : ""}`} data-testid="hosted-allowance">
+      {hosted.label ?? "Hosted model"}: {browserLeft} of {HOSTED_DAILY_CAP} requests left today on this browser
+      {sharedLeft !== null ? ` · about ${sharedLeft} left for everyone` : ""}
+      {browserLeft === 0 ? " · Clavis Local still works" : ""}
     </div>
   );
 }
@@ -272,6 +305,7 @@ export function AssistantPanel() {
                   ? "Answering: the hosted model configured on the server."
                   : "Answering: Clavis Local first (in your browser). Requests it does not understand go to the hosted model when the server has one."}
             </p>
+            <HostedNote />
           </div>
         )}
         {turns.map((t) =>
@@ -337,6 +371,7 @@ export function AssistantPanel() {
           Send
         </button>
       </form>
+      <HostedAllowance />
       {turns.length > 0 && (
         <div className="assistant-foot">
           <button className="link" onClick={() => assistant.clear()}>

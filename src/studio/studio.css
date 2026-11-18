@@ -457,6 +457,10 @@
   .suggest { display: flex; gap: 5px; padding: 0 12px 8px; overflow-x: auto; flex: 0 0 auto; scrollbar-width: none; mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
   .suggest::-webkit-scrollbar { display: none; }
   .suggest .chip { white-space: nowrap; }
+  .hosted-allowance { font-size: 11px; color: var(--ink-3); padding: 0 12px 8px; }
+  .hosted-allowance.low { color: var(--amber); }
+  .hosted-allowance.out { color: var(--red); }
+  .hosted-note { border-left: 2px solid var(--accent-line); padding-left: 8px; }
   .composer { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); flex: 0 0 auto; align-items: flex-end; }
   .composer textarea { flex: 1 1 auto; line-height: 1.4; background: var(--raised); }
   .assistant-foot { display: flex; justify-content: space-between; padding: 0 12px 8px; font-size: 12px; }
