@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AccountBridge } from "@/components/account/AccountBridge";
 
 const sans = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
@@ -25,7 +26,10 @@ export const viewport: Viewport = { themeColor: "#f1f0ea", width: "device-width"
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body className="min-h-dvh bg-paper font-sans text-ink">{children}</body>
+      <body className="min-h-dvh bg-paper font-sans text-ink">
+        {children}
+        <AccountBridge />
+      </body>
     </html>
   );
 }

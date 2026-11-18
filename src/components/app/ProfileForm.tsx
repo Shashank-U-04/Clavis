@@ -7,7 +7,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, LogIn } from "lucide-react";
+import { ArrowRight, Check, LogIn, LogOut } from "lucide-react";
+import { signOut, useAccount } from "@/lib/account/bridge";
 import { authConfigured } from "@/lib/auth/config";
 import { getProfile, listEvents, listPlans, listVersions, saveProfile, storageUsed } from "@/lib/workspace/browser";
 import { mutate, useWorkspace } from "@/lib/workspace/useWorkspace";
@@ -145,25 +146,53 @@ export function ProfileForm() {
 
       <section aria-labelledby="account-heading" className="border-b border-rule">
         <Band title="Account" id="account-heading" />
-        <div className="flex flex-wrap items-center justify-between gap-5 px-5 py-8 md:px-8">
-          <div className="max-w-xl">
-            <p className="font-semibold">You are using Clavis as a guest.</p>
-            <p className="mt-1 text-sm text-ink-2">
-              {authConfigured()
-                ? "Sign in to keep your plans in your account and open them anywhere. The plans in this browser can be brought along."
-                : "Accounts are not switched on yet. Everything — plans, versions, history and this profile — is kept in this browser only."}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/settings" className="label flex items-center gap-2 border border-rule px-4 py-3 hover:border-ink">
-              Data and settings <ArrowRight size={13} aria-hidden="true" />
-            </Link>
-            <Link href="/login" className="label flex items-center gap-2 bg-ink px-4 py-3 text-paper hover:bg-marker">
-              Sign in <LogIn size={13} aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
+        <AccountCard />
       </section>
     </>
+  );
+}
+
+function AccountCard() {
+  const { account, sync } = useAccount();
+  if (account)
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-5 px-5 py-8 md:px-8">
+        <div className="max-w-xl">
+          <p className="font-semibold">Signed in as {account.email}</p>
+          <p className="mt-1 text-sm text-ink-2">
+            Your plans, versions, history and this profile are kept in your account and synced to every device you sign in on. This browser keeps a working copy, so the studio
+            stays fast and keeps working offline.
+            {sync.state === "offline" ? " Some changes are waiting to be sent." : ""}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/settings" className="label flex items-center gap-2 border border-rule px-4 py-3 hover:border-ink">
+            Data and settings <ArrowRight size={13} aria-hidden="true" />
+          </Link>
+          <button type="button" onClick={() => void signOut()} className="label flex items-center gap-2 bg-ink px-4 py-3 text-paper hover:bg-marker">
+            Sign out <LogOut size={13} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-5 px-5 py-8 md:px-8">
+      <div className="max-w-xl">
+        <p className="font-semibold">You are using Clavis as a guest.</p>
+        <p className="mt-1 text-sm text-ink-2">
+          {authConfigured()
+            ? "Sign in to keep your plans in your account and open them anywhere. The plans in this browser can be brought along."
+            : "Accounts are not switched on yet. Everything — plans, versions, history and this profile — is kept in this browser only."}
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Link href="/settings" className="label flex items-center gap-2 border border-rule px-4 py-3 hover:border-ink">
+          Data and settings <ArrowRight size={13} aria-hidden="true" />
+        </Link>
+        <Link href="/login" className="label flex items-center gap-2 bg-ink px-4 py-3 text-paper hover:bg-marker">
+          Sign in <LogIn size={13} aria-hidden="true" />
+        </Link>
+      </div>
+    </div>
   );
 }

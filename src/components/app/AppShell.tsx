@@ -9,7 +9,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, HardDrive, LogIn, Menu, Search, X } from "lucide-react";
+import { ArrowUpRight, HardDrive, Menu, Search, X } from "lucide-react";
+import { AccountStatus, useWhereSaved } from "@/components/account/AccountStatus";
 import { Logo } from "@/components/site/Logo";
 import { getProfile, lastPlan, listPlans, storageUsed } from "@/lib/workspace/browser";
 import { useWorkspace } from "@/lib/workspace/useWorkspace";
@@ -37,6 +38,7 @@ function NavItem({ d, path, count, lead }: { d: AppDest; path: string; count?: n
 function Sidebar({ path }: { path: string }) {
   const ws = useWorkspace((s) => ({ plans: listPlans(s).length, profile: getProfile(s), used: storageUsed(s as Storage | null) }));
   const used = ws?.used ?? 0;
+  const where = useWhereSaved();
   return (
     <div className="flex h-full flex-col">
       <Link href="/" className="flex h-14 shrink-0 items-center border-b border-rule px-5 hover:text-marker" aria-label="Clavis website">
@@ -67,15 +69,13 @@ function Sidebar({ path }: { path: string }) {
 
       <div className="border-t border-rule px-5 py-4">
         <p className="label flex items-center gap-2 text-[0.62rem] text-ink-3">
-          <HardDrive size={12} aria-hidden="true" /> Saved in this browser
+          <HardDrive size={12} aria-hidden="true" /> {where}
         </p>
         <div className="mt-2.5 h-1 bg-paper-3" role="meter" aria-label="Browser storage used" aria-valuemin={0} aria-valuemax={STORAGE_BUDGET} aria-valuenow={used}>
           <div className="h-full bg-ink" style={{ width: `${Math.min(100, Math.max(used > 0 ? 2 : 0, (used / STORAGE_BUDGET) * 100))}%` }} />
         </div>
         <p className="mt-1.5 font-mono text-[0.66rem] text-ink-3">{bytes(used)} of about 5 MB</p>
-        <Link href="/login" className="label mt-4 flex items-center justify-between border border-rule px-3 py-2 text-ink-2 hover:border-ink hover:text-ink">
-          Sign in to sync <LogIn size={13} aria-hidden="true" />
-        </Link>
+        <AccountStatus />
       </div>
     </div>
   );

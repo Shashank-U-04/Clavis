@@ -7,6 +7,8 @@
  */
 
 import Link from "next/link";
+import { GuestImportBanner } from "@/components/account/GuestImportBanner";
+import { useAccount } from "@/lib/account/bridge";
 import type { ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, Bookmark, FilePlus2, FileUp, LayoutTemplate, Plus, Sparkles } from "lucide-react";
 import { getProfile, lastPlan, listEvents, listPlans, listVersions } from "@/lib/workspace/browser";
@@ -29,6 +31,7 @@ function greeting(name: string) {
 }
 
 export function Home({ templates }: { templates: ReactNode }) {
+  const { account } = useAccount();
   const ws = useWorkspace((s) => {
     const last = lastPlan(s);
     return {
@@ -48,10 +51,11 @@ export function Home({ templates }: { templates: ReactNode }) {
 
   return (
     <>
+      <GuestImportBanner />
       <SheetHeader
         sheet="A · Home"
         title={greeting(profile.name)}
-        intro={plans.length ? `${plans.length} ${plans.length === 1 ? "plan" : "plans"} · ${totalArea} m² designed · all saved in this browser.` : "Nothing here yet. Start a plan below, and it will wait for you here."}
+        intro={plans.length ? `${plans.length} ${plans.length === 1 ? "plan" : "plans"} · ${totalArea} m² designed · ${account ? "kept in your account." : "all saved in this browser."}` : "Nothing here yet. Start a plan below, and it will wait for you here."}
       >
         <Link href="/templates" className="label border border-ink px-4 py-3 hover:bg-ink hover:text-paper">
           Templates
