@@ -5,8 +5,13 @@ import "./globals.css";
 const sans = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 
+/** The public address: set explicitly, else the production domain Vercel provides, else local dev. */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:5199");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(siteUrl),
   title: { default: "Clavis — describe a home, check it, walk through it", template: "%s · Clavis" },
   description:
     "Design a home in plain language. Clavis lays it out in metres, checks every wall, door, window and piece of furniture, and lets you walk through it in 3D.",
