@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FEATURES } from "./nav";
+import { JUDGES_EMAIL, JUDGES_PASSWORD, judgesLoginShown } from "@/lib/auth/judges";
 import { FooterBrief } from "./FooterBrief";
 import { HouseMark } from "./HouseMark";
 import { Wordmark } from "./Wordmark";
@@ -11,13 +12,13 @@ const COLUMNS = [
 ];
 
 const NOTES = [
-  { title: "Your work", text: "Saved in this browser as you design. Accounts are on the way." },
+  { title: "Your work", text: "Saved in this browser as you design. Sign in with Google to keep it on every device." },
   { title: "The assistant", text: "Clavis Local runs in your browser; a hosted model helps when one is set up." },
 ];
 
 const ACCOUNT = [
   { href: "/login", label: "Sign in" },
-  { href: "/signup", label: "Create an account" },
+  { href: "/signup", label: "Sign up with Google" },
   { href: "/dashboard", label: "Your projects" },
 ];
 
@@ -100,6 +101,19 @@ export function SiteFooter() {
           <Cross className="bottom-1 right-1.5" />
           <div className="ruler-x rotate-180" aria-hidden="true" />
         </div>
+
+        {/* the judges' demo account: public on purpose, set in the deployment's settings */}
+        {judgesLoginShown() && (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-rule bg-paper-2 px-5 py-3 text-sm" data-testid="judges-login">
+            <span className="label text-marker">For hackathon judges only</span>
+            <span className="font-mono text-[0.85rem]">
+              {JUDGES_EMAIL} <span className="text-ink-3">/</span> {JUDGES_PASSWORD}
+            </span>
+            <Link href="/login" className="label underline underline-offset-4 hover:text-marker">
+              Sign in to the demo account →
+            </Link>
+          </div>
+        )}
 
         {/* bottom bar */}
         <div className="flex flex-wrap items-stretch justify-between border-t border-rule">
