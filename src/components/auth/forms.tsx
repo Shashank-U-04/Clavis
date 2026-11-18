@@ -1,10 +1,17 @@
 "use client";
 
+/**
+ * Signing in. Clavis accounts are Google accounts: one button, nothing to fill in, no
+ * passwords to keep. The one exception is the hackathon judges' demo account, which signs in
+ * with the email and password shown in the site footer.
+ */
+
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { auth, type AuthResult } from "@/lib/auth/client";
-import { errorsOf, MagicLinkSchema, passwordStrength, ResetSchema, SignInSchema, SignUpSchema, type FieldErrors } from "@/lib/auth/validate";
+import { JUDGES_EMAIL, JUDGES_PASSWORD, judgesLoginShown } from "@/lib/auth/judges";
+import { errorsOf, SignInSchema, type FieldErrors } from "@/lib/auth/validate";
 import { AuthNotice, Divider, Field, GoogleButton } from "./fields";
 
 /** Shared submit plumbing: validate, call, show the answer. */
@@ -21,7 +28,6 @@ function useAuthForm() {
       const out = await action();
       // a full page load, so the whole app picks up the new session (and this person's plans)
       if (out.ok && out.redirect) {
-        if (out.message) setResult(out);
         window.location.assign(out.redirect);
         return;
       }
@@ -35,116 +41,86 @@ function useAuthForm() {
 
 const values = (e: FormEvent<HTMLFormElement>) => Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
 
+/** The judges' demo account: email and password, prefilled from the footer's values. */
+function JudgesForm() {
+  const f = useAuthForm();
+  return (
+    <details className="group border border-rule" open={false}>
+      <summary className="label flex cursor-pointer list-none items-center justify-between px-4 py-3 text-ink-2 hover:text-ink">
+        Hackathon judges: demo account
+        <span className="text-ink-3 group-open:rotate-45" aria-hidden="true">
+          +
+        </span>
+      </summary>
+      <form
+        noValidate
+        className="space-y-4 border-t border-rule p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const v = values(e);
+          void f.run(errorsOf(SignInSchema.safeParse(v)), () => auth.signInWithPassword(v.email, v.password));
+        }}
+      >
+        <p className="text-sm text-ink-2">A shared account with sample plans, for judging. Everyone else signs in with Google.</p>
+        <Field label="Email" name="email" type="email" autoComplete="username" defaultValue={JUDGES_EMAIL} error={f.errors.email} />
+        <Field label="Password" name="password" type="password" autoComplete="current-password" defaultValue={JUDGES_PASSWORD} error={f.errors.password} />
+        <AuthNotice result={f.result} />
+        <Button type="submit" arrow disabled={f.busy} className="w-full py-3">
+          {f.busy ? "Signing in…" : "Sign in to the demo account"}
+        </Button>
+      </form>
+    </details>
+  );
+}
+
 export function LoginForm() {
-  const [mode, setMode] = useState<"password" | "link">("password");
   const f = useAuthForm();
   const { setResult } = f;
-  // back from /auth/callback with a link that no longer works
+  // back from /auth/callback with a link or Google answer that no longer works
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("error") === "link")
-      setResult({ ok: false, code: "invalid", message: "That sign-in link has expired or was already used. Ask for a new one below." });
+      setResult({ ok: false, code: "invalid", message: "That sign-in didn't go through, or the link was already used. Try again." });
   }, [setResult]);
   return (
     <div className="space-y-6">
       <GoogleButton onClick={f.google} busy={f.busy} />
-      <Divider>or with email</Divider>
-      <div className="grid grid-cols-2 border border-rule" role="tablist" aria-label="Sign-in method">
-        {(["password", "link"] as const).map((m) => (
-          <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`label py-2.5 ${mode === m ? "bg-ink text-paper" : "text-ink-2 hover:text-ink"}`}>
-            {m === "password" ? "Password" : "Magic link"}
-          </button>
-        ))}
-      </div>
-      <form
-        noValidate
-        className="space-y-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const v = values(e);
-          if (mode === "password") void f.run(errorsOf(SignInSchema.safeParse(v)), () => auth.signInWithPassword(v.email, v.password));
-          else void f.run(errorsOf(MagicLinkSchema.safeParse(v)), () => auth.sendMagicLink(v.email));
-        }}
-      >
-        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" error={f.errors.email} />
-        {mode === "password" ? (
-          <Field
-            label="Password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            error={f.errors.password}
-            hint={
-              <Link href="/forgot-password" className="underline underline-offset-4 hover:text-marker">
-                Forgot your password?
-              </Link>
-            }
-          />
-        ) : (
-          <p className="text-sm text-ink-2">We&apos;ll email you a one-time link. Open it on this device and you&apos;re signed in — no password needed.</p>
-        )}
-        <AuthNotice result={f.result} />
-        <Button type="submit" arrow disabled={f.busy} className="w-full py-4">
-          {f.busy ? "Working…" : mode === "password" ? "Sign in" : "Email me a link"}
-        </Button>
-      </form>
+      <AuthNotice result={f.result} />
+      <p className="text-sm text-ink-2">Your Google account is your Clavis account: no new password, and your plans follow you to every device.</p>
+      {judgesLoginShown() && (
+        <>
+          <Divider>or</Divider>
+          <JudgesForm />
+        </>
+      )}
       <p className="text-sm text-ink-2">
-        New to Clavis?{" "}
-        <Link href="/signup" className="text-ink underline underline-offset-4 hover:text-marker">
-          Create an account
+        No account needed to design:{" "}
+        <Link href="/dashboard" className="text-ink underline underline-offset-4 hover:text-marker">
+          continue as a guest
         </Link>
+        , and your plans stay in this browser.
       </p>
     </div>
   );
 }
 
-const STRENGTH = ["Too weak", "Weak", "Fair", "Good", "Strong"];
-
 export function SignupForm() {
   const f = useAuthForm();
-  const [pw, setPw] = useState("");
-  const strength = passwordStrength(pw);
   return (
     <div className="space-y-6">
       <GoogleButton onClick={f.google} busy={f.busy} />
-      <Divider>or with email</Divider>
-      <form
-        noValidate
-        className="space-y-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const v = values(e);
-          void f.run(errorsOf(SignUpSchema.safeParse(v)), () => auth.signUp(v.name, v.email, v.password));
-        }}
-      >
-        <Field label="Name" name="name" autoComplete="name" placeholder="What should we call you?" error={f.errors.name} />
-        <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" error={f.errors.email} />
-        <div>
-          <Field label="Password" name="password" type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} error={f.errors.password} hint="At least 10 characters, with a number or symbol." />
-          <div className="mt-2 flex items-center gap-3" aria-live="polite">
-            <div className="grid flex-1 grid-cols-4 gap-1">
-              {[1, 2, 3, 4].map((i) => (
-                <span key={i} className={`h-1 ${pw && strength >= i ? (strength >= 3 ? "bg-ink" : "bg-marker") : "bg-rule"}`} />
-              ))}
-            </div>
-            <span className="label w-16 text-right text-ink-3">{pw ? STRENGTH[strength] : ""}</span>
-          </div>
-        </div>
-        <AuthNotice result={f.result} />
-        <Button type="submit" arrow disabled={f.busy} className="w-full py-4">
-          {f.busy ? "Working…" : "Create account"}
-        </Button>
-        <p className="text-xs text-ink-3">
-          By creating an account you agree to the{" "}
-          <Link href="/terms" className="underline underline-offset-2 hover:text-ink">
-            terms
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline underline-offset-2 hover:text-ink">
-            privacy notice
-          </Link>
-          .
-        </p>
-      </form>
+      <AuthNotice result={f.result} />
+      <p className="text-sm text-ink-2">There is nothing to fill in: the first time you continue with Google, your Clavis account is made, named from your Google profile.</p>
+      <p className="text-xs text-ink-3">
+        By continuing you agree to the{" "}
+        <Link href="/terms" className="underline underline-offset-2 hover:text-ink">
+          terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-ink">
+          privacy notice
+        </Link>
+        .
+      </p>
       <p className="text-sm text-ink-2">
         Already have an account?{" "}
         <Link href="/login" className="text-ink underline underline-offset-4 hover:text-marker">
@@ -152,54 +128,5 @@ export function SignupForm() {
         </Link>
       </p>
     </div>
-  );
-}
-
-export function ForgotForm() {
-  const f = useAuthForm();
-  return (
-    <form
-      noValidate
-      className="space-y-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const v = values(e);
-        void f.run(errorsOf(MagicLinkSchema.safeParse(v)), () => auth.requestPasswordReset(v.email));
-      }}
-    >
-      <Field label="Email" name="email" type="email" autoComplete="email" placeholder="you@example.com" error={f.errors.email} />
-      <AuthNotice result={f.result} />
-      <Button type="submit" arrow disabled={f.busy} className="w-full py-4">
-        {f.busy ? "Working…" : "Send a reset link"}
-      </Button>
-      <p className="text-sm text-ink-2">
-        Remembered it?{" "}
-        <Link href="/login" className="text-ink underline underline-offset-4 hover:text-marker">
-          Back to sign in
-        </Link>
-      </p>
-    </form>
-  );
-}
-
-export function ResetForm() {
-  const f = useAuthForm();
-  return (
-    <form
-      noValidate
-      className="space-y-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const v = values(e);
-        void f.run(errorsOf(ResetSchema.safeParse(v)), () => auth.updatePassword(v.password));
-      }}
-    >
-      <Field label="New password" name="password" type="password" autoComplete="new-password" error={f.errors.password} hint="At least 10 characters, with a number or symbol." />
-      <Field label="Repeat it" name="confirm" type="password" autoComplete="new-password" error={f.errors.confirm} />
-      <AuthNotice result={f.result} />
-      <Button type="submit" arrow disabled={f.busy} className="w-full py-4">
-        {f.busy ? "Working…" : "Save the new password"}
-      </Button>
-    </form>
   );
 }

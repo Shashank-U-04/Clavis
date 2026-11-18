@@ -1,6 +1,6 @@
 /**
- * Where Google sign-in, magic links, email confirmations and password-reset links return to.
- * The link carries a one-time code; it is exchanged here for a session (stored in cookies),
+ * Where Google sign-in returns to (and any Supabase email link, should one be sent).
+ * The address carries a one-time code; it is exchanged here for a session (stored in cookies),
  * then the person goes on to `next` — only ever a path on this site.
  */
 

@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * What the sign-in forms call: Supabase Auth with email + password, magic links and Google.
- * Every action answers in plain words and never throws. When accounts are not configured
- * (no Supabase URL and key), each one says so instead of failing.
+ * What the sign-in page calls: Google for everyone, and email + password for the hackathon
+ * judges' demo account only (see judges.ts). Every action answers in plain words and never
+ * throws. When accounts are not configured (no Supabase URL and key), each one says so.
  *
- * Links in emails and the Google round trip come back through /auth/callback, which turns
- * the one-time code into a session and then goes on to `next`.
+ * The Google round trip comes back through /auth/callback, which turns the one-time code
+ * into a session and then goes on to `next`.
  */
 
 import type { AuthError } from "@supabase/supabase-js";
@@ -27,7 +27,7 @@ const NOT_CONFIGURED: AuthResult = {
 export function explain(error: AuthError | Error): AuthResult {
   const code = "code" in error ? String(error.code ?? "") : "";
   const status = "status" in error ? Number(error.status) : 0;
-  if (code === "invalid_credentials") return { ok: false, code: "invalid", message: "That email and password don't match an account." };
+  if (code === "invalid_credentials") return { ok: false, code: "invalid", message: "That email and password don't match. Check them against the site footer." };
   if (code === "email_not_confirmed") return { ok: false, code: "unconfirmed", message: "Confirm your email first: open the link we sent you, then sign in." };
   if (code === "user_already_exists" || code === "email_exists") return { ok: false, code: "exists", message: "There is already an account with this email. Sign in instead." };
   if (code === "weak_password") return { ok: false, code: "invalid", message: "Choose a stronger password: longer, with a mix of letters, numbers and symbols." };
@@ -62,29 +62,6 @@ export const auth = {
       return error ? explain(error) : { ok: true, redirect: next };
     }),
 
-  sendMagicLink: (email: string, next = nextFromLocation()) =>
-    attempt(async () => {
-      const sb = supabaseBrowser();
-      if (!sb) return NOT_CONFIGURED;
-      const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: callback(next) } });
-      return error ? explain(error) : { ok: true, message: `We sent a sign-in link to ${email.trim()}. Open it on this device.` };
-    }),
-
-  signUp: (name: string, email: string, password: string, next = nextFromLocation()) =>
-    attempt(async () => {
-      const sb = supabaseBrowser();
-      if (!sb) return NOT_CONFIGURED;
-      const { data, error } = await sb.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { data: { name: name.trim() }, emailRedirectTo: callback(next) },
-      });
-      if (error) return explain(error);
-      // with email confirmation on, there is no session until the link is opened
-      if (!data.session) return { ok: true, message: `Almost there: we sent a confirmation link to ${email.trim()}. Open it to finish.` };
-      return { ok: true, redirect: next };
-    }),
-
   signInWithGoogle: (next = nextFromLocation()) =>
     attempt(async () => {
       const sb = supabaseBrowser();
@@ -92,22 +69,5 @@ export const auth = {
       // on success the browser leaves for Google; nothing more happens here
       const { error } = await sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: callback(next) } });
       return error ? explain(error) : { ok: true };
-    }),
-
-  requestPasswordReset: (email: string) =>
-    attempt(async () => {
-      const sb = supabaseBrowser();
-      if (!sb) return NOT_CONFIGURED;
-      const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: callback("/reset-password") });
-      // the same answer whether or not the address has an account, so the form reveals nothing
-      return error ? explain(error) : { ok: true, message: `If ${email.trim()} has an account, a reset link is on its way.` };
-    }),
-
-  updatePassword: (password: string) =>
-    attempt(async () => {
-      const sb = supabaseBrowser();
-      if (!sb) return NOT_CONFIGURED;
-      const { error } = await sb.auth.updateUser({ password });
-      return error ? explain(error) : { ok: true, message: "Your password is changed.", redirect: "/dashboard" };
     }),
 };

@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Frame } from "@/components/site/Sheet";
 
-const POINTS = ["Projects on every device", "Named versions to return to", "Read-only links to share a design", "The hosted assistant on your account"];
+const POINTS = ["Your plans on every device, synced as you work", "Named versions to return to", "A history of everything you did", "25 hosted-AI requests a day on your account"];
 
 /** Sign-in pages: a dark title sheet on the left, the form on paper on the right. */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
