@@ -166,6 +166,10 @@ async function callProvider(env: AssistantEnv, cfg: ProviderConfig, body: unknow
   }
   if (res.status >= 500)
     throw new ProviderError("provider_unavailable", `${who} is unavailable (HTTP ${res.status}).`, 502, true);
+  // Groq answers 400 json_validate_failed when the model's own output broke the schema: the
+  // request was fine and a second sample usually passes, so it is a model failure, not ours.
+  if (res.status === 400 && detail.includes("json_validate_failed"))
+    throw new ProviderError("malformed_output", `${who} produced an answer that was not valid JSON.`, 502, true);
   throw new ProviderError("provider_rejected", `${who} rejected the request (HTTP ${res.status}). ${detail}`.trim(), 502, false);
 }
 

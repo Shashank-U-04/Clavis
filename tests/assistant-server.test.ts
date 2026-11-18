@@ -223,6 +223,20 @@ describe("assistant handler — provider failures", () => {
     expect(out.meta.attempts).toBe(2);
   });
 
+  it("retries once when Groq says the model's own JSON failed validation", async () => {
+    const failed = () =>
+      new Response(JSON.stringify({ error: { message: "Failed to generate JSON.", code: "json_validate_failed" } }), { status: 400 });
+    const ok = harness([failed(), completion(proposal)]);
+    const out = await (await handleAssistantRequest(post(body()), groq, ok.deps)).json();
+    expect(out.ok).toBe(true);
+    expect(out.meta.attempts).toBe(2);
+
+    const bad = harness([failed(), failed()]);
+    const res = await handleAssistantRequest(post(body()), groq, bad.deps);
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toMatchObject({ code: "malformed_output", retryable: true });
+  });
+
   it("gives up after two transient failures with a retryable error", async () => {
     const h = harness([new Response("", { status: 503 }), new Response("", { status: 503 })]);
     const out = await (await handleAssistantRequest(post(body()), env, h.deps)).json();
