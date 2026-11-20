@@ -13,7 +13,8 @@
     "test:live": "vitest run tests/live --reporter=verbose",
     "e2e": "node tests/e2e/smoke.mjs",
     "db:check": "node scripts/db-check.mjs",
-    "judges": "vite-node --config vitest.config.ts scripts/judges.ts"
+    "judges": "vite-node --config vitest.config.ts scripts/judges.ts",
+    "check:live": "node scripts/live-check.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
