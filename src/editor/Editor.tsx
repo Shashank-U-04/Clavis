@@ -15,10 +15,11 @@ import { snap, segLen, pointSegDist, projectT, type Pt } from "../model/geometry
 import { catalogByKind } from "../model/catalog";
 import { blockById, nextLabel, snapRect } from "../model/blocks";
 import { useSession } from "../ai/session";
-import { useUi } from "../studio/uiStore";
+import { setUi, useUi } from "../studio/uiStore";
+import { ItemDimensions, OverallDimensions, RoomDimensions } from "./dimensions";
 import { onCommand, sendCommand } from "../three/events";
 import { extentOf, movedFar, useViewport } from "./useViewport";
-import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomsLayer, RouteLayer, TracingLayer, WallsLayer } from "./layers";
+import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomLabelsLayer, RoomsLayer, RouteLayer, TracingLayer, WallsLayer } from "./layers";
 
 type Drag =
   | { kind: "pan"; lastX: number; lastY: number }
@@ -38,6 +39,7 @@ export function Editor() {
     return t?.check?.preview?.ok ? t.check.preview : null;
   });
   const route = useUi((s) => s.route);
+  const dims = useUi((s) => s.dims);
   const model = previewing ? previewing.model : live;
   const proposed = useMemo(() => new Set(previewing?.changedEntityIds ?? []), [previewing]);
 
@@ -245,6 +247,8 @@ export function Editor() {
   const mark = (id: string) => (flagged.has(id) ? INK.flagged : selected.has(id) ? INK.selected : previewing && proposed.has(id) ? INK.proposed : null);
   const removed = previewing ? live.items.filter((i) => !model.items.some((x) => x.id === i.id)) : [];
   const start = editor.pendingWallStart;
+  const selRoom = model.rooms.find((r) => r.id === editor.selectedRoomId);
+  const selItem = model.items.find((i) => i.id === editor.selectedItemId);
   const help: Partial<Record<typeof editor.drawMode, string>> = {
     wall: " · click to chain walls · Esc to stop",
     room: " · drag to draw a room; its walls come with it",
@@ -278,7 +282,11 @@ export function Editor() {
         <RemovedLayer items={removed} k={k} />
         <WallsLayer walls={model.walls} k={k} mark={mark} pickable={editable} onPress={pick(actions.selectWall)} />
         <OpeningsLayer model={model} k={k} mark={mark} pickable={editable} onPress={pick(actions.selectOpening)} />
+        <RoomLabelsLayer rooms={model.rooms} k={k} />
         {route && <RouteLayer points={route.points} k={k} />}
+        {dims && <OverallDimensions model={model} k={k} />}
+        {dims && !previewing && selRoom && <RoomDimensions room={selRoom} k={k} />}
+        {dims && !previewing && selItem && <ItemDimensions item={selItem} rooms={model.rooms} k={k} />}
 
         {editor.drawMode === "wall" && start && cursor && (
           <g pointerEvents="none">
@@ -299,6 +307,9 @@ export function Editor() {
             stroke={INK.selected}
             strokeDasharray="6 4"
           />
+        )}
+        {drag?.kind === "room" && cursor && Math.abs(cursor.x - drag.from.x) > 0 && Math.abs(cursor.y - drag.from.y) > 0 && (
+          <RoomDimensions room={{ id: "", label: "", floor: "oak", x: Math.min(drag.from.x, cursor.x), y: Math.min(drag.from.y, cursor.y), w: Math.abs(cursor.x - drag.from.x), h: Math.abs(cursor.y - drag.from.y) }} k={k} />
         )}
         {ghost && (
           <g pointerEvents="none">
@@ -334,6 +345,9 @@ export function Editor() {
         </button>
         <button title="Fit the plan (F)" onClick={() => fit(extent)}>
           Fit
+        </button>
+        <button title="Show or hide measurements" aria-pressed={dims} className={dims ? "on" : ""} onClick={() => setUi({ dims: !dims })}>
+          Dimensions
         </button>
       </div>
       <div className="plan-readout">

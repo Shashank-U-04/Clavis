@@ -67,25 +67,36 @@ export function TracingLayer({ model, k }: { model: PlanModel; k: number }) {
 }
 
 export function RoomsLayer({ rooms, k, mark, onPress, movable }: { rooms: Room[]; k: number; mark: Marker; onPress: Press; movable: boolean }) {
-  const size = Math.max(10, Math.min(16, 0.24 * k));
   return (
     <g>
       {rooms.map((r) => {
         const m = mark(r.id);
-        const cx = (r.x + r.w / 2) * k;
-        const cy = (r.y + r.h / 2) * k;
         return (
           <g key={r.id} data-room={r.label} onPointerDown={(e) => onPress(e, r.id)} style={{ cursor: movable ? "move" : undefined }}>
             <rect x={r.x * k} y={r.y * k} width={r.w * k} height={r.h * k} fill={FLOOR_TINT[r.floor] ?? FLOOR_TINT.oak} stroke={m ?? "none"} strokeWidth={m ? 2.5 : 0} />
-            {r.w * k > 40 && (
-              <text x={cx} y={cy} textAnchor="middle" fontSize={size} fill={INK.label} fontWeight={600} pointerEvents="none">
-                {r.label}
-                <tspan x={cx} dy={size * 1.2} fontSize={size * 0.8} fontWeight={400} fill={INK.dim}>
-                  {(r.w * r.h).toFixed(1)} m²
-                </tspan>
-              </text>
-            )}
           </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** Room names, areas and sizes, drawn above the furniture so they stay readable. */
+export function RoomLabelsLayer({ rooms, k }: { rooms: Room[]; k: number }) {
+  const size = Math.max(10, Math.min(16, 0.24 * k));
+  return (
+    <g pointerEvents="none">
+      {rooms.map((r) => {
+        if (r.w * k <= 40) return null;
+        const cx = (r.x + r.w / 2) * k;
+        const cy = (r.y + r.h / 2) * k;
+        return (
+          <text key={r.id} x={cx} y={cy} textAnchor="middle" fontSize={size} fill={INK.label} fontWeight={600} stroke={INK.paper} strokeWidth={3} strokeOpacity={0.75} paintOrder="stroke">
+            {r.label}
+            <tspan x={cx} dy={size * 1.2} fontSize={size * 0.8} fontWeight={400} fill={INK.dim}>
+              {(r.w * r.h).toFixed(1)} m²{r.w * k > 90 ? ` · ${r.w.toFixed(2)} × ${r.h.toFixed(2)}` : ""}
+            </tspan>
+          </text>
         );
       })}
     </g>
