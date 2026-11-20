@@ -296,6 +296,13 @@
   .cat-item { display: flex; align-items: center; gap: 10px; text-align: left; padding: 5px 7px; background: transparent; border-color: transparent; }
   .cat-item:hover:not(:disabled) { background: var(--raised); border-color: var(--line); }
   .cat-item.active { background: var(--accent-soft); border-color: var(--accent-line); }
+  .shelf-section { display: flex; flex-direction: column; gap: 2px; }
+  .shelf-section + .shelf-section { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
+  .shelf-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 6px; background: transparent; border-color: transparent; font-size: 12px; font-weight: 600; color: var(--ink); text-align: left; position: sticky; top: 0; z-index: 1; background: var(--panel); }
+  .shelf-head small { margin-left: auto; font-weight: 400; color: var(--ink-3); }
+  .shelf-caret { width: 10px; color: var(--ink-3); font-size: 10px; }
+  .shelf-type { display: flex; flex-direction: column; gap: 2px; }
+  .shelf-type-label { margin: 4px 0 0 22px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
   .cat-item img, .cat-item .swatch { width: 40px; height: 40px; border-radius: var(--radius); object-fit: cover; background: var(--bg); flex: 0 0 auto; }
   .cat-text { display: flex; flex-direction: column; min-width: 0; }
   .cat-text small { color: var(--ink-3); font-size: 11px; }
