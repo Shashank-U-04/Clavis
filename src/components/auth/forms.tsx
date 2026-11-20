@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { leaveTo } from "@/lib/account/bridge";
 import { auth, type AuthResult } from "@/lib/auth/client";
 import { JUDGES_EMAIL, JUDGES_PASSWORD, judgesLoginShown } from "@/lib/auth/judges";
 import { errorsOf, SignInSchema, type FieldErrors } from "@/lib/auth/validate";
@@ -28,7 +29,7 @@ function useAuthForm() {
       const out = await action();
       // a full page load, so the whole app picks up the new session (and this person's plans)
       if (out.ok && out.redirect) {
-        window.location.assign(out.redirect);
+        leaveTo(out.redirect);
         return;
       }
       setResult(out);

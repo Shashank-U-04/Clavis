@@ -113,6 +113,18 @@ const syncSoon = () => {
  */
 let confirmed: string | null = null;
 
+/** Where the page is about to go after signing in, so the account switch goes there too. */
+let leavingFor: string | null = null;
+
+/**
+ * Leave for `href` once signed in on this page. The new session also reaches reconcile(),
+ * whose reload would cancel this navigation and leave the person on the sign-in page.
+ */
+export function leaveTo(href: string) {
+  leavingFor = href;
+  window.location.assign(href);
+}
+
 function reconcile(user: User | null) {
   const base = baseStorage();
   const stored = readAccount(base);
@@ -122,7 +134,8 @@ function reconcile(user: User | null) {
       writeAccount(base, account);
       // reload only if the switch stuck; with storage blocked that would loop forever
       if (readAccount(base)?.id === account.id) {
-        window.location.reload();
+        if (leavingFor) window.location.assign(leavingFor);
+        else window.location.reload();
         return;
       }
     }
