@@ -100,6 +100,8 @@ function useGlobalKeys() {
       if (st.editor.camera === "walk" && views.scene) {
         if (/^[wasd]$/i.test(e.key)) return; // WASD belongs to the walker
       }
+      // while drawing a wall, digits are its length (see Editor), not the view keys
+      if (st.editor.drawMode === "wall" && st.editor.pendingWallStart && /^[0-9.]$/.test(e.key)) return;
       if (viewKey(e.key)) return;
       if (st.editor.selectedItemId && (e.key === "r" || e.key === "R")) return;
       const modes: Record<string, "select" | "wall" | "room" | "door" | "window"> = { v: "select", w: "wall", m: "room", d: "door", n: "window" };

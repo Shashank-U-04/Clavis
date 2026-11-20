@@ -54,9 +54,10 @@ export const OPERATION_SCHEMAS = {
       ax: coord, ay: coord, bx: coord, by: coord,
       thickness: metres(0.05, 0.5).optional().describe("default 0.15 m"),
       height: metres(2.1, 5).optional().describe("default 2.7 m"),
+      precise: z.boolean().optional().describe("keep the points to the millimetre instead of the 5 cm grid (walls at an angle)"),
     })
     .strict()
-    .describe("Add a straight wall between two points (metres, snapped to 5 cm)."),
+    .describe("Add a straight wall between two points (metres, snapped to 5 cm unless precise)."),
   update_wall: z
     .object({
       op: z.literal("update_wall"),
@@ -270,6 +271,7 @@ const done = (model: PlanModel, summary: string, changed: string[], extra: Parti
 const reject = (code: OpError["code"], message: string): Failed => ({ ok: false, error: { code, message } });
 
 const round = (v: number, places = 3) => Math.round(v * 10 ** places) / 10 ** places;
+const mm = (v: number) => Math.round(v * 1000) / 1000;
 const normDeg = (d: number) => round(((d % 360) + 360) % 360, 2);
 
 // ---------------------------------------------------------------------------
@@ -315,7 +317,8 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
     case "add_wall": {
       const w: Wall = {
         id: ctx.newId("wall"),
-        ax: snap(op.ax), ay: snap(op.ay), bx: snap(op.bx), by: snap(op.by),
+        // precise: to the millimetre, so a wall drawn at an angle or to a typed length keeps it
+        ...(op.precise ? { ax: mm(op.ax), ay: mm(op.ay), bx: mm(op.bx), by: mm(op.by) } : { ax: snap(op.ax), ay: snap(op.ay), bx: snap(op.bx), by: snap(op.by) }),
         thickness: op.thickness ?? 0.15,
         height: op.height ?? 2.7,
       };

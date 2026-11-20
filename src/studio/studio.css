@@ -322,7 +322,7 @@
   .plan-tools { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 4px; }
   .plan-tools button { padding: 4px 10px; background: var(--overlay); }
   .plan-tools button.on { color: var(--accent); border-color: var(--accent-line); }
-  .plan-readout { position: absolute; left: 10px; bottom: 10px; font: 11.5px var(--mono); color: var(--ink-3); pointer-events: none; text-shadow: var(--hint-shadow); }
+  .plan-readout { position: absolute; left: 10px; bottom: 44px; max-width: calc(100% - 20px); font: 11.5px var(--mono); color: var(--ink-3); pointer-events: none; text-shadow: var(--hint-shadow); }
   .plan-banner { position: absolute; left: 10px; right: 10px; top: 10px; margin: 0 auto; width: fit-content; max-width: calc(100% - 20px); text-align: center; background: var(--overlay); border: 1px solid var(--green-line); color: var(--ink); padding: 6px 12px; border-radius: 999px; font-size: 12.5px; backdrop-filter: blur(4px); box-shadow: var(--shadow); }
   .ghost-key { color: var(--green); font-weight: 650; }
   .removed-key { color: var(--red); font-weight: 650; }

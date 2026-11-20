@@ -299,7 +299,8 @@ type Finish = "oak" | "tile" | "carpet" | "concrete";
 
 export const actions = {
   // walls
-  addWall: (ax: number, ay: number, bx: number, by: number, thickness = 0.15, height = 2.7) => apply({ op: "add_wall", ax, ay, bx, by, thickness, height }),
+  addWall: (ax: number, ay: number, bx: number, by: number, thickness = 0.15, height = 2.7, precise = false) =>
+    apply({ op: "add_wall", ax, ay, bx, by, thickness, height, ...(precise && { precise: true }) }),
   editWall: (id: string, patch: { ax?: number; ay?: number; bx?: number; by?: number; thickness?: number; height?: number }) => apply({ op: "update_wall", id, ...patch }),
   removeWall: (id: string) => apply({ op: "remove_wall", id }),
 
