@@ -19,7 +19,7 @@ import type { CameraMode } from "../model/store";
 import { analyzeModel } from "../model/analysis";
 import { boxesOverlap, segLen, wallBox, type Box } from "../model/geometry";
 import { itemBox, openingSpan } from "../model/issues";
-import { catalogByKind } from "../model/catalog";
+import { catalogByKind, itemSize } from "../model/catalog";
 import { buildContent, disposeGroup } from "./content";
 import { groundMaterial } from "./materials";
 
@@ -72,7 +72,7 @@ function obstaclesOf(model: PlanModel): Box[] {
   }
   for (const it of model.items) {
     const c = catalogByKind(it.kind);
-    if (!c || c.isRug || c.h < 0.3) continue;
+    if (!c || c.isRug || (itemSize(it)?.h ?? c.h) < 0.3) continue;
     const box = itemBox(it);
     if (box) out.push(box);
   }

@@ -21,7 +21,7 @@ import type { Item, Opening, PlanModel, Room, Wall } from "./types";
 import { emptyModel } from "./types";
 import { segLen, snap } from "./geometry";
 import { clampOpeningT } from "./issues";
-import { CATALOG, catalogByKind } from "./catalog";
+import { CATALOG, catalogByKind, ITEM_SIZE_LIMITS } from "./catalog";
 import { buildLayout, FLOOR_FINISHES, LayoutSpecSchema, SIDES } from "./layout";
 
 // ---------------------------------------------------------------------------
@@ -163,6 +163,17 @@ export const OPERATION_SCHEMAS = {
     })
     .strict()
     .describe("Move and/or rotate a furniture item."),
+  resize_item: z
+    .object({
+      op: z.literal("resize_item"),
+      id: ref,
+      w: metres(ITEM_SIZE_LIMITS.min, ITEM_SIZE_LIMITS.maxPlan).optional().describe("width across the front"),
+      d: metres(ITEM_SIZE_LIMITS.min, ITEM_SIZE_LIMITS.maxPlan).optional().describe("depth, front to back"),
+      h: metres(ITEM_SIZE_LIMITS.min, ITEM_SIZE_LIMITS.maxHeight).optional().describe("height"),
+      reset: z.boolean().optional().describe("true puts the piece back to its catalog size"),
+    })
+    .strict()
+    .describe("Change a furniture item's own width, depth or height (or reset it to the catalog size)."),
   remove_item: z
     .object({ op: z.literal("remove_item"), id: ref })
     .strict()
@@ -496,6 +507,27 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
       return done(
         { ...model, items: model.items.map((i) => (i.id === it.id ? next : i)) },
         `Item ${it.id} moved to (${next.x.toFixed(2)}, ${next.y.toFixed(2)}), facing ${next.rotation}°.`,
+        [it.id],
+      );
+    }
+
+    case "resize_item": {
+      const it = find(model.items, ctx, op.id, "item");
+      if (isFail(it)) return it;
+      const cat = catalogByKind(it.kind);
+      if (!cat) return reject("invalid_input", `Item ${it.id} is not a catalog piece, so it has no size to change.`);
+      const { w: _w, d: _d, h: _h, ...base } = it;
+      const own = (v: number | undefined, was: number | undefined, nominal: number) => {
+        const next = op.reset ? undefined : v !== undefined ? round(v) : was;
+        // a size equal to the catalog's is no override at all
+        return next === undefined || Math.abs(next - nominal) < 1e-9 ? undefined : next;
+      };
+      const size = { w: own(op.w, _w, cat.w), d: own(op.d, _d, cat.d), h: own(op.h, _h, cat.h) };
+      const next: Item = { ...base, ...(size.w !== undefined && { w: size.w }), ...(size.d !== undefined && { d: size.d }), ...(size.h !== undefined && { h: size.h }) };
+      const shown = { w: size.w ?? cat.w, d: size.d ?? cat.d, h: size.h ?? cat.h };
+      return done(
+        { ...model, items: model.items.map((i) => (i.id === it.id ? next : i)) },
+        op.reset ? `${cat.label} ${it.id} back to its catalog size (${cat.w} × ${cat.d} × ${cat.h} m).` : `${cat.label} ${it.id} resized to ${shown.w} × ${shown.d} × ${shown.h} m.`,
         [it.id],
       );
     }

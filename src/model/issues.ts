@@ -25,7 +25,7 @@ import {
   type Box,
   type Pt,
 } from "./geometry";
-import { catalogByKind } from "./catalog";
+import { catalogByKind, itemSize } from "./catalog";
 import { reviewFindings } from "./analysis";
 
 /**
@@ -280,8 +280,8 @@ function checkRooms({ model, wallById, out }: Ctx) {
 }
 
 /** The footprint of a placed item; its front (local +y) faces the item's rotation. */
-export function itemBox(it: { kind: string; x: number; y: number; rotation: number }): Box | null {
-  const c = catalogByKind(it.kind);
+export function itemBox(it: { kind: string; x: number; y: number; rotation: number; w?: number; d?: number }): Box | null {
+  const c = itemSize(it);
   return c ? { x: it.x, y: it.y, halfW: c.w / 2, halfD: c.d / 2, angle: (-it.rotation * Math.PI) / 180 } : null;
 }
 
@@ -309,6 +309,7 @@ function checkFurniture({ model, wallById, out }: Ctx) {
       return;
     }
     const box = itemBox(it)!;
+    const tall = itemSize(it)!.h;
     // leaning on a wall is fine; more than 2 cm into it is not
     for (const { w, box: wb } of wallBoxes) {
       if (boxesOverlap(box, wb, 0.02)) out.push({ severity: "error", code: "item_through_wall", message: `${cat.label} goes through wall ${w.id}.`, refs: [it.id, w.id] });
@@ -317,13 +318,13 @@ function checkFurniture({ model, wallById, out }: Ctx) {
       if (!boxesOverlap(box, zone)) continue;
       if (o.kind === "door") {
         out.push({ severity: "error", code: "item_blocks_door", message: `${cat.label} is in the way of door ${o.id}.`, refs: [it.id, o.id], measurements: { clearanceDepth: r3(depth) } });
-      } else if (cat.h > o.sill) {
+      } else if (tall > o.sill) {
         out.push({
           severity: "warning",
           code: "item_blocks_window",
-          message: `${cat.label} (${cat.h} m tall) stands in front of window ${o.id} (sill ${o.sill} m).`,
+          message: `${cat.label} (${tall} m tall) stands in front of window ${o.id} (sill ${o.sill} m).`,
           refs: [it.id, o.id],
-          measurements: { itemHeight: cat.h, sill: o.sill },
+          measurements: { itemHeight: tall, sill: o.sill },
         });
       }
     }

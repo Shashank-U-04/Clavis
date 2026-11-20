@@ -327,6 +327,7 @@ export const actions = {
   // furniture
   placeItem: (kind: string, x: number, y: number, rotation = 0) => apply({ op: "place_item", kind, x, y, rotation }),
   moveItem: (id: string, x?: number, y?: number, rotation?: number) => apply({ op: "move_item", id, x, y, rotation }),
+  resizeItem: (id: string, size: { w?: number; d?: number; h?: number; reset?: boolean }) => apply({ op: "resize_item", id, ...size }),
   removeItem: (id: string) => apply({ op: "remove_item", id }),
 
   // the design as a whole

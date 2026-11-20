@@ -40,7 +40,9 @@ const OpeningSchema = z
 const RoomSchema = z
   .object({ id, x: n, y: n, w: pos.max(500), h: pos.max(500), label: z.string().max(80), floor: z.enum(FLOOR_FINISHES) })
   .strict();
-const ItemSchema = z.object({ id, kind: z.string().min(1).max(80), x: n, y: n, rotation: n }).strict();
+const ItemSchema = z
+  .object({ id, kind: z.string().min(1).max(80), x: n, y: n, rotation: n, w: pos.max(20).optional(), d: pos.max(20).optional(), h: pos.max(10).optional() })
+  .strict();
 const UnderlaySchema = z
   .object({
     dataUrl: z

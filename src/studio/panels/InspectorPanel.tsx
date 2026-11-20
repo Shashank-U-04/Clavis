@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { actions, logActivity, useAppStore, type ActionResult } from "../../model/store";
-import { catalogByKind } from "../../model/catalog";
+import { catalogByKind, isResized, itemSize } from "../../model/catalog";
 import { FLOOR_FINISHES } from "../../model/layout";
 import { segLen } from "../../model/geometry";
 import { analyzeModel } from "../../model/analysis";
@@ -81,12 +81,36 @@ export function InspectorPanel() {
 
   if (item) {
     const cat = catalogByKind(item.kind);
+    const size = itemSize(item);
     return (
       <div className="panel-pad inspector">
         <h4>{cat?.label ?? item.kind}</h4>
         <p className="muted small">
-          {cat ? `${cat.w} × ${cat.d} × ${cat.h} m (nominal size)` : "Unknown catalog piece"} · <code>{item.id}</code>
+          {cat ? (isResized(item) ? `Resized · catalog size ${cat.w} × ${cat.d} × ${cat.h} m` : `Catalog size (nominal)`) : "Unknown catalog piece"} · <code>{item.id}</code>
         </p>
+        {size && (
+          <>
+            <p className="field-group">Size</p>
+            <div className="fields">
+              <Num label="Width" value={size.w} step={0.05} min={0.1} max={6} onCommit={(v) => actions.resizeItem(item.id, { w: v })} />
+              <Num label="Depth" value={size.d} step={0.05} min={0.1} max={6} onCommit={(v) => actions.resizeItem(item.id, { d: v })} />
+              <Num label="Height" value={size.h} step={0.05} min={0.1} max={3.5} onCommit={(v) => actions.resizeItem(item.id, { h: v })} />
+            </div>
+            {isResized(item) && (
+              <div className="row">
+                <button
+                  onClick={() => {
+                    const r = actions.resizeItem(item.id, { reset: true });
+                    logActivity("human", "resize_item", r.summary, r.ok);
+                  }}
+                >
+                  Reset to catalog size
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        <p className="field-group">Position</p>
         <div className="fields">
           <Num label="x" value={item.x} onCommit={(v) => actions.moveItem(item.id, v)} />
           <Num label="y" value={item.y} onCommit={(v) => actions.moveItem(item.id, undefined, v)} />

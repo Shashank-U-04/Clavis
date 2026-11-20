@@ -7,7 +7,7 @@
 import type { ReactElement, PointerEvent as ReactPointerEvent } from "react";
 import type { Item, Opening, PlanModel, Room, Wall } from "../model/types";
 import { segLen, type Pt } from "../model/geometry";
-import { catalogByKind } from "../model/catalog";
+import { catalogByKind, itemSize } from "../model/catalog";
 import { doorLeaves, leafPath, openingEnds } from "../model/drawing";
 
 /**
@@ -94,10 +94,11 @@ export function RoomsLayer({ rooms, k, mark, onPress, movable }: { rooms: Room[]
 
 function Piece({ item, k, mark, onPress, movable }: { item: Item; k: number; mark: Marker; onPress: Press; movable: boolean }) {
   const c = catalogByKind(item.kind);
-  if (!c) return null;
+  const size = itemSize(item);
+  if (!c || !size) return null;
   const m = mark(item.id);
-  const w = c.w * k;
-  const d = c.d * k;
+  const w = size.w * k;
+  const d = size.d * k;
   return (
     <g transform={`translate(${item.x * k} ${item.y * k}) rotate(${-item.rotation})`} onPointerDown={(e) => onPress(e, item.id)} style={{ cursor: movable ? "move" : undefined }}>
       <rect
@@ -137,7 +138,7 @@ export function RemovedLayer({ items, k }: { items: Item[]; k: number }) {
   return (
     <g pointerEvents="none">
       {items.map((it) => {
-        const c = catalogByKind(it.kind);
+        const c = itemSize(it);
         return c ? (
           <rect key={it.id} transform={`translate(${it.x * k} ${it.y * k}) rotate(${-it.rotation})`} x={(-c.w / 2) * k} y={(-c.d / 2) * k} width={c.w * k} height={c.d * k} fill="none" stroke={INK.flagged} strokeDasharray="4 3" strokeWidth={1.5} />
         ) : null;

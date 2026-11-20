@@ -5,7 +5,7 @@
  */
 
 import type { PlanModel } from "../model/types";
-import { catalogByKind } from "../model/catalog";
+import { catalogByKind, itemSize } from "../model/catalog";
 import { doorLeaves, leafPath, openingEnds } from "../model/drawing";
 import { analyzeModel } from "../model/analysis";
 
@@ -36,10 +36,11 @@ export function planToSvg(model: PlanModel, opts: { title?: string; date?: strin
   }
   // furniture
   for (const it of model.items) {
-    const c = catalogByKind(it.kind);
-    if (!c) continue;
+    const cat = catalogByKind(it.kind);
+    const c = itemSize(it);
+    if (!cat || !c) continue;
     out.push(
-      `<g transform="translate(${p(it.x)} ${p(it.y)}) rotate(${-it.rotation})"><rect x="${p(-c.w / 2)}" y="${p(-c.d / 2)}" width="${p(c.w)}" height="${p(c.d)}" rx="3" fill="none" stroke="#9aa0a6" stroke-width="1"${c.isRug ? ' stroke-dasharray="4 3"' : ""}/></g>`,
+      `<g transform="translate(${p(it.x)} ${p(it.y)}) rotate(${-it.rotation})"><rect x="${p(-c.w / 2)}" y="${p(-c.d / 2)}" width="${p(c.w)}" height="${p(c.d)}" rx="3" fill="none" stroke="#9aa0a6" stroke-width="1"${cat.isRug ? ' stroke-dasharray="4 3"' : ""}/></g>`,
     );
   }
   // walls

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import type { PlanModel } from "../model/types";
 import { buildArchitecture } from "./architecture";
 import { buildFurniture } from "./furniture";
+import { catalogByKind, isResized, itemSize } from "../model/catalog";
 
 /** Furniture stands on the floor slabs, not on the ground under them. */
 const FLOOR_TOP = 0.04;
@@ -18,6 +19,10 @@ export function buildContent(model: PlanModel): { group: THREE.Group; bounds: TH
     if (!piece) continue;
     piece.position.set(item.x, FLOOR_TOP, item.y);
     piece.rotation.y = (item.rotation * Math.PI) / 180;
+    // a resized piece is its catalog model stretched to the new size
+    const cat = catalogByKind(item.kind);
+    const size = itemSize(item);
+    if (cat && size && isResized(item)) piece.scale.set(size.w / cat.w, size.h / cat.h, size.d / cat.d);
     piece.userData.entityId = item.id;
     group.add(piece);
   }
