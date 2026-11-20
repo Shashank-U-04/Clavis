@@ -4,6 +4,9 @@
  * theme and shortcuts. Everything else lives in the views themselves.
  */
 
+import { useAccount } from "@/lib/account/bridge";
+import { auth, herePath } from "@/lib/auth/client";
+import { authConfigured } from "@/lib/auth/config";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { actions, logActivity, store, useAppStore } from "../model/store";
 import { findTemplate, makerText } from "../lib/catalogue";
@@ -88,6 +91,8 @@ function PlanName() {
 
 function SaveStatus() {
   const save = useAppStore((s) => s.save);
+  const { account } = useAccount();
+  const where = account ? "Saved here and synced to your account" : "Saved in this browser (sign in to keep it on every device)";
   const [, tick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => tick((x) => x + 1), 15000);
@@ -96,7 +101,7 @@ function SaveStatus() {
   if (save.state === "error") return <span className="save err" title={save.message}>⚠ Not saved</span>;
   if (save.state === "saved") {
     const s = Math.round((Date.now() - save.at) / 1000);
-    return <span className="save ok" title="Saved in this browser">✓ Saved{s > 20 ? ` ${s < 3600 ? `${Math.round(s / 60) || 1} min ago` : "earlier"}` : ""}</span>;
+    return <span className="save ok" title={where}>✓ Saved{s > 20 ? ` ${s < 3600 ? `${Math.round(s / 60) || 1} min ago` : "earlier"}` : ""}</span>;
   }
   return <span className="save">Not saved yet</span>;
 }
@@ -296,6 +301,49 @@ function Shortcuts() {
   );
 }
 
+const GoogleG = () => (
+  <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden>
+    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z" />
+    <path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.9-6.1z" />
+    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.2-13.5-10l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
+  </svg>
+);
+
+/**
+ * Who you are, in the studio too: a guest gets one Google button that brings this plan (and
+ * every other one made here) into an account and comes straight back; someone signed in sees
+ * their initial and whether the cloud copy is up to date.
+ */
+function AccountChip() {
+  const { account, sync } = useAccount();
+  const [busy, setBusy] = useState(false);
+  if (!authConfigured()) return null;
+  if (!account)
+    return (
+      <button
+        className="acct guest"
+        disabled={busy}
+        title="Sign in with Google: this plan and the others you made here come with you, on every device"
+        onClick={async () => {
+          setBusy(true);
+          const r = await auth.signInWithGoogle(herePath());
+          if (!r.ok) setBusy(false);
+        }}
+      >
+        <GoogleG />
+        {busy ? "Opening Google…" : "Sign in"}
+      </button>
+    );
+  const state = sync.state === "synced" ? "synced" : sync.state === "syncing" ? "syncing…" : sync.state === "offline" ? "not synced yet, kept here" : "";
+  return (
+    <a className="acct" href="/profile" title={`${account.email} · ${state}`} aria-label={`Your account, ${account.email}, ${state}`}>
+      <span className="avatar">{(account.name || account.email).trim().charAt(0).toUpperCase()}</span>
+      <span className={`sync-dot ${sync.state}`} aria-hidden />
+    </a>
+  );
+}
+
 export function Header() {
   const canUndo = useAppStore((s) => s.undoStack.length > 0);
   const canRedo = useAppStore((s) => s.redoStack.length > 0);
@@ -353,6 +401,7 @@ export function Header() {
         </button>
         <ThemeButton />
         <Shortcuts />
+        <AccountChip />
       </div>
     </header>
   );

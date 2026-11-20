@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import { Cloud, CloudOff, LogIn, LogOut, RefreshCw } from "lucide-react";
 import { authConfigured } from "@/lib/auth/config";
 import { signOut, signOutAnyway, syncNow, useAccount, type SyncState } from "@/lib/account/bridge";
+import { auth, herePath } from "@/lib/auth/client";
+import { GoogleButton } from "@/components/auth/fields";
 
 function ago(at: number, now: number): string {
   const s = Math.max(0, Math.round((now - at) / 1000));
@@ -42,10 +44,26 @@ export function AccountStatus() {
   const [busy, setBusy] = useState(false);
 
   if (!account) {
+    if (!authConfigured())
+      return (
+        <Link href="/login?accounts=off" className="label mt-4 flex items-center justify-between border border-rule px-3 py-2 text-ink-2 hover:border-ink hover:text-ink">
+          Sign in to sync <LogIn size={13} aria-hidden="true" />
+        </Link>
+      );
+    const google = async () => {
+      setBusy(true);
+      const r = await auth.signInWithGoogle(herePath());
+      if (!r.ok) setProblem(r.message);
+      setBusy(false);
+    };
     return (
-      <Link href={authConfigured() ? "/login" : "/login?accounts=off"} className="label mt-4 flex items-center justify-between border border-rule px-3 py-2 text-ink-2 hover:border-ink hover:text-ink">
-        Sign in to sync <LogIn size={13} aria-hidden="true" />
-      </Link>
+      <div className="mt-4 space-y-2" data-testid="account-status">
+        <p className="text-xs text-ink-2">
+          <span className="font-semibold text-ink">Working as a guest.</span> Sign in and everything here comes with you, on every device.
+        </p>
+        <GoogleButton onClick={() => void google()} busy={busy} />
+        {problem && <p className="text-xs text-marker">{problem}</p>}
+      </div>
     );
   }
 

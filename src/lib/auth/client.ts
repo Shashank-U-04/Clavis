@@ -36,6 +36,9 @@ export function explain(error: AuthError | Error): AuthResult {
 /** Where the Google round trip should land, back on this site. */
 const callback = (next: string) => `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext(next))}`;
 
+/** Where to come back to after signing in from this page itself (path and query). */
+export const herePath = (): string => (typeof window === "undefined" ? "/dashboard" : safeNext(window.location.pathname + window.location.search));
+
 /** `next` from the current page's address (?next=/plans/abc), so sign-in returns there. */
 export const nextFromLocation = (): string =>
   typeof window === "undefined" ? "/dashboard" : safeNext(new URLSearchParams(window.location.search).get("next"));
