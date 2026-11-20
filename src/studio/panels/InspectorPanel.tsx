@@ -3,6 +3,9 @@ import { actions, logActivity, useAppStore, type ActionResult } from "../../mode
 import { catalogByKind, isResized, itemSize } from "../../model/catalog";
 import { FLOOR_FINISHES } from "../../model/layout";
 import { segLen } from "../../model/geometry";
+import { doorLeaves, leafPath } from "../../model/drawing";
+import { SWINGS } from "../../editor/doorPlace";
+import type { Opening, Wall } from "../../model/types";
 import { analyzeModel } from "../../model/analysis";
 import { assistant, useSession } from "../../ai/session";
 import { setUi } from "../uiStore";
@@ -67,6 +70,31 @@ function Remove({ what, run }: { what: string; run: () => ActionResult }) {
     >
       Delete {what}
     </button>
+  );
+}
+
+/** A door's swing drawn small, the way it lies on the plan, for picking which way it opens. */
+function SwingIcon({ wall, o }: { wall: Wall; o: Opening }) {
+  const len = segLen(wall.ax, wall.ay, wall.bx, wall.by) || 1;
+  const d = { x: (wall.bx - wall.ax) / len, y: (wall.by - wall.ay) / len };
+  // the same direction as the real wall, one door wide, centred on the icon
+  const span = 1.6;
+  const mini: Wall = { ...wall, ax: -d.x * span / 2, ay: -d.y * span / 2, bx: d.x * span / 2, by: d.y * span / 2 };
+  const leaves = doorLeaves(mini, { ...o, t: 0.5, width: Math.min(o.width, 1.1) });
+  const s = 18;
+  return (
+    <svg width="44" height="44" viewBox="-22 -22 44 44" aria-hidden>
+      <line x1={mini.ax * s} y1={mini.ay * s} x2={mini.bx * s} y2={mini.by * s} stroke="currentColor" strokeWidth={4} opacity={0.35} />
+      {leaves.map((l, i) => {
+        const p = leafPath(l, s);
+        return (
+          <g key={i}>
+            <path d={p.arc} fill="none" stroke="currentColor" strokeWidth={1} strokeDasharray="2 2" />
+            <path d={p.leaf} stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -142,12 +170,49 @@ export function InspectorPanel() {
           {!door && <Num label="Sill" value={opening.sill} onCommit={(v) => actions.editOpening(opening.id, { sill: v })} />}
           <Num label="From start" value={opening.t * len} onCommit={(v) => actions.editOpening(opening.id, { offset: v })} />
         </div>
-        {door && (
-          <div className="row">
-            <button onClick={() => actions.setDoorSwing(opening.id, opening.hinge === "b" ? "a" : "b", opening.side)}>Flip hinge</button>
-            <button onClick={() => actions.setDoorSwing(opening.id, opening.hinge, opening.side === "left" ? "right" : "left")}>Swing other way</button>
-          </div>
+        {door && host && (
+          <>
+            <p className="field-group">Opens</p>
+            <div className="swings" role="radiogroup" aria-label="Which way the door opens">
+              {SWINGS.map((s) => {
+                const on = (opening.hinge ?? "a") === s.hinge && (opening.side ?? "right") === s.side;
+                return (
+                  <button
+                    key={`${s.hinge}${s.side}`}
+                    role="radio"
+                    aria-checked={on}
+                    className={on ? "on" : ""}
+                    title="Open this way (R turns the selected door)"
+                    onClick={() => {
+                      const r = actions.setDoorSwing(opening.id, s.hinge, s.side);
+                      logActivity("human", "set_door_swing", r.summary, r.ok);
+                    }}
+                  >
+                    <SwingIcon wall={host} o={{ ...opening, ...s }} />
+                  </button>
+                );
+              })}
+            </div>
+            <p className="field-group">Width</p>
+            <div className="row">
+              {[0.7, 0.8, 0.9, 1.0, 1.6].map((w) => (
+                <button
+                  key={w}
+                  className={Math.abs(opening.width - w) < 1e-6 ? "on" : ""}
+                  title={w > 1.15 ? "Double door" : "Single door"}
+                  onClick={() => {
+                    const r = actions.editOpening(opening.id, { width: w });
+                    logActivity("human", "edit", r.summary, r.ok);
+                  }}
+                >
+                  {w.toFixed(1)} m{w > 1.15 ? " double" : ""}
+                </button>
+              ))}
+            </div>
+          </>
         )}
+        {door && <p className="muted small">Drag the door along its wall to move it · R turns it · Del deletes it.</p>}
+        {!door && <p className="muted small">Drag the window along its wall to move it.</p>}
         <div className="row">
           <Remove what={door ? "door" : "window"} run={() => actions.removeOpening(opening.id)} />
         </div>

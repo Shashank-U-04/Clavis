@@ -506,6 +506,9 @@
   .num small { grid-column: 1 / -1; margin-top: 3px; line-height: 1.3; }
   .num.wide { grid-column: 1 / -1; margin: 8px 0; }
   .row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .row button.on, .swings button.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+  .swings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0; }
+  .swings button { display: grid; place-items: center; padding: 4px; color: var(--ink-2, var(--ink)); }
 
   /* project */
   .project section { margin-bottom: 18px; display: flex; flex-direction: column; gap: 8px; }

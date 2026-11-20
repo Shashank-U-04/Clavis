@@ -11,8 +11,10 @@
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { actions, beginGesture, endGesture, logActivity, store, useAppStore } from "../model/store";
+import type { Opening } from "../model/types";
 import { snap, segLen, pointSegDist, projectT, type Pt } from "../model/geometry";
 import { wallEnd } from "./wallDraw";
+import { nextSwing, swingToward } from "./doorPlace";
 import { catalogByKind } from "../model/catalog";
 import { blockById, nextLabel, snapRect } from "../model/blocks";
 import { useSession } from "../ai/session";
@@ -25,6 +27,7 @@ import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomLabels
 type Drag =
   | { kind: "pan"; lastX: number; lastY: number }
   | { kind: "move"; what: "item" | "room"; id: string; grab: Pt; moved: boolean }
+  | { kind: "slide"; id: string; moved: boolean }
   | { kind: "room"; from: Pt };
 
 const inField = (t: EventTarget | null) => {
@@ -142,6 +145,12 @@ export function Editor() {
         }
         return;
       }
+      const door = ed.selectedOpeningId ? store.getState().model.openings.find((o) => o.id === ed.selectedOpeningId && o.kind === "door") : undefined;
+      if (door && key === "r") {
+        const s = nextSwing(door);
+        const r = actions.setDoorSwing(door.id, s.hinge, s.side);
+        return logActivity("human", "set_door_swing", r.summary, r.ok);
+      }
       const item = ed.selectedItemId ? store.getState().model.items.find((i) => i.id === ed.selectedItemId) : undefined;
       if (!item) return;
       if (key === "r") return void actions.moveItem(item.id, undefined, undefined, (item.rotation + (e.shiftKey ? 270 : 90)) % 360);
@@ -194,6 +203,16 @@ export function Editor() {
     select(id);
   };
 
+  /** Press on a door or window: select it, and drag to slide it along its wall. */
+  const grabOpening = (e: ReactPointerEvent, id: string) => {
+    if (!editable || e.button !== 0) return;
+    e.stopPropagation();
+    actions.selectOpening(id);
+    beginGesture();
+    setDrag({ kind: "slide", id, moved: false });
+    svg.current?.setPointerCapture(e.pointerId);
+  };
+
   const startPan = (e: ReactPointerEvent) => {
     setDrag({ kind: "pan", lastX: e.clientX, lastY: e.clientY });
     svg.current?.setPointerCapture(e.pointerId);
@@ -236,8 +255,11 @@ export function Editor() {
       }
       case "door":
       case "window": {
-        const hit = wallUnder(toWorld(e.clientX, e.clientY));
-        const r = hit ? actions.addOpening(editor.drawMode, hit.id, hit.t) : { ok: false, summary: "Click on a wall to place it." };
+        const at = toWorld(e.clientX, e.clientY);
+        const hit = wallUnder(at);
+        const host = hit && live.walls.find((w) => w.id === hit.id);
+        const swing = host && editor.drawMode === "door" ? swingToward(host, hit.t, at) : undefined;
+        const r = hit ? actions.addOpening(editor.drawMode, hit.id, hit.t, undefined, undefined, undefined, swing) : { ok: false, summary: "Click on a wall to place it." };
         return logActivity("human", `add_${editor.drawMode}`, r.summary, r.ok);
       }
       default:
@@ -261,6 +283,16 @@ export function Editor() {
       if (drag.what === "item") actions.moveItem(drag.id, x, y);
       else actions.updateRoom(drag.id, { x, y });
       if (!drag.moved) setDrag({ ...drag, moved: true });
+    } else if (drag.kind === "slide") {
+      const o = live.openings.find((x) => x.id === drag.id);
+      const w = o && live.walls.find((x) => x.id === o.wallId);
+      if (!o || !w) return;
+      const len = segLen(w.ax, w.ay, w.bx, w.by) || 1;
+      const t = projectT(toWorld(e.clientX, e.clientY), { x: w.ax, y: w.ay }, { x: w.bx, y: w.by });
+      // along the wall in 5 cm steps, kept inside it
+      const offset = Math.min(len, Math.max(0, snap(t * len)));
+      if (Math.abs(offset - o.t * len) > 1e-6) actions.editOpening(o.id, { offset });
+      if (!drag.moved) setDrag({ ...drag, moved: true });
     }
   };
 
@@ -268,6 +300,11 @@ export function Editor() {
     const d = drag;
     setDrag(null);
     if (!d) return;
+    if (d.kind === "slide") {
+      endGesture();
+      const o = store.getState().model.openings.find((x) => x.id === d.id);
+      if (d.moved && o) logActivity("human", "update_opening", `${o.kind === "door" ? "Door" : "Window"} slid along its wall.`);
+    }
     if (d.kind === "move") {
       endGesture();
       if (d.moved && d.what === "item") {
@@ -310,6 +347,16 @@ export function Editor() {
         ? wallEnd(start, pointer.current.p, live.walls, { free: pointer.current.free, length: typedLength, scale: k })
         : cursor
       : null;
+  // where a door or window would go, and for a door which way it would open
+  const openingGhost = (() => {
+    if ((editor.drawMode !== "door" && editor.drawMode !== "window") || previewing || !pointer.current) return null;
+    const hit = wallUnder(pointer.current.p);
+    const w = hit && live.walls.find((x) => x.id === hit.id);
+    if (!hit || !w) return null;
+    const door = editor.drawMode === "door";
+    const ghost: Opening = { id: "ghost", kind: editor.drawMode, wallId: w.id, t: hit.t, width: door ? 0.9 : 1.2, sill: door ? 0 : 0.9, height: door ? 2.1 : 1.2, ...(door && swingToward(w, hit.t, pointer.current.p)) };
+    return { ...live, walls: [w], openings: [ghost] };
+  })();
   const selRoom = model.rooms.find((r) => r.id === editor.selectedRoomId);
   const selItem = model.items.find((i) => i.id === editor.selectedItemId);
   const help: Partial<Record<typeof editor.drawMode, string>> = {
@@ -318,7 +365,7 @@ export function Editor() {
       : " · click where the wall starts; it snaps to 15° steps and to other walls' ends",
     room: " · drag to draw a room; its walls come with it",
     block: editor.placingKind ? ` · click to place a ${blockById(editor.placingKind)?.label ?? "room"}; it snaps to its neighbours · Esc to stop` : "",
-    door: " · click a wall to add a door",
+    door: " · click a wall to add a door; it opens towards the side you click on, hinged on the nearer jamb · select it and press R to turn it",
     window: " · click a wall to add a window",
     place: editor.placingKind ? ` · click to place ${catalogByKind(editor.placingKind)?.label ?? ""} · Esc to stop` : "",
   };
@@ -346,7 +393,12 @@ export function Editor() {
         <FurnitureLayer items={model.items} k={k} mark={mark} movable={editable} onPress={(e, id) => grab(e, "item", id)} />
         <RemovedLayer items={removed} k={k} />
         <WallsLayer walls={model.walls} k={k} mark={mark} pickable={editable} onPress={pick(actions.selectWall)} />
-        <OpeningsLayer model={model} k={k} mark={mark} pickable={editable} onPress={pick(actions.selectOpening)} />
+        <OpeningsLayer model={model} k={k} mark={mark} pickable={editable} onPress={grabOpening} />
+        {openingGhost && (
+          <g pointerEvents="none" opacity={0.75}>
+            <OpeningsLayer model={openingGhost} k={k} mark={() => INK.selected} pickable={false} onPress={() => {}} />
+          </g>
+        )}
         <RoomLabelsLayer rooms={model.rooms} k={k} />
         {route && <RouteLayer points={route.points} k={k} />}
         {dims && <OverallDimensions model={model} k={k} />}
