@@ -86,7 +86,7 @@ export function LoginForm() {
     <div className="space-y-6">
       <GoogleButton onClick={f.google} busy={f.busy} />
       <AuthNotice result={f.result} />
-      <p className="text-sm text-ink-2">Your Google account is your Clavis account: no new password, and your plans follow you to every device.</p>
+      <p className="text-sm text-ink-2">Your Google account is your Clavis account: no new password, and your plans follow you to every device. Anything you made here as a guest comes with you.</p>
       {judgesLoginShown() && (
         <>
           <Divider>or</Divider>

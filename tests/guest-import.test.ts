@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { declineGuestPlans, guestPlansToOffer, importGuestPlans } from "../src/lib/account/guestImport";
+import { declineGuestPlans, guestPlansToOffer, importGuestPlans, moveGuestPlans } from "../src/lib/account/guestImport";
 import { ScopedStorage } from "../src/model/account";
 import { listProjects, loadProject, saveProject } from "../src/model/library";
 import { listEvents, listVersions, saveVersion } from "../src/lib/workspace/browser";
@@ -60,5 +60,23 @@ describe("plans made before signing in", () => {
     const mine = new ScopedStorage(base, A);
     declineGuestPlans(mine);
     expect(guestPlansToOffer(base, mine)).toEqual([]);
+  });
+
+  it("move into the account on signing in, so signing out later shows no stale copies", () => {
+    const base = memoryStorage();
+    saveProject(base, "g1", { ...emptyModel(), name: "Guest loft" }, [], 1000);
+    saveVersion(base, "g1", { ...emptyModel(), name: "Guest loft" }, [], { label: "v1", now: 1100 });
+    saveProject(base, "g2", { ...emptyModel(), name: "Guest flat" }, [], 1200);
+    const mine = new ScopedStorage(base, A);
+
+    expect(moveGuestPlans(base, mine, 2000)).toBe(2);
+    expect(listProjects(mine).map((p) => p.name).sort()).toEqual(["Guest flat", "Guest loft"]);
+    expect(listVersions(mine, "g1").map((v) => v.label)).toEqual(["v1"]);
+    expect(loadProject(mine, "g1").ok).toBe(true);
+    // the guest space is empty now: back as a guest, there is nothing left over
+    expect(listProjects(base)).toEqual([]);
+    expect(loadProject(base, "g1").ok).toBe(false);
+    // and nothing moves twice
+    expect(moveGuestPlans(base, mine, 3000)).toBe(0);
   });
 });

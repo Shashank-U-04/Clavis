@@ -1,65 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
-import { useAccount, syncNow } from "@/lib/account/bridge";
-import { declineGuestPlans, guestPlansToOffer, importGuestPlans } from "@/lib/account/guestImport";
-import { baseStorage, browserStorage } from "@/model/persistence";
-import { notifyWorkspace } from "@/lib/workspace/useWorkspace";
+import { X } from "lucide-react";
+import { useAccount } from "@/lib/account/bridge";
+import { BROUGHT_ALONG_KEY } from "@/lib/account/guestImport";
 
-/** On the first visit after signing in: bring along the plans made here as a guest? */
+const forget = () => {
+  try {
+    sessionStorage.removeItem(BROUGHT_ALONG_KEY);
+  } catch {
+    /* nothing to forget */
+  }
+};
+
+/** After signing in: the plans made before it are in the account now, said once. */
 export function GuestImportBanner() {
   const { account } = useAccount();
-  const [names, setNames] = useState<string[]>([]);
-  const [done, setDone] = useState<number | null>(null);
+  const [n, setN] = useState(0);
 
   useEffect(() => {
-    if (!account) return setNames([]);
-    setNames(guestPlansToOffer(baseStorage(), browserStorage()).map((p) => p.name));
+    if (!account) return;
+    let v = 0;
+    try {
+      v = Number(sessionStorage.getItem(BROUGHT_ALONG_KEY) ?? 0);
+    } catch {
+      /* nothing to say */
+    }
+    if (!(v > 0)) return;
+    setN(v);
+    // said once: forget it after it has been on screen a moment (not at once, since the page
+    // that moved the plans reloads straight away and must not use it up)
+    const t = setTimeout(forget, 3000);
+    return () => clearTimeout(t);
   }, [account]);
 
-  if (done !== null)
-    return (
-      <div className="border-b border-rule bg-paper-2 px-5 py-4 text-sm md:px-8" role="status">
-        {done === 1 ? "1 plan is" : `${done} plans are`} now in your account.
-      </div>
-    );
-  if (!account || names.length === 0) return null;
-
-  const bring = () => {
-    const guest = baseStorage();
-    const mine = browserStorage();
-    if (!guest || !mine) return;
-    setDone(importGuestPlans(guest, mine));
-    setNames([]);
-    notifyWorkspace();
-    void syncNow();
-  };
-  const decline = () => {
-    declineGuestPlans(browserStorage());
-    setNames([]);
-  };
-
+  if (!account || n === 0) return null;
   return (
-    <section className="flex flex-wrap items-center justify-between gap-4 border-b border-rule bg-paper-2 px-5 py-5 md:px-8" aria-label="Plans from before you signed in">
-      <div className="max-w-2xl">
-        <p className="font-semibold">
-          {names.length === 1 ? "1 plan" : `${names.length} plans`} made in this browser before you signed in
-        </p>
-        <p className="mt-1 text-sm text-ink-2">
-          {names.slice(0, 3).join(", ")}
-          {names.length > 3 ? ` and ${names.length - 3} more` : ""}. Bring {names.length === 1 ? "it" : "them"} into your account to open {names.length === 1 ? "it" : "them"} anywhere. The
-          copies here stay as they are.
-        </p>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={decline} className="label flex items-center gap-2 border border-rule px-4 py-3 hover:border-ink">
-          Not now <X size={13} aria-hidden="true" />
-        </button>
-        <button type="button" onClick={bring} className="label flex items-center gap-2 bg-ink px-4 py-3 text-paper hover:bg-marker">
-          Bring {names.length === 1 ? "it" : "them"} along <Download size={13} aria-hidden="true" />
-        </button>
-      </div>
-    </section>
+    <div className="flex items-center justify-between gap-4 border-b border-rule bg-paper-2 px-5 py-4 text-sm md:px-8" role="status">
+      <p>
+        <span className="font-semibold">{n === 1 ? "The plan" : `The ${n} plans`} you made before signing in {n === 1 ? "is" : "are"} in your account now</span>
+        <span className="text-ink-2"> and on every device you sign in on.</span>
+      </p>
+      <button type="button" onClick={() => (forget(), setN(0))} className="text-ink-3 hover:text-ink" aria-label="Dismiss">
+        <X size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }

@@ -181,7 +181,7 @@ function AccountCard() {
         <p className="font-semibold">You are using Clavis as a guest.</p>
         <p className="mt-1 text-sm text-ink-2">
           {authConfigured()
-            ? "Sign in to keep your plans in your account and open them anywhere. The plans in this browser can be brought along."
+            ? "Sign in to keep your plans in your account and open them anywhere. Everything in this browser comes with you."
             : "Accounts are not switched on yet. Everything — plans, versions, history and this profile — is kept in this browser only."}
         </p>
       </div>

@@ -19,6 +19,8 @@ import { baseStorage, browserStorage } from "@/model/persistence";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { CHANGED, SAVED, notifyWorkspace } from "@/lib/workspace/useWorkspace";
 import { syncWorkspace } from "./sync";
+import { BROUGHT_ALONG_KEY, moveGuestPlans } from "./guestImport";
+import { JUDGES_EMAIL } from "@/lib/auth/judges";
 import { supabaseRemote } from "./supabaseRemote";
 
 export type SyncState =
@@ -132,6 +134,17 @@ function reconcile(user: User | null) {
     const account = toAccount(user);
     if (stored?.id !== account.id) {
       writeAccount(base, account);
+      // from guest to an account: what was made as a guest comes along, before the page reloads
+      // (the judges' shared demo account keeps to its sample plans)
+      const mine = browserStorage();
+      if (!stored && base && mine && readAccount(base)?.id === account.id && account.email.toLowerCase() !== JUDGES_EMAIL.toLowerCase()) {
+        try {
+          const n = moveGuestPlans(base, mine);
+          if (n > 0) sessionStorage.setItem(BROUGHT_ALONG_KEY, String(n));
+        } catch {
+          /* the plans stay in the guest space; nothing is lost */
+        }
+      }
       // reload only if the switch stuck; with storage blocked that would loop forever
       if (readAccount(base)?.id === account.id) {
         if (leavingFor) window.location.assign(leavingFor);
