@@ -152,7 +152,7 @@ export function Editor() {
         return logActivity("human", "set_door_swing", r.summary, r.ok);
       }
       const item = ed.selectedItemId ? store.getState().model.items.find((i) => i.id === ed.selectedItemId) : undefined;
-      if (!item) return;
+      if (!item || ed.camera === "walk") return; // while walking, the arrows move the walker
       if (key === "r") return void actions.moveItem(item.id, undefined, undefined, (item.rotation + (e.shiftKey ? 270 : 90)) % 360);
       const nudge = e.shiftKey ? 0.25 : 0.05;
       const step: Record<string, [number, number]> = { arrowleft: [-nudge, 0], arrowright: [nudge, 0], arrowup: [0, -nudge], arrowdown: [0, nudge] };

@@ -6,8 +6,9 @@
  * Camera modes:
  *   orbit — circle the building (drag to orbit, scroll to zoom)
  *   top   — straight down, north up, like the plan
- *   walk  — eye height, drag to look, WASD / arrows to move, walls and furniture block you,
- *           doorways do not
+ *   walk  — eye height; click to look with the mouse (pointer lock; Esc frees it) or drag to
+ *           look; WASD / arrows to move, Shift to hurry; walls and furniture block you,
+ *           doorways do not. Movement eases in and out rather than jumping.
  */
 
 import * as THREE from "three";
@@ -24,9 +25,14 @@ import { buildContent, disposeGroup } from "./content";
 import { groundMaterial } from "./materials";
 
 const EYE = 1.6;
-const STEP = 2.1; // metres per second
+const STEP = 1.9; // metres per second, walking
+const RUN = 1.9; // × STEP with Shift held
+const EASE = 10; // how quickly the walker reaches speed and stops (per second)
 const BODY = 0.22; // half-width of the walker
-const LOOK_SPEED = 0.0042;
+const LOOK_SPEED = 0.0042; // dragging
+const MOUSE_LOOK = 0.0022; // pointer lock: radians per pixel of mouse movement
+/** When the pointer lock last ended: the Esc that ends it should not also leave the walk. */
+export let pointerFreedAt = 0;
 
 export interface ViewerCallbacks {
   /** a piece of furniture (or nothing) was clicked */
@@ -121,6 +127,8 @@ export class Viewer {
   private doors: Door[] = [];
   private mode: CameraMode = "orbit";
   private keys = new Set<string>();
+  private velocity = { x: 0, z: 0 };
+  private shadowsDirty = true;
   private yaw = 0;
   private pitch = 0;
   private dragging: { x: number; y: number; moved: number } | null = null;
@@ -131,9 +139,13 @@ export class Viewer {
   private raycaster = new THREE.Raycaster();
 
   constructor(private mount: HTMLElement, private callbacks: ViewerCallbacks) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // no preserveDrawingBuffer: snapshot() renders and reads in the same task, and keeping the
+    // buffer costs every frame
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
+    // the sun never moves: shadows are drawn again only when the building or a door changes
+    this.renderer.shadowMap.autoUpdate = false;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -174,6 +186,8 @@ export class Viewer {
   // ---- public ------------------------------------------------------------------
 
   setModel(model: PlanModel) {
+    // the same design again (a selection or a view change): nothing to rebuild
+    if (model === this.model || model === this.pendingModel) return;
     this.pendingModel = model;
   }
 
@@ -188,6 +202,8 @@ export class Viewer {
   setMode(mode: CameraMode) {
     this.mode = mode;
     this.keys.clear();
+    this.velocity = { x: 0, z: 0 };
+    if (mode !== "walk" && document.pointerLockElement === this.renderer.domElement) document.exitPointerLock();
     this.placeCamera();
   }
 
@@ -214,6 +230,7 @@ export class Viewer {
 
   /** The current frame as a PNG data URL. */
   snapshot(): string {
+    this.renderer.shadowMap.needsUpdate = true;
     this.renderer.render(this.scene, this.camera);
     return this.renderer.domElement.toDataURL("image/png");
   }
@@ -251,6 +268,7 @@ export class Viewer {
     this.bounds = bounds;
     this.model = model;
     this.scene.add(group);
+    this.shadowsDirty = true;
     this.obstacles = obstaclesOf(model);
     this.doors = [];
     group.traverse((o) => {
@@ -322,18 +340,31 @@ export class Viewer {
     const keyDown = (e: KeyboardEvent) => {
       if (this.mode !== "walk" || typing(e)) return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (["w", "a", "s", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(k)) {
+      if (["w", "a", "s", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Shift"].includes(k)) {
         this.keys.add(k);
-        e.preventDefault();
+        if (k !== "Shift") e.preventDefault();
       }
     };
-    const keyUp = (e: KeyboardEvent) => this.keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+    const keyUp = (e: KeyboardEvent) => {
+      this.keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+      if (e.key === "Shift") this.keys.delete("Shift");
+    };
     const blur = () => this.keys.clear();
+    const locked = () => document.pointerLockElement === el;
+    const lockChange = () => {
+      if (!locked()) pointerFreedAt = performance.now();
+    };
+    const mouseLook = (e: MouseEvent) => {
+      if (this.mode !== "walk" || !locked()) return;
+      this.yaw -= e.movementX * MOUSE_LOOK;
+      this.pitch = Math.max(-1.25, Math.min(1.25, this.pitch - e.movementY * MOUSE_LOOK));
+      this.aim();
+    };
     const down = (e: PointerEvent) => {
       this.dragging = { x: e.clientX, y: e.clientY, moved: 0 };
     };
     const move = (e: PointerEvent) => {
-      if (!this.dragging) return;
+      if (!this.dragging || locked()) return;
       const dx = e.clientX - this.dragging.x;
       const dy = e.clientY - this.dragging.y;
       this.dragging = { x: e.clientX, y: e.clientY, moved: this.dragging.moved + Math.abs(dx) + Math.abs(dy) };
@@ -346,11 +377,19 @@ export class Viewer {
     const up = (e: PointerEvent) => {
       const drag = this.dragging;
       this.dragging = null;
-      if (drag && drag.moved < 5) this.click(e);
+      if (!drag || drag.moved >= 5) return;
+      // walking: the first click takes the mouse for looking; later clicks act at the crosshair
+      if (this.mode === "walk" && !locked() && !this.callbacks.placing()) {
+        void Promise.resolve(el.requestPointerLock?.()).catch(() => {});
+        return;
+      }
+      this.click(e, this.mode === "walk" && locked());
     };
     window.addEventListener("keydown", keyDown);
     window.addEventListener("keyup", keyUp);
     window.addEventListener("blur", blur);
+    document.addEventListener("pointerlockchange", lockChange);
+    document.addEventListener("mousemove", mouseLook);
     el.addEventListener("pointerdown", down);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);
@@ -358,16 +397,19 @@ export class Viewer {
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("blur", blur);
+      document.removeEventListener("pointerlockchange", lockChange);
+      document.removeEventListener("mousemove", mouseLook);
+      if (locked()) document.exitPointerLock();
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
     });
   }
 
-  private click(e: PointerEvent) {
+  private click(e: PointerEvent, atCentre = false) {
     if (!this.content) return;
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    const ndc = atCentre ? new THREE.Vector2(0, 0) : new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     if (this.callbacks.placing()) {
       const floor = new THREE.Vector3();
@@ -403,18 +445,29 @@ export class Viewer {
     if (this.keys.has("s") || this.keys.has("ArrowDown")) forward--;
     if (this.keys.has("d") || this.keys.has("ArrowRight")) strafe++;
     if (this.keys.has("a") || this.keys.has("ArrowLeft")) strafe--;
-    if (!forward && !strafe) return;
     const f = { x: Math.sin(this.yaw), z: Math.cos(this.yaw) };
     const r = { x: -f.z, z: f.x };
-    let dx = (f.x * forward + r.x * strafe) * STEP * dt;
-    let dz = (f.z * forward + r.z * strafe) * STEP * dt;
+    // diagonal moves are no faster than straight ones
+    const n = Math.hypot(forward, strafe) || 1;
+    const speed = STEP * (this.keys.has("Shift") ? RUN : 1);
+    const want = { x: ((f.x * forward + r.x * strafe) / n) * speed, z: ((f.z * forward + r.z * strafe) / n) * speed };
+    // ease towards the wanted velocity: smooth starts and stops, independent of frame rate
+    const blend = 1 - Math.exp(-EASE * dt);
+    this.velocity.x += (want.x - this.velocity.x) * blend;
+    this.velocity.z += (want.z - this.velocity.z) * blend;
+    if (!forward && !strafe && Math.hypot(this.velocity.x, this.velocity.z) < 0.01) {
+      this.velocity = { x: 0, z: 0 };
+      return;
+    }
+    let dx = this.velocity.x * dt;
+    let dz = this.velocity.z * dt;
     const p = this.camera.position;
     const free = (x: number, z: number) => !this.obstacles.some((b) => boxesOverlap({ x, y: z, halfW: BODY, halfD: BODY, angle: 0 }, b));
     // slide along walls: try the full step, then each axis on its own
     if (!free(p.x + dx, p.z + dz)) {
-      if (free(p.x + dx, p.z)) dz = 0;
-      else if (free(p.x, p.z + dz)) dx = 0;
-      else return;
+      if (free(p.x + dx, p.z)) (dz = 0), (this.velocity.z = 0);
+      else if (free(p.x, p.z + dz)) (dx = 0), (this.velocity.x = 0);
+      else return void (this.velocity = { x: 0, z: 0 });
     }
     p.x += dx;
     p.z += dz;
@@ -439,9 +492,14 @@ export class Viewer {
       if (Math.abs(d.target - d.amount) < 1e-3) continue;
       d.amount += (d.target - d.amount) * Math.min(1, dt * 6);
       d.hinge.rotation.y = d.amount * d.openAngle;
+      this.shadowsDirty = true;
     }
     // a hidden pane (plan-only layout) keeps its scene current but skips drawing
     if (this.mount.clientWidth < 2 || this.mount.clientHeight < 2) return;
+    if (this.shadowsDirty) {
+      this.renderer.shadowMap.needsUpdate = true;
+      this.shadowsDirty = false;
+    }
     this.renderer.render(this.scene, this.camera);
   };
 }

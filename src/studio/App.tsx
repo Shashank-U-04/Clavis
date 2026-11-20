@@ -11,6 +11,7 @@ import { actions, issuesFor, store, useAppStore } from "../model/store";
 import { analyzeModel } from "../model/analysis";
 import { Editor } from "../editor/Editor";
 import { Scene3D } from "../three/Scene3D";
+import { pointerFreedAt } from "../three/viewer";
 import { Header, viewKey } from "./Header";
 import { Library, ToolStrip } from "./ToolStrip";
 import { ActivityFeed } from "./ActivityFeed";
@@ -53,6 +54,12 @@ function CameraBar() {
 function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
   const walking = useAppStore((s) => s.editor.camera === "walk");
   const [full, setFull] = useState(false);
+  const [looking, setLooking] = useState(false);
+  useEffect(() => {
+    const on = () => setLooking(!!document.pointerLockElement);
+    document.addEventListener("pointerlockchange", on);
+    return () => document.removeEventListener("pointerlockchange", on);
+  }, []);
   useEffect(() => {
     const on = () => setFull(document.fullscreenElement === pane.current);
     document.addEventListener("fullscreenchange", on);
@@ -60,18 +67,29 @@ function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
   }, [pane]);
   useEffect(() => {
     if (!walking) return;
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.fullscreenElement && featureActions.exitWalk();
+    // Esc frees the mouse first (the browser does that); only an Esc after that leaves the walk
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.fullscreenElement && !document.pointerLockElement && performance.now() - pointerFreedAt > 400 && featureActions.exitWalk();
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, [walking]);
   if (!walking) return null;
   const toggleFull = () => (document.fullscreenElement ? void document.exitFullscreen() : void pane.current?.requestFullscreen?.());
   return (
+    <>
+    {looking && <div className="walk-crosshair" aria-hidden="true" />}
     <div className="walk-hud" role="group" aria-label="Walk">
       <div className="walk-text">
         <span className="walk-title">Walking · eye height 1.60 m</span>
         <span className="walk-keys">
-          <kbd>W A S D</kbd> move · <kbd>drag</kbd> look · <kbd>click</kbd> a door
+          {looking ? (
+            <>
+              <kbd>W A S D</kbd> / <kbd>arrows</kbd> move · <kbd>Shift</kbd> hurry · mouse looks · <kbd>click</kbd> opens a door · <kbd>Esc</kbd> frees the mouse
+            </>
+          ) : (
+            <>
+              <kbd>click</kbd> the view to look with the mouse · <kbd>W A S D</kbd> / <kbd>arrows</kbd> move · <kbd>Shift</kbd> hurry
+            </>
+          )}
         </span>
       </div>
       <button onClick={toggleFull}>{full ? "Exit full screen" : "Full screen"}</button>
@@ -79,6 +97,7 @@ function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
         Exit walk
       </button>
     </div>
+    </>
   );
 }
 
