@@ -17,6 +17,7 @@ import { Library, ToolStrip } from "./ToolStrip";
 import { ActivityFeed } from "./ActivityFeed";
 import { Welcome } from "./Welcome";
 import { BuildGuide } from "./BuildGuide";
+import { SelectionBar } from "./SelectionBar";
 import { AssistantPanel } from "./panels/AssistantPanel";
 import { ReviewPanel, routePoints } from "./panels/ReviewPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
@@ -205,11 +206,13 @@ export function App() {
           <section className="pane plan-pane" aria-label="Plan" aria-hidden={!views.plan || undefined}>
             <Editor />
             <PaneLabel>Plan</PaneLabel>
+            <SelectionBar where="plan" />
             {guide && !(empty && welcome && !drawing) && <BuildGuide />}
           </section>
           <section ref={scenePane} className="pane scene-pane" aria-label="3D view" aria-hidden={!views.scene || undefined}>
             <Scene3D theme={theme} />
             <CameraBar />
+            <SelectionBar where="scene" />
             <WalkHud pane={scenePane} />
           </section>
           {empty && welcome && !drawing && <Welcome />}
