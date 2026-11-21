@@ -73,6 +73,37 @@ export const CATALOG: readonly CatalogEntry[] = [
   // stairs climb one floor; their height follows the floor they climb to
   entry({ kind: "stair_straight", label: "Straight stair", w: 1.0, d: 3.8, h: 3.0, color: "#c9b79c", category: "structure", tags: ["stair"], stair: "straight" }),
   entry({ kind: "stair_spiral", label: "Spiral stair", w: 1.8, d: 1.8, h: 3.0, color: "#8d9196", category: "structure", tags: ["stair"], stair: "spiral" }),
+  // railings and structure: drawn along a balcony, a terrace or a void; stretch the width to fit
+  entry({ kind: "railing_glass", label: "Glass balustrade", w: 2.0, d: 0.06, h: 1.0, color: "#cfe3ea", category: "structure", tags: ["railing"] }),
+  entry({ kind: "railing_steel", label: "Steel railing", w: 2.0, d: 0.06, h: 1.0, color: "#2c2f33", category: "structure", tags: ["railing"] }),
+  entry({ kind: "glass_wall", label: "Glass wall", w: 2.4, d: 0.08, h: 2.6, color: "#cfe3ea", category: "structure", tags: ["facade", "glazing"] }),
+  entry({ kind: "cladding", label: "Timber cladding", w: 2.0, d: 0.08, h: 2.6, color: "#8a5f3c", category: "structure", tags: ["facade"] }),
+  entry({ kind: "column", label: "Column", w: 0.3, d: 0.3, h: 2.7, color: "#e9e6df", category: "structure", tags: ["structure"] }),
+  entry({ kind: "pergola", label: "Pergola", w: 3.6, d: 3.0, h: 2.6, color: "#3a3d41", category: "structure", tags: ["canopy", "shade"] }),
+  // outdoor and pool: these belong outside, so they may stand beyond the rooms
+  entry({ kind: "pool", label: "Pool", w: 4.0, d: 8.0, h: 0.15, color: "#3d9cc9", category: "outdoor", tags: ["pool", "water"], isRug: true }),
+  entry({ kind: "pool_infinity", label: "Infinity pool", w: 3.6, d: 10.0, h: 0.15, color: "#2f8fc0", category: "outdoor", tags: ["pool", "water"], isRug: true }),
+  entry({ kind: "stone_terrace", label: "Stone terrace", w: 4.0, d: 4.0, h: 0.06, color: "#ddd7cb", category: "outdoor", tags: ["paving"], isRug: true }),
+  entry({ kind: "timber_deck", label: "Timber deck", w: 4.0, d: 3.0, h: 0.08, color: "#a87c55", category: "outdoor", tags: ["paving"], isRug: true }),
+  entry({ kind: "sun_lounger", label: "Sun lounger", w: 0.7, d: 1.95, h: 0.35, color: "#f2f0ea", category: "outdoor", tags: ["seating"] }),
+  entry({ kind: "outdoor_sofa", label: "Outdoor sofa", w: 2.2, d: 0.9, h: 0.72, color: "#4a4d52", category: "outdoor", tags: ["seating"] }),
+  entry({ kind: "outdoor_dining", label: "Outdoor dining table", w: 2.2, d: 1.0, h: 0.75, color: "#3a3d41", category: "outdoor", tags: ["table"] }),
+  entry({ kind: "parasol", label: "Parasol", w: 2.6, d: 2.6, h: 2.5, color: "#f1ede4", category: "outdoor", tags: ["shade"] }),
+  entry({ kind: "fire_pit", label: "Fire pit", w: 1.0, d: 1.0, h: 0.4, color: "#5a5c60", category: "outdoor", tags: ["fixture"] }),
+  entry({ kind: "planter", label: "Planter", w: 1.2, d: 0.5, h: 0.7, color: "#5f7f4c", category: "outdoor", tags: ["planting"] }),
+  entry({ kind: "hedge", label: "Hedge", w: 2.0, d: 0.6, h: 1.2, color: "#5f7f4c", category: "outdoor", tags: ["planting"] }),
+  entry({ kind: "tree", label: "Tree", w: 2.6, d: 2.6, h: 4.5, color: "#5b8a4a", category: "outdoor", tags: ["planting"] }),
+  // the finer rooms of a large house
+  entry({ kind: "kitchen_island", label: "Kitchen island", w: 2.6, d: 1.1, h: 0.92, color: "#e9e6df", category: "kitchen", tags: ["counter", "luxury"] }),
+  entry({ kind: "bar_counter", label: "Bar", w: 2.0, d: 0.6, h: 1.1, color: "#3a2f28", category: "kitchen", tags: ["counter", "luxury"] }),
+  entry({ kind: "bar_stool", label: "Bar stool", w: 0.45, d: 0.45, h: 0.78, color: "#2f2d2b", category: "kitchen", tags: ["seating", "chair"] }),
+  entry({ kind: "double_vanity", label: "Double vanity", w: 1.6, d: 0.55, h: 0.9, color: "#e9e6df", category: "bath", tags: ["fixture", "luxury"] }),
+  entry({ kind: "freestanding_tub", label: "Freestanding bath", w: 1.7, d: 0.8, h: 0.6, color: "#f4f4f2", category: "bath", tags: ["fixture", "luxury"] }),
+  entry({ kind: "walk_in_wardrobe", label: "Walk-in wardrobe", w: 2.4, d: 0.6, h: 2.4, color: "#b49a7c", category: "bedroom", tags: ["storage", "luxury"] }),
+  entry({ kind: "fireplace", label: "Fireplace", w: 1.8, d: 0.45, h: 1.2, color: "#4a4744", category: "living", tags: ["fixture", "luxury"] }),
+  entry({ kind: "grand_piano", label: "Grand piano", w: 1.5, d: 1.9, h: 1.0, color: "#141414", category: "living", tags: ["luxury"] }),
+  entry({ kind: "cinema_screen", label: "Projector screen", w: 3.0, d: 0.15, h: 2.0, color: "#f4f4f2", category: "living", tags: ["media", "luxury"] }),
+  entry({ kind: "cinema_recliners", label: "Cinema recliners", w: 2.8, d: 1.0, h: 1.0, color: "#3d2f2a", category: "living", tags: ["seating", "luxury"] }),
 ];
 
 export const CATEGORIES: readonly CatalogCategory[] = ["living", "bedroom", "kitchen", "bath", "office", "decor", "structure", "outdoor"];

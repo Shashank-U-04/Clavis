@@ -11,7 +11,9 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { PlanModel } from "../model/types";
+import type { PlanModel, Room } from "../model/types";
+import { elevationOf, levelAbove, levelOf } from "../model/levels";
+import { catalogByKind } from "../model/catalog";
 import type { SitePiece } from "../components/figures/sunsetFigure";
 import { buildContent, disposeGroup } from "./content";
 import { buildSite } from "./site";
@@ -25,13 +27,24 @@ const CAP = wallCapMaterial.color.clone();
 
 const roofMaterial = surface("#eeede8", "matte");
 
-/** A flat roof over every room, out to the walls' outer faces, resting on the tallest wall. */
+/**
+ * A flat roof over every room that has no room above it, out to the walls' outer faces and
+ * resting on the tallest wall of its floor. A room mostly covered by the floor above is left
+ * to that floor's slab.
+ */
 function buildRoof(model: PlanModel): THREE.Group {
   const roof = new THREE.Group();
   roof.name = "roof";
-  const top = Math.max(2.4, ...model.walls.map((w) => w.height));
   const edge = Math.max(0.1, ...model.walls.map((w) => w.thickness)) / 2 + 0.02;
-  for (const r of model.rooms) roof.add(slab(r.w + edge * 2, 0.24, r.h + edge * 2, roofMaterial).at(r.x + r.w / 2, top, r.y + r.h / 2));
+  const overlap = (a: Room, b: Room) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  for (const r of model.rooms) {
+    const level = levelOf(r);
+    const above = levelAbove(model, level);
+    const covered = above ? model.rooms.filter((o) => levelOf(o) === above.id).reduce((sum, o) => sum + overlap(r, o), 0) : 0;
+    if (covered > r.w * r.h * 0.5) continue;
+    const top = elevationOf(model, level) + Math.max(2.4, ...model.walls.filter((w) => levelOf(w) === level).map((w) => w.height));
+    roof.add(slab(r.w + edge * 2, 0.24, r.h + edge * 2, roofMaterial).at(r.x + r.w / 2, top, r.y + r.h / 2));
+  }
   return roof;
 }
 
@@ -122,8 +135,12 @@ export class Showcase {
     this.site.traverse((o) => {
       if (o.userData.frames) framed.union(new THREE.Box3().setFromObject(o));
     });
+    // the design's own pools, terraces and decks belong in the picture too (its trees need not)
+    const paved = new Set(model.items.filter((it) => catalogByKind(it.kind)?.category === "outdoor" && catalogByKind(it.kind)?.isRug).map((it) => it.id));
+    for (const child of this.house.children) if (paved.has(child.userData.entityId)) framed.union(new THREE.Box3().setFromObject(child));
     framed.getCenter(this.centre);
-    this.centre.y = 1.2;
+    // look at the middle of a tall house, and just above the floor of a low one
+    this.centre.y = Math.max(1.2, bounds.max.y * 0.38);
     this.radius = Math.max(6, framed.getSize(new THREE.Vector3()).setY(0).length() / 2);
     this.daylight.aim(all.getCenter(new THREE.Vector3()), all.getSize(new THREE.Vector3()).setY(0).length() / 2 + 2);
 
