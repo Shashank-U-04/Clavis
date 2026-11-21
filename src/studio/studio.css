@@ -213,7 +213,7 @@
   .side { grid-column: 4; }
   .lib-open .work { --library-w: var(--library); }
   .no-side .work { --side-w: 0px; }
-  .no-side .side { visibility: hidden; border: 0; }
+  .no-side .side { visibility: hidden; border: 0; overflow: hidden; } /* its tabs must not widen the page while it is folded away */
   /* chat alone: the conversation takes the room, set in a readable column */
   .chat-only .work { --strip-w: 0px; --stage-w: 0px; --side-w: minmax(0, 1fr); }
   .chat-only .strip, .chat-only .stage { visibility: hidden; border: 0; }
