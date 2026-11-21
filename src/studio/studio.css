@@ -331,6 +331,19 @@
   .scene-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 13px; pointer-events: none; padding: 20px; text-align: center; }
   .camera-hint { position: absolute; left: 10px; bottom: 10px; font-size: 11.5px; color: var(--ink-3); pointer-events: none; text-shadow: var(--hint-shadow); }
   .placing-hint { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); font-size: 12px; background: var(--overlay); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; box-shadow: var(--shadow); }
+  /* the floors, top floor first, at the foot of the plan */
+  .floors { position: absolute; left: 10px; bottom: 70px; z-index: 4; display: flex; flex-direction: column; gap: 2px; width: 150px; padding: 4px; background: var(--overlay); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(6px); }
+  .floors .floor { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; background: none; text-align: left; font-size: 12.5px; }
+  .floors .floor.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .floors .floor-n { display: inline-grid; place-items: center; width: 18px; height: 18px; border: 1px solid currentColor; border-radius: 3px; font: 10.5px var(--mono); flex: none; }
+  .floors .floor-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .floors .floor-name { font-size: 12.5px; padding: 3px 6px; }
+  .floors .floor-actions { display: flex; gap: 4px; margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--line-soft); }
+  .floors .floor-actions button { flex: 1; padding: 3px 6px; font-size: 12px; }
+  .floors .floor-confirm { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 4px; font-size: 12px; }
+  .floors .floor-confirm span { width: 100%; }
+  .floors .floor-confirm button { padding: 3px 8px; font-size: 12px; }
+
   /* what is selected and its buttons: top right of the plan, or the foot of the 3D model */
   .sel-bar {
     position: absolute; z-index: 5; display: flex; align-items: center; gap: 4px; max-width: calc(100% - 20px);
