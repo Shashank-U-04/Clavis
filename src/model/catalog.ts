@@ -7,7 +7,7 @@
  * links are attached because none were verified.
  */
 
-export type CatalogCategory = "living" | "bedroom" | "kitchen" | "bath" | "office" | "decor";
+export type CatalogCategory = "living" | "bedroom" | "kitchen" | "bath" | "office" | "decor" | "structure" | "outdoor";
 
 /** Where an entry's dimensions come from. Only "verified" may be presented as a real product size. */
 export type DimensionSource = "verified" | "nominal";
@@ -22,6 +22,8 @@ export interface CatalogEntry {
   category: CatalogCategory;
   /** rugs may overlap other furniture */
   isRug?: boolean;
+  /** a stair: it climbs from the floor it stands on to the floor above, from its front edge to its back (see model/stairs.ts) */
+  stair?: "straight" | "spiral";
   dimensionSource: DimensionSource;
   /** the 3D asset: procedural geometry in three/furniture.ts */
   asset: { source: string; license: string };
@@ -68,9 +70,12 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry({ kind: "sink", label: "Washbasin", w: 0.55, d: 0.42, h: 0.85, color: "#e7ebee", category: "bath", tags: ["fixture"] }),
   entry({ kind: "towel_rail", label: "Towel rail", w: 0.6, d: 0.12, h: 1.1, color: "#c8ccd0", category: "bath" }),
   entry({ kind: "plant", label: "Plant", w: 0.4, d: 0.4, h: 1.1, color: "#5d8a54", category: "decor" }),
+  // stairs climb one floor; their height follows the floor they climb to
+  entry({ kind: "stair_straight", label: "Straight stair", w: 1.0, d: 3.8, h: 3.0, color: "#c9b79c", category: "structure", tags: ["stair"], stair: "straight" }),
+  entry({ kind: "stair_spiral", label: "Spiral stair", w: 1.8, d: 1.8, h: 3.0, color: "#8d9196", category: "structure", tags: ["stair"], stair: "spiral" }),
 ];
 
-export const CATEGORIES: readonly CatalogCategory[] = ["living", "bedroom", "kitchen", "bath", "office", "decor"];
+export const CATEGORIES: readonly CatalogCategory[] = ["living", "bedroom", "kitchen", "bath", "office", "decor", "structure", "outdoor"];
 
 const byKind = new Map(CATALOG.map((c) => [c.kind, c]));
 
