@@ -81,7 +81,7 @@ const steps = (sample: { rooms: number; items: number }) => [
 
 export default function Home() {
   const model = cedarVillaModel();
-  const figure = buildSunsetFigure(model, VILLA_SITE);
+  const figure = buildSunsetFigure(model, VILLA_SITE, { turnable: true });
   const analysis = analyzeModel(model);
   const counts = summarizeIssues(checkModel(model));
   const rooms = analysis.rooms;
