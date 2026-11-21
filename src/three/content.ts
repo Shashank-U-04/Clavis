@@ -8,6 +8,7 @@ import type { PlanModel } from "../model/types";
 import { buildArchitecture } from "./architecture";
 import { buildFurniture } from "./furniture";
 import { catalogByKind, isResized, itemSize } from "../model/catalog";
+import { elevationOf, levelAbove, levelOf } from "../model/levels";
 
 /** Furniture stands on the floor slabs, not on the ground under them. */
 const FLOOR_TOP = 0.04;
@@ -17,12 +18,16 @@ export function buildContent(model: PlanModel): { group: THREE.Group; bounds: TH
   for (const item of model.items) {
     const piece = buildFurniture(item.kind);
     if (!piece) continue;
-    piece.position.set(item.x, FLOOR_TOP, item.y);
+    const level = levelOf(item);
+    piece.position.set(item.x, elevationOf(model, level) + FLOOR_TOP, item.y);
     piece.rotation.y = (item.rotation * Math.PI) / 180;
     // a resized piece is its catalog model stretched to the new size
     const cat = catalogByKind(item.kind);
     const size = itemSize(item);
     if (cat && size && isResized(item)) piece.scale.set(size.w / cat.w, size.h / cat.h, size.d / cat.d);
+    // a stair climbs exactly to the floor above it
+    const above = cat?.stair ? levelAbove(model, level) : undefined;
+    if (cat && above) piece.scale.y = (above.elevation - elevationOf(model, level)) / cat.h;
     piece.userData.entityId = item.id;
     group.add(piece);
   }
