@@ -1,4 +1,27 @@
-import type { ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
+
+/**
+ * A line of text split into words that rise into place one after another when it scrolls into
+ * view (see Motion.tsx). Screen readers get the sentence whole; the words are only drawn.
+ */
+export function Words({ text, start = 0 }: { text: string; start?: number }) {
+  const words = text.split(" ");
+  return (
+    <>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">
+        {words.map((w, i) => (
+          <Fragment key={i}>
+            <span className="w">
+              <span style={{ "--i": start + i } as CSSProperties}>{w}</span>
+            </span>
+            {i < words.length - 1 ? " " : ""}
+          </Fragment>
+        ))}
+      </span>
+    </>
+  );
+}
 
 /** A crosshair mark for the corners of a drawing frame. */
 function Cross({ className }: { className: string }) {
@@ -39,13 +62,19 @@ export function Section({ id, sheet, title, intro, children, className = "" }: {
   return (
     <section id={id} className={`border-b border-rule ${className}`}>
       <div className="mx-auto max-w-[1440px]">
-        <div className="grid border-b border-rule md:grid-cols-[14rem_1fr]">
+        <div className="rule-draw relative grid border-b border-rule md:grid-cols-[14rem_1fr]">
           <div className="border-b border-rule p-5 md:border-b-0 md:border-r">
             <p className="label text-ink-3">Sheet {sheet}</p>
           </div>
           <div className="grid gap-4 p-5 md:grid-cols-[1fr_minmax(0,26rem)] md:p-8">
-            <h2 className="text-balance text-3xl font-semibold leading-[1.02] tracking-[-0.03em] md:text-5xl">{title}</h2>
-            {intro && <div className="self-end text-pretty text-ink-2">{intro}</div>}
+            <h2 className={`text-balance text-3xl font-semibold leading-[1.02] tracking-[-0.03em] md:text-5xl ${typeof title === "string" ? "words" : ""}`} data-reveal>
+              {typeof title === "string" ? <Words text={title} /> : title}
+            </h2>
+            {intro && (
+              <div className="self-end text-pretty text-ink-2" data-reveal style={{ "--i": 3 } as CSSProperties}>
+                {intro}
+              </div>
+            )}
           </div>
         </div>
         {children}

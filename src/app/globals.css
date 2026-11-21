@@ -212,6 +212,175 @@
   }
 }
 
+/*
+ * Motion on the site pages (components/site/Motion.tsx). Hidden states apply only under
+ * html.motion, which the script sets, so pages without JavaScript show everything.
+ */
+@layer components {
+  /* blocks: fade and rise, staggered by --i */
+  .motion [data-reveal]:not(.words):not(.typing) {
+    opacity: 0;
+    translate: 0 28px;
+    transition:
+      opacity 0.8s cubic-bezier(0.2, 0.7, 0.1, 1),
+      translate 0.8s cubic-bezier(0.2, 0.7, 0.1, 1);
+    transition-delay: calc(var(--i, 0) * 70ms);
+  }
+  .motion [data-reveal].is-in:not(.words):not(.typing) {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  /* headings: each word rises out of its own mask */
+  .words .w {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: top;
+    padding-bottom: 0.1em;
+    margin-bottom: -0.1em;
+  }
+  .words .w > span {
+    display: inline-block;
+    transition: translate 0.9s cubic-bezier(0.2, 0.7, 0.1, 1) calc(var(--i, 0) * 55ms);
+  }
+  .motion .words:not(.is-in) .w > span {
+    translate: 0 110%;
+  }
+
+  /* a section's header rule is drawn across in marker blue as its title comes in */
+  .rule-draw::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: var(--color-marker);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .motion .rule-draw:has(.words.is-in)::after {
+    animation: rule-draw 1.6s cubic-bezier(0.6, 0, 0.2, 1) both;
+  }
+
+  /* specimens type themselves out, a line at a time */
+  .typing .tl {
+    display: block;
+    min-height: 1lh;
+    transition: clip-path 0.6s steps(24) calc(250ms + var(--i, 0) * 380ms);
+  }
+  .motion .typing:not(.is-in) .tl {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  /* the hero headline rises line by line as the page opens, then the marker underlines it */
+  .rise-line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+  }
+  .rise-line > span {
+    display: block;
+    animation: rise 1s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .marker-line {
+    position: relative;
+  }
+  .marker-line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* just under the baseline: a tight line height leaves the descender space outside the mask */
+    bottom: 0.1em;
+    height: 0.06em;
+    background: var(--color-marker);
+    transform-origin: 0 50%;
+    animation: underline 0.9s cubic-bezier(0.6, 0, 0.2, 1) 1.1s both;
+  }
+  .fade-up {
+    animation: fade-up 0.9s cubic-bezier(0.2, 0.7, 0.1, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+
+  .scroll-progress {
+    display: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    translate: 0 105%;
+  }
+}
+@keyframes underline {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+@keyframes rule-draw {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  65% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* scroll-linked: a reading line along the top of the page, and big numerals that drift */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .scroll-progress {
+      display: block;
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 60;
+      height: 2px;
+      background: var(--color-marker);
+      transform-origin: 0 50%;
+      pointer-events: none;
+      animation: progress linear both;
+      animation-timeline: scroll(root);
+    }
+    .drift {
+      animation: drift linear both;
+      animation-timeline: view();
+    }
+  }
+}
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes drift {
+  from {
+    translate: 0 36px;
+  }
+  to {
+    translate: 0 -36px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
