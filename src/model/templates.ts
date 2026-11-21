@@ -150,3 +150,147 @@ export function sunsetLoftModel(): PlanModel {
   let n = 0;
   return applyBatch(emptyModel(), SUNSET_LOFT, (prefix) => `${prefix}_${(n++).toString(36)}`).model;
 }
+
+const against = (kind: string, roomId: string, side: "north" | "south" | "east" | "west", along = 0.5, gap?: number): DesignOperation => ({
+  op: "place_item_in_room",
+  kind,
+  roomId: `$${roomId}`,
+  against: side,
+  along,
+  ...(gap !== undefined && { gap }),
+});
+
+/**
+ * Cedar Villa — a single-storey villa of about 330 m² (24 × 14.4 m on centrelines). The day
+ * rooms run along the north front: a grand living room glazed floor to ceiling towards the
+ * pool on the west, dining and an open kitchen with an island. A gallery hall runs behind
+ * them to the bedrooms: a study, two guest bedrooms and a family bathroom, and at the east end
+ * a main suite with its own dressing room and en-suite.
+ */
+export const CEDAR_VILLA: DesignOperation[] = [
+  {
+    op: "build_layout",
+    name: "Cedar Villa",
+    rooms: [
+      { as: "living", label: "Living room", x: 0, y: 0, w: 8.4, h: 6.6, floor: "oak" },
+      { as: "dining", label: "Dining", x: 8.4, y: 0, w: 4.8, h: 6.6, floor: "oak" },
+      { as: "kitchen", label: "Kitchen", x: 13.2, y: 0, w: 4.8, h: 6.6, floor: "tile" },
+      { as: "main", label: "Main bedroom", x: 18, y: 0, w: 6, h: 8.4, floor: "oak" },
+      { as: "hall", label: "Gallery hall", x: 0, y: 6.6, w: 18, h: 1.8, floor: "oak" },
+      { as: "study", label: "Study", x: 0, y: 8.4, w: 4.4, h: 6, floor: "oak" },
+      { as: "guest", label: "Guest bedroom", x: 4.4, y: 8.4, w: 4.6, h: 6, floor: "carpet" },
+      { as: "bath", label: "Bathroom", x: 9, y: 8.4, w: 2.6, h: 6, floor: "tile" },
+      { as: "bed3", label: "Bedroom 3", x: 11.6, y: 8.4, w: 4.4, h: 6, floor: "carpet" },
+      { as: "utility", label: "Utility", x: 16, y: 8.4, w: 2, h: 6, floor: "tile" },
+      { as: "dress", label: "Dressing room", x: 18, y: 8.4, w: 2.4, h: 6, floor: "oak" },
+      { as: "ensuite", label: "En-suite", x: 20.4, y: 8.4, w: 3.6, h: 6, floor: "tile" },
+    ],
+    doors: [
+      { from: "hall", to: "exterior", side: "west", width: 1.6 },
+      { from: "living", to: "exterior", side: "north", width: 1.8, position: 1 },
+      { from: "living", to: "hall", width: 1.6, position: 0.6 },
+      { from: "dining", to: "living", width: 2.4 },
+      { from: "kitchen", to: "dining", width: 1.4 },
+      { from: "kitchen", to: "hall", position: 0.8 },
+      { from: "main", to: "hall" },
+      { from: "study", to: "hall", position: 0.7 },
+      { from: "guest", to: "hall", position: 0.2 },
+      { from: "bath", to: "hall", width: 0.8 },
+      { from: "bed3", to: "hall", position: 0.8 },
+      { from: "utility", to: "hall", width: 0.8 },
+      { from: "dress", to: "main", width: 0.9 },
+      { from: "ensuite", to: "main", width: 0.9, position: 0.3 },
+    ],
+    windows: [
+      { room: "living", side: "west", width: 4, height: 2.2, sill: 0 },
+      { room: "living", side: "north", width: 3.6, height: 2, sill: 0.2 },
+      { room: "dining", side: "north", width: 3.2, height: 1.8, sill: 0.4 },
+      { room: "kitchen", side: "north", width: 2.4, height: 1.1, sill: 1.05 },
+      { room: "main", side: "north", width: 3.2, height: 1.8, sill: 0.4 },
+      { room: "main", side: "east", width: 2, height: 1.5 },
+      { room: "study", side: "west", width: 1.8, height: 1.5 },
+      { room: "study", side: "south", width: 1.4 },
+      { room: "guest", side: "south", width: 2.4, height: 1.4 },
+      { room: "bath", side: "south", width: 0.8, sill: 1.3, height: 0.8 },
+      { room: "bed3", side: "south", width: 2.4, height: 1.4 },
+      { room: "utility", side: "south", width: 0.6, sill: 1.2, height: 0.9 },
+      { room: "dress", side: "south", width: 0.8, sill: 1.4, height: 0.6 },
+      { room: "ensuite", side: "east", width: 1, sill: 1.3, height: 0.8 },
+      { room: "ensuite", side: "south", width: 1.2, sill: 1.2, height: 0.9 },
+    ],
+  },
+  // living: a long sofa and two armchairs facing the glass wall and the pool beyond it
+  item("rug", 2.5, 3.3, 90),
+  item("sofa_3", 3.75, 3.3, 270),
+  item("coffee_table", 2.5, 3.3, 90),
+  item("armchair", 2.5, 1.5, 0),
+  item("armchair", 2.5, 5.1, 180),
+  item("side_table", 3.75, 1.6, 0),
+  item("plant", 0.45, 0.45, 0),
+  item("plant", 0.45, 6.15, 0),
+  // a second seat by the north window, the fire side of the room
+  item("rug", 5.9, 3.3, 0),
+  item("sofa", 5.9, 4.6, 180),
+  item("armchair", 5.2, 2.1, 0),
+  item("armchair", 6.6, 2.1, 0),
+  item("coffee_table", 5.9, 3.35, 0),
+  // dining for six
+  item("dining_table_oval", 10.8, 3.3, 90),
+  item("dining_chair", 10.045, 2.7, 90),
+  item("dining_chair", 10.045, 3.3, 90),
+  item("dining_chair", 10.045, 3.9, 90),
+  item("dining_chair", 11.555, 2.7, 270),
+  item("dining_chair", 11.555, 3.3, 270),
+  item("dining_chair", 11.555, 3.9, 270),
+  against("sideboard", "dining", "south", 0.2),
+  // kitchen: a run along the east wall and an island
+  item("kitchen_sink_unit", 17.64, 0.75, 270),
+  item("kitchen_counter", 17.64, 2.55, 270),
+  item("kitchen_hob_unit", 17.64, 4.35, 270),
+  item("fridge", 17.6, 5.3, 270),
+  item("kitchen_counter", 15.5, 3.3, 90),
+  // main bedroom
+  against("bed_double", "main", "east", 0.38),
+  item("nightstand", 23.7, 2.355, 270),
+  item("nightstand", 23.7, 4.505, 270),
+  against("sofa", "main", "west", 0.36, 0.1),
+  item("rug", 21.2, 3.2, 90),
+  item("plant", 18.5, 0.5, 0),
+  // study
+  against("desk", "study", "west", 0.45),
+  against("bookshelf", "study", "east", 0.4),
+  against("armchair", "study", "south", 0.82),
+  // guest bedroom
+  against("bed_double", "guest", "south", 0.5),
+  item("nightstand", 5.625, 14.1, 180),
+  item("nightstand", 7.775, 14.1, 180),
+  against("wardrobe", "guest", "east", 0.25),
+  // family bathroom
+  against("bathtub", "bath", "south", 0.5),
+  against("toilet", "bath", "east", 0.3),
+  against("sink", "bath", "west", 0.3),
+  // bedroom 3
+  against("bed_double", "bed3", "south", 0.5),
+  item("nightstand", 12.725, 14.1, 180),
+  item("nightstand", 14.875, 14.1, 180),
+  against("wardrobe", "bed3", "west", 0.25),
+  against("desk", "bed3", "east", 0.3),
+  // utility
+  against("counter_unit", "utility", "west", 0.6),
+  // dressing room
+  item("wardrobe", 18.35, 9.95, 90),
+  item("wardrobe", 18.35, 11.5, 90),
+  item("wardrobe", 18.35, 13.05, 90),
+  // en-suite
+  against("bathtub", "ensuite", "south", 0.6),
+  item("shower", 23.45, 9.4, 270),
+  against("sink", "ensuite", "west", 0.25),
+  against("sink", "ensuite", "west", 0.45),
+  against("toilet", "ensuite", "west", 0.68),
+];
+
+/** Cedar Villa as a ready design. */
+export function cedarVillaModel(): PlanModel {
+  let n = 0;
+  return applyBatch(emptyModel(), CEDAR_VILLA, (prefix) => `${prefix}_${(n++).toString(36)}`).model;
+}
