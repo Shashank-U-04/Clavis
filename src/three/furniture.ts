@@ -371,9 +371,304 @@ function spiralStair(c: CatalogEntry): THREE.Group {
   return g;
 }
 
+// ---------------------------------------------------------------------------
+// Railings, facade and structure
+// ---------------------------------------------------------------------------
+
+const frameDark = surface("#2c2f33", "metal");
+const stone = surface("#e9e6df", "matte");
+
+/** A frameless glass balustrade: a pane in a slim steel shoe, with a steel handrail. */
+const railingGlass: Builder = (c) =>
+  assemble(slab(c.w, 0.08, 0.08, frameDark).at(0, 0, 0), slab(c.w - 0.02, c.h - 0.1, 0.014, glassRail, false).at(0, 0.08, 0), slab(c.w, 0.04, 0.06, frameDark).at(0, c.h - 0.04, 0));
+
+/** A steel railing: posts every metre or so, a top rail and thin bars between. */
+const railingSteel: Builder = (c) => {
+  const g = assemble(slab(c.w, 0.04, 0.05, frameDark).at(0, c.h - 0.04, 0), slab(c.w, 0.02, 0.03, frameDark).at(0, 0.08, 0));
+  const posts = Math.max(2, Math.round(c.w / 1.1) + 1);
+  for (let i = 0; i < posts; i++) g.add(slab(0.04, c.h - 0.04, 0.04, frameDark).at(-c.w / 2 + 0.02 + (i * (c.w - 0.04)) / (posts - 1), 0, 0));
+  const bars = Math.round(c.w / 0.12);
+  for (let i = 1; i < bars; i++) g.add(post(0.008, c.h - 0.14, frameDark).at(-c.w / 2 + (i * c.w) / bars, 0.1, 0));
+  return g;
+};
+
+/** Floor-to-ceiling glazing: tall panes between slim dark frames. */
+const glassWall: Builder = (c) => {
+  const g = assemble(slab(c.w, 0.05, c.d, frameDark).at(0, 0, 0), slab(c.w, 0.05, c.d, frameDark).at(0, c.h - 0.05, 0));
+  const panes = Math.max(1, Math.round(c.w / 1.2));
+  const pw = c.w / panes;
+  for (let i = 0; i <= panes; i++) g.add(slab(0.05, c.h, c.d, frameDark).at(-c.w / 2 + i * pw, 0, 0));
+  g.add(slab(c.w - 0.04, c.h - 0.1, 0.012, glassRail, false).at(0, 0.05, 0));
+  return g;
+};
+
+/** Vertical timber battens on a dark backing, as modern facades are clad. */
+const cladding: Builder = (c) => {
+  const g = assemble(slab(c.w, c.h, 0.02, frameDark).at(0, 0, -c.d / 2 + 0.01));
+  const battens = Math.round(c.w / 0.09);
+  for (let i = 0; i < battens; i++) g.add(slab(0.05, c.h, c.d - 0.02, wood(c.color)).at(-c.w / 2 + 0.045 + (i * (c.w - 0.09)) / Math.max(1, battens - 1), 0, 0.01));
+  return g;
+};
+
+const column: Builder = (c) => assemble(slab(c.w, c.h, c.d, stone));
+
+/** A pergola: four dark posts, two beams and slats overhead for dappled shade. */
+const pergola: Builder = (c) => {
+  const s = 0.12;
+  const g = new THREE.Group();
+  for (const x of [-1, 1]) for (const z of [-1, 1]) g.add(slab(s, c.h - 0.2, s, frameDark).at(x * (c.w / 2 - s / 2), 0, z * (c.d / 2 - s / 2)));
+  for (const z of [-1, 1]) g.add(slab(c.w + 0.3, 0.2, 0.08, frameDark).at(0, c.h - 0.2, z * (c.d / 2 - s / 2)));
+  const slats = Math.round(c.w / 0.25);
+  for (let i = 0; i <= slats; i++) g.add(slab(0.05, 0.12, c.d + 0.3, frameDark).at(-c.w / 2 + (i * c.w) / slats, c.h - 0.12, 0));
+  return g;
+};
+
+// ---------------------------------------------------------------------------
+// Outdoor and pool
+// ---------------------------------------------------------------------------
+
+const poolTile = surface("#6fb4d3", "gloss");
+const coping = surface("#ece6da", "matte");
+const outdoorCushion = surface("#f2f0ea", "fabric");
+const greenery = surface("#5b8a4a", "matte");
+const hedgeGreen = surface("#5f7f4c", "matte");
+
+/** A pool: water in a tiled basin, with a stone coping all round. */
+function poolOf(c: CatalogEntry, infinity: boolean): THREE.Group {
+  const lip = 0.3;
+  const g = assemble(slab(c.w - lip, 0.02, c.d - lip, poolTile, false).at(0, 0, 0), slab(c.w - lip, 0.01, c.d - lip, waterMaterial, false).at(0, c.h - 0.06, 0));
+  // coping on every side, except the far end of an infinity pool, where the water runs over a glass edge
+  g.add(slab(c.w, c.h, lip / 2, coping, false).at(0, 0, c.d / 2 - lip / 4));
+  g.add(slab(lip / 2, c.h, c.d, coping, false).at(-c.w / 2 + lip / 4, 0, 0));
+  g.add(slab(lip / 2, c.h, c.d, coping, false).at(c.w / 2 - lip / 4, 0, 0));
+  if (infinity) g.add(slab(c.w - lip, c.h - 0.04, 0.02, glassRail, false).at(0, 0, -c.d / 2 + lip / 4));
+  else g.add(slab(c.w, c.h, lip / 2, coping, false).at(0, 0, -c.d / 2 + lip / 4));
+  return g;
+}
+
+const paving: Builder = (c) => assemble(slab(c.w, c.h, c.d, surface(c.color, "matte"), false));
+
+/** A timber deck: boards across its width, with gaps between. */
+const deck: Builder = (c) => {
+  const g = new THREE.Group();
+  const boards = Math.round(c.d / 0.15);
+  for (let i = 0; i < boards; i++) g.add(slab(c.w, c.h, 0.14, wood(c.color), false).at(0, 0, -c.d / 2 + 0.075 + (i * (c.d - 0.15)) / Math.max(1, boards - 1)));
+  return g;
+};
+
+/** A sun lounger: a slim cushion on a dark frame, its back raised towards the head. */
+const lounger: Builder = (c) => {
+  const g = assemble(slab(c.w, 0.05, c.d, frameDark).at(0, 0.2, 0), slab(c.w * 0.94, 0.07, c.d * 0.62, outdoorCushion).at(0, 0.25, c.d * 0.17));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(post(0.02, 0.2, frameDark).at(sx * (c.w / 2 - 0.05), 0, sz * (c.d / 2 - 0.08)));
+  const back = slab(c.w * 0.94, 0.07, c.d * 0.36, outdoorCushion).at(0, 0.25, -c.d / 2 + c.d * 0.18);
+  back.rotation.x = -0.6;
+  g.add(back);
+  return g;
+};
+
+const outdoorSofa: Builder = (c) => {
+  const body = surface(c.color, "matte");
+  const arm = 0.12;
+  return assemble(
+    slab(c.w, 0.32, c.d, body).at(0, 0.06, 0),
+    slab(c.w - arm * 2, 0.12, c.d - 0.2, outdoorCushion).at(0, 0.38, 0.06),
+    slab(c.w, c.h - 0.06, 0.16, body).at(0, 0.06, -c.d / 2 + 0.08),
+    slab(arm, 0.5, c.d, body).at(-c.w / 2 + arm / 2, 0.06, 0),
+    slab(arm, 0.5, c.d, body).at(c.w / 2 - arm / 2, 0.06, 0),
+  );
+};
+
+const outdoorDining: Builder = (c) => {
+  const g = assemble(slab(c.w, 0.04, c.d, frameDark).at(0, c.h - 0.04, 0));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(slab(0.05, c.h - 0.04, 0.05, frameDark).at(sx * (c.w / 2 - 0.1), 0, sz * (c.d / 2 - 0.1)));
+  // a chair at each place along the long sides
+  const places = Math.max(2, Math.floor(c.w / 0.65));
+  for (let i = 0; i < places; i++)
+    for (const side of [-1, 1]) {
+      const x = -c.w / 2 + (c.w / places) * (i + 0.5);
+      g.add(slab(0.45, 0.04, 0.45, outdoorCushion).at(x, 0.44, side * (c.d / 2 + 0.3)));
+      g.add(slab(0.45, 0.42, 0.04, frameDark).at(x, 0.44, side * (c.d / 2 + 0.5)));
+      for (const lx of [-1, 1]) for (const lz of [-1, 1]) g.add(post(0.012, 0.44, frameDark).at(x + lx * 0.2, 0, side * (c.d / 2 + 0.3) + lz * 0.2));
+    }
+  return g;
+};
+
+const parasol: Builder = (c) => {
+  const canopy = new THREE.ConeGeometry(c.w / 2, 0.45, 8, 1, true);
+  canopy.translate(0, c.h - 0.22, 0);
+  // its own material: the canopy is seen from below, so both faces are drawn
+  const shade = new THREE.Mesh(canopy, new THREE.MeshStandardMaterial({ color: c.color, roughness: 0.95, side: THREE.DoubleSide }));
+  shade.castShadow = true;
+  return assemble(slab(0.5, 0.06, 0.5, frameDark).at(0, 0, 0), post(0.025, c.h - 0.2, frameDark).at(0, 0, 0), shade);
+};
+
+const firePit: Builder = (c) => {
+  const bowl = post(c.w / 2, c.h, surface(c.color, "matte"), c.w / 2 - 0.08, 24);
+  const glow = new THREE.MeshStandardMaterial({ color: "#3a2a20", emissive: "#ff8a3a", emissiveIntensity: 0.8 });
+  return assemble(bowl, post(c.w / 2 - 0.12, 0.02, glow).at(0, c.h - 0.02, 0));
+};
+
+const planter: Builder = (c) => assemble(slab(c.w, c.h * 0.7, c.d, surface("#3b3d40", "matte")), blob(c.w / 2 - 0.05, c.h * 0.45, c.d / 2 - 0.03, greenery).at(0, c.h * 0.55, 0));
+
+const hedge: Builder = (c) => assemble(pillow(c.w, c.h, c.d, hedgeGreen));
+
+/** A tree: a trunk and a crown of overlapping rounded masses. */
+const tree: Builder = (c) => {
+  const r = c.w / 2;
+  const trunk = surface("#6b5241", "wood");
+  return assemble(
+    post(0.12, c.h * 0.45, trunk, 0.16).at(0, 0, 0),
+    blob(r, c.h * 0.32, r, greenery).at(0, c.h * 0.38, 0),
+    blob(r * 0.7, c.h * 0.26, r * 0.7, surface("#4b7740", "matte")).at(r * 0.25, c.h * 0.6, -r * 0.15),
+    blob(r * 0.6, c.h * 0.22, r * 0.6, greenery).at(-r * 0.3, c.h * 0.55, r * 0.2),
+  );
+};
+
+// ---------------------------------------------------------------------------
+// The finer rooms of a large house
+// ---------------------------------------------------------------------------
+
+/** A kitchen island: cabinets on one side, an overhanging stone top with stools on the other. */
+const kitchenIsland: Builder = (c) => {
+  const top = surface("#f1efea", "gloss");
+  const g = cabinet({ ...c, h: c.h - 0.04, d: c.d - 0.3 }, 4, { plinth: 0.1 });
+  g.position.z = -0.15;
+  const out = assemble(g, slab(c.w, 0.04, c.d, top).at(0, c.h - 0.04, 0));
+  for (let i = 0; i < 3; i++) out.add(barStool({ ...c, w: 0.42, d: 0.42, h: 0.66 }).translateX(-c.w / 3 + (i * c.w) / 3).translateZ(c.d / 2 + 0.22));
+  return out;
+};
+
+const barCounter: Builder = (c) => {
+  const top = surface("#2b2522", "gloss");
+  const g = cabinet({ ...c, h: c.h - 0.05 }, 3, { plinth: 0.08 });
+  g.add(slab(c.w + 0.1, 0.05, c.d + 0.2, top).at(0, c.h - 0.05, 0.1));
+  // bottles on a shelf behind
+  for (let i = 0; i < 6; i++) g.add(post(0.035, 0.28, surface(["#2f5d3a", "#6e2f2a", "#c7a55a"][i % 3], "gloss")).at(-c.w / 2 + 0.25 + i * 0.28, c.h, -c.d / 2 + 0.12));
+  return g;
+};
+
+function barStool(c: CatalogEntry): THREE.Group {
+  return assemble(post(0.2, 0.05, surface("#2f2d2b", "fabric")).at(0, c.h - 0.05, 0), post(0.025, c.h - 0.05, frameDark).at(0, 0, 0), post(0.18, 0.02, frameDark).at(0, 0, 0), post(0.16, 0.015, frameDark).at(0, 0.3, 0));
+}
+
+const doubleVanity: Builder = (c) => {
+  const g = cabinet({ ...c, h: c.h - 0.05 }, 4, { plinth: 0.1 });
+  g.add(slab(c.w, 0.04, c.d, surface("#f1efea", "gloss")).at(0, c.h - 0.05, 0));
+  for (const x of [-c.w / 4, c.w / 4]) {
+    g.add(slab(0.42, 0.01, 0.3, waterMaterial, false).at(x, c.h - 0.012, 0.02));
+    g.add(post(0.012, 0.2, metal("#c5c9cc")).at(x, c.h, -c.d / 2 + 0.06));
+    g.add(slab(0.6, 0.8, 0.02, surface("#d9e4ea", "gloss")).at(x, c.h + 0.3, -c.d / 2 + 0.01)); // mirror
+  }
+  return g;
+};
+
+/** A freestanding bath: a rounded tub on the floor with a floor-standing tap. */
+const freestandingTub: Builder = (c) => {
+  const tub = pillow(c.w, c.h, c.d, white);
+  const water = slab(c.w - 0.2, 0.01, c.d - 0.2, waterMaterial, false).at(0, c.h - 0.1, 0);
+  return assemble(tub, water, post(0.015, c.h + 0.25, metal("#c5c9cc")).at(c.w / 2 + 0.12, 0, 0));
+};
+
+/** Open walk-in shelving: hanging rails, shelves and drawers along one wall. */
+const walkInWardrobe: Builder = (c) => {
+  const body = wood(c.color);
+  const g = assemble(slab(c.w, c.h, 0.03, body).at(0, 0, -c.d / 2 + 0.015));
+  const bays = Math.max(2, Math.round(c.w / 0.8));
+  for (let i = 0; i <= bays; i++) g.add(slab(0.03, c.h, c.d, body).at(-c.w / 2 + 0.015 + (i * (c.w - 0.03)) / bays, 0, 0));
+  for (let i = 0; i < bays; i++) {
+    const x = -c.w / 2 + (c.w / bays) * (i + 0.5);
+    g.add(slab(c.w / bays - 0.04, 0.03, c.d - 0.04, body).at(x, c.h - 0.35, 0));
+    g.add(post(0.012, c.w / bays - 0.06, metal("#b9b3a8")).turn(Math.PI / 2, "z").at(x + (c.w / bays - 0.06) / 2, c.h - 0.45, 0));
+    // clothes on the rail, as soft blocks
+    g.add(slab(c.w / bays - 0.14, 0.9, c.d * 0.6, fabric(["#5a6b80", "#c9c2b6", "#2f3134"][i % 3])).at(x, c.h - 1.4, 0));
+    g.add(slab(c.w / bays - 0.04, 0.5, c.d - 0.04, body).at(x, 0, 0)); // drawers
+  }
+  return g;
+};
+
+const fireplace: Builder = (c) => {
+  const glow = new THREE.MeshStandardMaterial({ color: "#2a1d16", emissive: "#ff7a2e", emissiveIntensity: 0.9 });
+  return assemble(
+    slab(c.w, c.h, c.d, surface(c.color, "matte")),
+    slab(c.w * 0.6, c.h * 0.32, 0.02, screenMaterial).at(0, c.h * 0.25, c.d / 2),
+    slab(c.w * 0.52, 0.05, 0.02, glow).at(0, c.h * 0.3, c.d / 2 + 0.005),
+    slab(c.w + 0.1, 0.06, c.d + 0.06, stone).at(0, c.h, 0),
+  );
+};
+
+/** A grand piano: a curved black case on three legs, its lid propped open. */
+const grandPiano: Builder = (c) => {
+  const black = surface("#111111", "gloss");
+  const shape = new THREE.Shape();
+  const w = c.w / 2;
+  const d = c.d / 2;
+  shape.moveTo(-w, d);
+  shape.lineTo(w, d);
+  shape.lineTo(w, -d * 0.2);
+  shape.quadraticCurveTo(w, -d, 0, -d);
+  shape.quadraticCurveTo(-w * 0.4, -d, -w * 0.5, -d * 0.4);
+  shape.quadraticCurveTo(-w, d * 0.2, -w, d);
+  const caseGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.3, bevelEnabled: false });
+  caseGeo.rotateX(-Math.PI / 2);
+  caseGeo.translate(0, c.h - 0.35, 0);
+  const caseMesh = new THREE.Mesh(caseGeo, black);
+  caseMesh.castShadow = true;
+  const lid = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.02, bevelEnabled: false }).rotateX(-Math.PI / 2), black);
+  lid.position.set(0, c.h - 0.05, 0);
+  lid.rotation.z = 0.5;
+  const g = assemble(caseMesh, lid, slab(c.w * 0.9, 0.05, 0.25, white).at(0, c.h - 0.3, d - 0.05));
+  for (const [x, z] of [[-w * 0.8, d * 0.8], [w * 0.8, d * 0.8], [0, -d * 0.6]]) g.add(post(0.04, c.h - 0.35, black).at(x, 0, z));
+  return g;
+};
+
+const cinemaScreen: Builder = (c) => assemble(slab(c.w, c.h - 0.5, 0.03, white).at(0, 0.5, 0), slab(c.w + 0.1, 0.06, c.d, frameDark).at(0, c.h - 0.06, 0), slab(c.w, 0.5, c.d, frameDark).at(0, 0, 0));
+
+/** A row of cinema recliners with wide arms between the seats. */
+const cinemaRecliners: Builder = (c) => {
+  const leather = surface(c.color, "fabric");
+  const seats = Math.max(2, Math.round(c.w / 0.9));
+  const sw = c.w / seats;
+  const g = new THREE.Group();
+  for (let i = 0; i < seats; i++) {
+    const x = -c.w / 2 + sw * (i + 0.5);
+    g.add(slab(sw - 0.16, 0.42, c.d * 0.75, leather).at(x, 0.05, 0.08));
+    g.add(slab(sw - 0.16, c.h - 0.05, 0.22, leather).at(x, 0.05, -c.d / 2 + 0.11));
+  }
+  for (let i = 0; i <= seats; i++) g.add(slab(0.14, 0.62, c.d, leather).at(-c.w / 2 + 0.07 + (i * (c.w - 0.14)) / seats, 0.05, 0));
+  return g;
+};
+
 const BUILDERS: Record<string, Builder> = {
   stair_straight: straightStair,
   stair_spiral: spiralStair,
+  railing_glass: railingGlass,
+  railing_steel: railingSteel,
+  glass_wall: glassWall,
+  cladding,
+  column,
+  pergola,
+  pool: (c) => poolOf(c, false),
+  pool_infinity: (c) => poolOf(c, true),
+  stone_terrace: paving,
+  timber_deck: deck,
+  sun_lounger: lounger,
+  outdoor_sofa: outdoorSofa,
+  outdoor_dining: outdoorDining,
+  parasol,
+  fire_pit: firePit,
+  planter,
+  hedge,
+  tree,
+  kitchen_island: kitchenIsland,
+  bar_counter: barCounter,
+  bar_stool: barStool,
+  double_vanity: doubleVanity,
+  freestanding_tub: freestandingTub,
+  walk_in_wardrobe: walkInWardrobe,
+  fireplace,
+  grand_piano: grandPiano,
+  cinema_screen: cinemaScreen,
+  cinema_recliners: cinemaRecliners,
   sofa,
   sofa_3: sofa3,
   armchair,
