@@ -13,7 +13,7 @@
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { skyDome, type SkyColours } from "./sky";
 import { OBJExporter } from "three/examples/jsm/exporters/OBJExporter.js";
 import type { PlanModel } from "../model/types";
 import type { CameraMode } from "../model/store";
@@ -107,16 +107,27 @@ function entryPose(m: PlanModel): { x: number; z: number; yaw: number } | null {
 
 export type SceneTheme = "light" | "dark";
 
-/** The sky and ground behind the model, per studio theme; the house itself does not change. */
-export const SCENE_THEMES: Record<SceneTheme, { sky: string; ground: string }> = {
-  light: { sky: "#dcdbd2", ground: "#bcbfb3" },
-  dark: { sky: "#11151c", ground: "#3a403d" },
+/**
+ * The light the model is seen in, per studio theme: a clear day, or dusk with the lamps on.
+ * `elevation` and `azimuth` place the sun (degrees); `ground` tints the lawn; `haze` is the
+ * colour the distance fades to.
+ */
+export const SCENE_THEMES: Record<SceneTheme, { elevation: number; azimuth: number; sun: string; sunIntensity: number; skyLight: number; exposure: number; ground: string; sky: SkyColours }> = {
+  light: { elevation: 38, azimuth: 215, sun: "#fff1dc", sunIntensity: 3.1, skyLight: 0.55, exposure: 0.95, ground: "#ffffff", sky: { zenith: "#4f86c6", horizon: "#cfe1ee", glow: "#fff6e6" } },
+  dark: { elevation: 12, azimuth: 250, sun: "#ffb27a", sunIntensity: 1.6, skyLight: 0.5, exposure: 0.75, ground: "#c3cbbd", sky: { zenith: "#1b2340", horizon: "#e49a6a", glow: "#ffcf9a" } },
 };
 
 export class Viewer {
   readonly renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(50, 1, 0.05, 200);
+  private camera = new THREE.PerspectiveCamera(50, 1, 0.05, 1500);
+  private sky = skyDome();
+  private sun = new THREE.DirectionalLight("#fff0d8", 2.2);
+  private skyLight = new THREE.HemisphereLight("#dbe8f5", "#5c6b4a", 0.55);
+  private pmrem: THREE.PMREMGenerator;
+  private env: THREE.WebGLRenderTarget | null = null;
+  /** where the sun is, as a unit vector from the model towards it */
+  private sunDir = new THREE.Vector3(0.5, 0.7, 0.4).normalize();
   private orbit: OrbitControls;
   private content: THREE.Group | null = null;
   private markers = new THREE.Group();
@@ -152,25 +163,21 @@ export class Viewer {
     this.renderer.domElement.dataset.testid = "scene3d-canvas";
     mount.appendChild(this.renderer.domElement);
 
-    this.scene.background = new THREE.Color(SCENE_THEMES.light.sky);
-    this.scene.fog = new THREE.Fog(SCENE_THEMES.light.sky, 50, 140);
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04);
-    this.scene.environment = env.texture;
-    this.scene.environmentIntensity = 0.35;
+    // a physical sky all round, and the lawn fading into haze far off
+    this.scene.fog = new THREE.Fog(SCENE_THEMES.light.sky.horizon, 120, 700);
+    this.pmrem = new THREE.PMREMGenerator(this.renderer);
     this.cleanups.push(() => {
-      env.dispose();
-      pmrem.dispose();
+      this.env?.dispose();
+      this.pmrem.dispose();
     });
 
-    const sky = new THREE.HemisphereLight("#e4ecf7", "#4d463d", 0.6);
-    const sun = new THREE.DirectionalLight("#fff0d8", 2.2);
-    sun.position.set(12, 18, 8);
+    const sun = this.sun;
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.bias = -0.0005;
-    Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, far: 60 });
-    this.scene.add(sky, sun, sun.target, this.markers);
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.02;
+    this.scene.add(this.sky.mesh, this.skyLight, sun, sun.target, this.markers);
+    this.setTheme("light");
 
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbit.enableDamping = true;
@@ -191,12 +198,41 @@ export class Viewer {
     this.pendingModel = model;
   }
 
-  /** Match the studio's theme: the sky behind the model and the ground under it. */
+  /** Match the studio's theme: a clear day, or dusk. The house itself does not change. */
   setTheme(theme: SceneTheme) {
     const t = SCENE_THEMES[theme];
-    (this.scene.background as THREE.Color).set(t.sky);
-    this.scene.fog?.color.set(t.sky);
+    const phi = THREE.MathUtils.degToRad(90 - t.elevation);
+    const theta = THREE.MathUtils.degToRad(t.azimuth);
+    this.sunDir.setFromSphericalCoords(1, phi, theta);
+    this.sky.paint(t.sky, this.sunDir);
+    this.sun.color.set(t.sun);
+    this.sun.intensity = t.sunIntensity;
+    this.skyLight.intensity = t.skyLight;
+    this.renderer.toneMappingExposure = t.exposure;
+    this.scene.fog?.color.set(t.sky.horizon);
     groundMaterial.color.set(t.ground);
+    // glass and glossy surfaces reflect this same sky
+    const skyScene = new THREE.Scene();
+    const reflected = skyDome();
+    reflected.paint(t.sky, this.sunDir);
+    skyScene.add(reflected.mesh);
+    this.env?.dispose();
+    this.env = this.pmrem.fromScene(skyScene, 0, 0.1, 1100);
+    reflected.dispose();
+    this.scene.environment = this.env.texture;
+    this.scene.environmentIntensity = theme === "light" ? 0.55 : 0.45;
+    this.aimSun();
+  }
+
+  /** Put the sun's shadow camera over the whole building, from the sun's direction. */
+  private aimSun() {
+    const c = this.bounds.isEmpty() ? new THREE.Vector3() : this.centre;
+    const r = this.bounds.isEmpty() ? 12 : this.radius + 3;
+    this.sun.target.position.copy(c);
+    this.sun.position.copy(c).addScaledVector(this.sunDir, r * 3);
+    Object.assign(this.sun.shadow.camera, { left: -r, right: r, top: r, bottom: -r, near: 0.5, far: r * 6 });
+    this.sun.shadow.camera.updateProjectionMatrix();
+    this.shadowsDirty = true;
   }
 
   setMode(mode: CameraMode) {
@@ -268,7 +304,7 @@ export class Viewer {
     this.bounds = bounds;
     this.model = model;
     this.scene.add(group);
-    this.shadowsDirty = true;
+    this.aimSun();
     this.obstacles = obstaclesOf(model);
     this.doors = [];
     group.traverse((o) => {
