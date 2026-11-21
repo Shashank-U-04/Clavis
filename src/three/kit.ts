@@ -5,6 +5,7 @@
  */
 
 import * as THREE from "three";
+import { worldUV } from "./textures";
 
 export class Part extends THREE.Mesh {
   constructor(geometry: THREE.BufferGeometry, material: THREE.Material, shadows = true) {
@@ -29,6 +30,9 @@ export class Part extends THREE.Mesh {
 export function slab(w: number, h: number, d: number, material: THREE.Material, shadows = true): Part {
   const g = new THREE.BoxGeometry(Math.max(w, 0.001), Math.max(h, 0.001), Math.max(d, 0.001));
   g.translate(0, h / 2, 0);
+  // a textured material repeats at its real size
+  const tile = material.userData.tile as number | undefined;
+  if (tile) worldUV(g, tile);
   return new Part(g, material, shadows);
 }
 
