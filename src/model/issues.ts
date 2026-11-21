@@ -311,11 +311,13 @@ function checkFurniture({ model, wallById, out }: Ctx) {
     }
     const box = itemBox(it)!;
     const tall = itemSize(it)!.h;
+    // paving, decks and pools are walked over: they run up to walls and past doors
+    const ground = cat.category === "outdoor" && !!cat.isRug;
     // leaning on a wall is fine; more than 2 cm into it is not
-    for (const { w, box: wb } of wallBoxes) {
+    for (const { w, box: wb } of ground ? [] : wallBoxes) {
       if (boxesOverlap(box, wb, 0.02)) out.push({ severity: "error", code: "item_through_wall", message: `${cat.label} goes through wall ${w.id}.`, refs: [it.id, w.id] });
     }
-    for (const { o, box: zone, depth } of clearances) {
+    for (const { o, box: zone, depth } of ground ? [] : clearances) {
       if (!boxesOverlap(box, zone)) continue;
       if (o.kind === "door") {
         out.push({ severity: "error", code: "item_blocks_door", message: `${cat.label} is in the way of door ${o.id}.`, refs: [it.id, o.id], measurements: { clearanceDepth: r3(depth) } });
@@ -337,8 +339,8 @@ function checkFurniture({ model, wallById, out }: Ctx) {
         out.push({ severity: "error", code: "items_overlap", message: `${cat.label} overlaps ${oc.label}.`, refs: [a.id, b.id] });
       }
     }
-    // outdoor pieces (pools, loungers, trees…) belong outside the rooms
-    if (rooms.length === 0 || cat.category === "outdoor") return;
+    // outdoor pieces (pools, loungers, trees…) and structure (railings, columns, pergolas) may stand outside the rooms
+    if (rooms.length === 0 || cat.category === "outdoor" || cat.category === "structure") return;
     const host = roomAt(rooms, it);
     if (!rooms.some((r) => pointInRect(it, r, 0.05))) {
       out.push({ severity: "warning", code: "item_outside_rooms", message: `${cat.label} is not in any room.`, refs: [it.id] });
