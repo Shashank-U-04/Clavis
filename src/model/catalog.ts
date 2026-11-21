@@ -75,3 +75,19 @@ export const CATEGORIES: readonly CatalogCategory[] = ["living", "bedroom", "kit
 const byKind = new Map(CATALOG.map((c) => [c.kind, c]));
 
 export const catalogByKind = (kind: string): CatalogEntry | undefined => byKind.get(kind);
+
+/** The limits a person can resize a piece to, in metres. */
+export const ITEM_SIZE_LIMITS = { min: 0.1, maxPlan: 6, maxHeight: 3.5 } as const;
+
+/**
+ * A placed piece's real size: its own width, depth and height where the person changed them,
+ * otherwise the catalog's. Every drawing, check and 3D model goes through this.
+ */
+export function itemSize(it: { kind: string; w?: number; d?: number; h?: number }): { w: number; d: number; h: number } | null {
+  const c = byKind.get(it.kind);
+  if (!c) return null;
+  return { w: it.w ?? c.w, d: it.d ?? c.d, h: it.h ?? c.h };
+}
+
+/** Whether a piece has been resized away from its catalog size. */
+export const isResized = (it: { kind: string; w?: number; d?: number; h?: number }): boolean => it.w !== undefined || it.d !== undefined || it.h !== undefined;

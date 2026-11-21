@@ -163,7 +163,7 @@ src/
 
 ## Next
 
-1. Accounts: `Workspace` gets a Supabase implementation, local plans are offered for import on
+1. Accounts: `Workspace` gets a Supabase implementation, local plans move into the account on
    first sign-in, and the sidebar footer shows the avatar menu.
 2. `/studio/[projectId]` and `/share/[token]`.
 3. Thumbnails rendered once and kept in Storage, not re-drawn on every visit.

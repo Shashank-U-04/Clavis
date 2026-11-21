@@ -24,6 +24,8 @@ interface UiState {
   feedOpen: boolean;
   /** shown once per session when the plan is empty */
   welcome: boolean;
+  /** measurements drawn on the plan */
+  dims: boolean;
 }
 
 const KEY = "clavis:ui";
@@ -37,6 +39,7 @@ const saved = (): Partial<UiState> => {
       library: typeof v.library === "boolean" ? v.library : undefined,
       libraryTab: v.libraryTab === "rooms" || v.libraryTab === "furniture" ? v.libraryTab : undefined,
       guide: typeof v.guide === "boolean" ? v.guide : undefined,
+      dims: typeof v.dims === "boolean" ? v.dims : undefined,
     };
   } catch {
     return {};
@@ -55,12 +58,13 @@ export const ui = createStore<UiState>(() => ({
   route: null,
   feedOpen: false,
   welcome: true,
+  dims: true,
   ...(typeof window === "undefined" ? {} : defined(saved())),
 }));
 
 ui.subscribe((s) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ views: s.views, theme: s.theme, feedOpen: s.feedOpen, library: s.library, libraryTab: s.libraryTab, guide: s.guide }));
+    localStorage.setItem(KEY, JSON.stringify({ views: s.views, theme: s.theme, feedOpen: s.feedOpen, library: s.library, libraryTab: s.libraryTab, guide: s.guide, dims: s.dims }));
   } catch {
     /* per-viewer convenience only */
   }

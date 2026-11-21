@@ -6,10 +6,10 @@
  * drawing tool while the plan is hidden brings the plan back, since that is where it draws.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { actions, useAppStore } from "../model/store";
-import { CATALOG, CATEGORIES, type CatalogCategory } from "../model/catalog";
-import { BLOCK_WALL, ROOM_BLOCKS } from "../model/blocks";
+import { CATALOG, CATEGORIES, type CatalogCategory, type CatalogEntry } from "../model/catalog";
+import { BLOCK_WALL, ROOM_BLOCKS, type RoomBlock } from "../model/blocks";
 import { thumbnailFor } from "../three/thumbnails";
 import { openLibrary, setUi, ui, useUi, viewActions } from "./uiStore";
 
@@ -28,11 +28,58 @@ const GUIDE = "M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2";
 const CAT_LABEL: Record<CatalogCategory, string> = {
   living: "Living",
   bedroom: "Bedroom",
-  kitchen: "Kitchen",
-  bath: "Bath",
+  kitchen: "Kitchen & dining",
+  bath: "Bathroom",
   office: "Office",
   decor: "Decor",
 };
+
+/** The kind of piece within its room class, so a shelf reads Seating, Tables, Storage… */
+function typeOf(c: CatalogEntry): string {
+  const t = c.tags ?? [];
+  if (c.isRug) return "Rugs";
+  if (t.includes("bed")) return "Beds";
+  if (t.includes("seating")) return "Seating";
+  if (t.includes("table")) return "Tables";
+  if (t.includes("appliance") && !t.includes("counter")) return "Appliances";
+  if (t.includes("counter")) return "Units";
+  if (t.includes("fixture")) return "Fixtures";
+  if (t.includes("storage") || t.includes("shelving") || t.includes("media")) return "Storage";
+  return "Accessories";
+}
+
+/** Group a list by a key, keeping first-seen order. */
+function groupBy<T>(list: readonly T[], key: (x: T) => string): [string, T[]][] {
+  const out = new Map<string, T[]>();
+  for (const x of list) out.set(key(x), [...(out.get(key(x)) ?? []), x]);
+  return [...out];
+}
+
+/** The room shelf in classes, as a person looks for a room. */
+const ROOM_CLASSES: [string, string[]][] = [
+  ["Living & dining", ["living", "living-kitchen", "dining"]],
+  ["Bedrooms", ["bedroom", "main-bedroom"]],
+  ["Kitchen & utility", ["kitchen", "utility"]],
+  ["Bathrooms", ["bathroom", "wc"]],
+  ["Work & circulation", ["study", "hall"]],
+];
+
+/** A collapsible class on a shelf: a heading with a count, then its entries. */
+function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <section className="shelf-section">
+      <button className="shelf-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="shelf-caret" aria-hidden="true">
+          {open ? "▾" : "▸"}
+        </span>
+        <span>{title}</span>
+        <small>{count}</small>
+      </button>
+      {open && children}
+    </section>
+  );
+}
 
 const Icon = ({ d }: { d: string }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -95,26 +142,33 @@ function RoomShelf() {
     <>
       <p className="library-hint">Pick a room, then click on the plan. It arrives with its walls and snaps against its neighbours, so rooms placed side by side share a wall. Then add doors and windows.</p>
       <div className="catalog">
-        {ROOM_BLOCKS.map((b) => (
-          <button
-            key={b.id}
-            className={`cat-item ${mode === "block" && placing === b.id ? "active" : ""}`}
-            onClick={() => {
-              viewActions.show("plan");
-              actions.setDrawMode("block", b.id);
-            }}
-            title={`${b.label}: ${b.w} × ${b.h} m — ${b.note}. Resize it afterwards in Details.`}
-            data-block={b.id}
-          >
-            <RoomGlyph w={b.w} h={b.h} />
-            <span className="cat-text">
-              <span>{b.label}</span>
-              <small>
-                {b.w} × {b.h} m · {Math.round((b.w - BLOCK_WALL) * (b.h - BLOCK_WALL) * 10) / 10} m² floor
-              </small>
-            </span>
-          </button>
-        ))}
+        {ROOM_CLASSES.map(([title, ids]) => {
+          const blocks = ids.map((id) => ROOM_BLOCKS.find((b) => b.id === id)).filter((b): b is RoomBlock => !!b);
+          return (
+            <Section key={title} title={title} count={blocks.length}>
+              {blocks.map((b) => (
+                <button
+                  key={b.id}
+                  className={`cat-item ${mode === "block" && placing === b.id ? "active" : ""}`}
+                  onClick={() => {
+                    viewActions.show("plan");
+                    actions.setDrawMode("block", b.id);
+                  }}
+                  title={`${b.label}: ${b.w} × ${b.h} m — ${b.note}. Resize it afterwards in Details.`}
+                  data-block={b.id}
+                >
+                  <RoomGlyph w={b.w} h={b.h} />
+                  <span className="cat-text">
+                    <span>{b.label}</span>
+                    <small>
+                      {b.w} × {b.h} m · {Math.round((b.w - BLOCK_WALL) * (b.h - BLOCK_WALL) * 10) / 10} m² floor
+                    </small>
+                  </span>
+                </button>
+              ))}
+            </Section>
+          );
+        })}
       </div>
     </>
   );
@@ -144,25 +198,34 @@ function FurnitureShelf() {
       </div>
       <p className="library-hint">Pick a piece, then click on the plan or the 3D floor to place it.</p>
       <div className="catalog">
-        {items.map((c) => {
-          const thumb = thumbnailFor(c.kind);
-          return (
-            <button
-              key={c.kind}
-              className={`cat-item ${mode === "place" && placing === c.kind ? "active" : ""}`}
-              onClick={() => actions.setDrawMode("place", c.kind)}
-              title={`${c.label} — ${c.w} × ${c.d} × ${c.h} m (nominal)`}
-            >
-              {thumb ? <img src={thumb} alt="" draggable={false} /> : <span className="swatch" style={{ background: c.color }} />}
-              <span className="cat-text">
-                <span>{c.label}</span>
-                <small>
-                  {c.w} × {c.d} m
-                </small>
-              </span>
-            </button>
-          );
-        })}
+        {groupBy(items, (c) => c.category).map(([category, pieces]) => (
+          <Section key={category} title={CAT_LABEL[category as CatalogCategory]} count={pieces.length}>
+            {groupBy(pieces, typeOf).map(([type, list]) => (
+              <div key={type} className="shelf-type">
+                <p className="shelf-type-label">{type}</p>
+                {list.map((c) => {
+                  const thumb = thumbnailFor(c.kind);
+                  return (
+                    <button
+                      key={c.kind}
+                      className={`cat-item ${mode === "place" && placing === c.kind ? "active" : ""}`}
+                      onClick={() => actions.setDrawMode("place", c.kind)}
+                      title={`${c.label} — ${c.w} × ${c.d} × ${c.h} m (nominal; change it after placing, in Details)`}
+                    >
+                      {thumb ? <img src={thumb} alt="" draggable={false} /> : <span className="swatch" style={{ background: c.color }} />}
+                      <span className="cat-text">
+                        <span>{c.label}</span>
+                        <small>
+                          {c.w} × {c.d} m
+                        </small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </Section>
+        ))}
         {items.length === 0 && <p className="muted small">Nothing matches “{q}”.</p>}
       </div>
     </>

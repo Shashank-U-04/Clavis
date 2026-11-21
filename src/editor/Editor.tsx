@@ -11,23 +11,34 @@
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { actions, beginGesture, endGesture, logActivity, store, useAppStore } from "../model/store";
+import type { Opening } from "../model/types";
 import { snap, segLen, pointSegDist, projectT, type Pt } from "../model/geometry";
+import { wallEnd } from "./wallDraw";
+import { nextSwing, swingToward } from "./doorPlace";
 import { catalogByKind } from "../model/catalog";
 import { blockById, nextLabel, snapRect } from "../model/blocks";
 import { useSession } from "../ai/session";
-import { useUi } from "../studio/uiStore";
+import { setUi, useUi } from "../studio/uiStore";
+import { ItemDimensions, OverallDimensions, RoomDimensions } from "./dimensions";
 import { onCommand, sendCommand } from "../three/events";
 import { extentOf, movedFar, useViewport } from "./useViewport";
-import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomsLayer, RouteLayer, TracingLayer, WallsLayer } from "./layers";
+import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomLabelsLayer, RoomsLayer, RouteLayer, TracingLayer, WallsLayer } from "./layers";
 
 type Drag =
   | { kind: "pan"; lastX: number; lastY: number }
   | { kind: "move"; what: "item" | "room"; id: string; grab: Pt; moved: boolean }
+  | { kind: "slide"; id: string; moved: boolean }
   | { kind: "room"; from: Pt };
 
 const inField = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+};
+
+/** A direction on the plan as drawn: 0° to the right (east), 90° down (south). */
+const angleOf = (a: Pt, b: Pt) => {
+  const d = Math.round((Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI);
+  return d < 0 ? d + 360 : d;
 };
 
 export function Editor() {
@@ -38,12 +49,23 @@ export function Editor() {
     return t?.check?.preview?.ok ? t.check.preview : null;
   });
   const route = useUi((s) => s.route);
+  const dims = useUi((s) => s.dims);
   const model = previewing ? previewing.model : live;
   const proposed = useMemo(() => new Set(previewing?.changedEntityIds ?? []), [previewing]);
 
   const svg = useRef<SVGSVGElement>(null);
   const { view, size, fit, toWorld, zoomCentre, panBy, touched, framed } = useViewport(svg);
+  const scaleRef = useRef(view.scale);
+  scaleRef.current = view.scale;
   const [cursor, setCursor] = useState<Pt | null>(null);
+  /** a wall length being typed while drawing walls (metres), committed with Enter */
+  const [typed, setTyped] = useState("");
+  const typedRef = useRef("");
+  typedRef.current = typed;
+  /** the raw pointer position in metres, and whether Shift (any angle) is held */
+  const pointer = useRef<{ p: Pt; free: boolean } | null>(null);
+  /** where the current chain of walls began, to end it when it closes */
+  const chainStart = useRef<Pt | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
 
   // ---- framing ----
@@ -73,6 +95,34 @@ export function Editor() {
         const r = actions.undo();
         return logActivity("human", "undo", r.summary, r.ok);
       }
+      if (ed.drawMode === "wall" && ed.pendingWallStart) {
+        const from = ed.pendingWallStart;
+        if (/^[0-9.]$/.test(e.key)) {
+          e.preventDefault();
+          return setTyped((t) => (t + e.key).slice(0, 7));
+        }
+        if (key === "backspace" && typedRef.current) {
+          e.preventDefault();
+          return setTyped((t) => t.slice(0, -1));
+        }
+        if (key === "enter") {
+          e.preventDefault();
+          const length = Number(typedRef.current);
+          const at = pointer.current;
+          if (!typedRef.current || !(length > 0) || !at) return;
+          const end = wallEnd(from, at.p, store.getState().model.walls, { free: at.free, length, scale: scaleRef.current });
+          const r = actions.addWall(from.x, from.y, end.x, end.y, undefined, undefined, true);
+          logActivity("human", "add_wall", r.summary, r.ok);
+          if (r.ok) actions.setPendingWallStart(end);
+          return setTyped("");
+        }
+        if (key === "escape") {
+          // the first Esc ends the chain; the next one leaves the wall tool
+          setTyped("");
+          chainStart.current = null;
+          return actions.setPendingWallStart(null);
+        }
+      }
       if (key === "escape") {
         actions.setDrawMode("select");
         actions.setHighlight([]);
@@ -95,8 +145,14 @@ export function Editor() {
         }
         return;
       }
+      const door = ed.selectedOpeningId ? store.getState().model.openings.find((o) => o.id === ed.selectedOpeningId && o.kind === "door") : undefined;
+      if (door && key === "r") {
+        const s = nextSwing(door);
+        const r = actions.setDoorSwing(door.id, s.hinge, s.side);
+        return logActivity("human", "set_door_swing", r.summary, r.ok);
+      }
       const item = ed.selectedItemId ? store.getState().model.items.find((i) => i.id === ed.selectedItemId) : undefined;
-      if (!item) return;
+      if (!item || ed.camera === "walk") return; // while walking, the arrows move the walker
       if (key === "r") return void actions.moveItem(item.id, undefined, undefined, (item.rotation + (e.shiftKey ? 270 : 90)) % 360);
       const nudge = e.shiftKey ? 0.25 : 0.05;
       const step: Record<string, [number, number]> = { arrowleft: [-nudge, 0], arrowright: [nudge, 0], arrowup: [0, -nudge], arrowdown: [0, nudge] };
@@ -147,6 +203,16 @@ export function Editor() {
     select(id);
   };
 
+  /** Press on a door or window: select it, and drag to slide it along its wall. */
+  const grabOpening = (e: ReactPointerEvent, id: string) => {
+    if (!editable || e.button !== 0) return;
+    e.stopPropagation();
+    actions.selectOpening(id);
+    beginGesture();
+    setDrag({ kind: "slide", id, moved: false });
+    svg.current?.setPointerCapture(e.pointerId);
+  };
+
   const startPan = (e: ReactPointerEvent) => {
     setDrag({ kind: "pan", lastX: e.clientX, lastY: e.clientY });
     svg.current?.setPointerCapture(e.pointerId);
@@ -158,11 +224,20 @@ export function Editor() {
     switch (editor.drawMode) {
       case "wall": {
         const start = editor.pendingWallStart;
-        if (start && Math.hypot(p.x - start.x, p.y - start.y) >= 0.2) {
-          const r = actions.addWall(start.x, start.y, p.x, p.y);
+        const end = wallEnd(start, toWorld(e.clientX, e.clientY), live.walls, { free: e.shiftKey, scale: view.scale });
+        setTyped("");
+        if (!start) chainStart.current = end;
+        else if (Math.hypot(end.x - start.x, end.y - start.y) >= 0.2) {
+          const r = actions.addWall(start.x, start.y, end.x, end.y, undefined, undefined, true);
           logActivity("human", "add_wall", r.summary, r.ok);
+          // closing the loop back onto where the chain began ends it
+          const first = chainStart.current;
+          if (r.ok && first && Math.hypot(end.x - first.x, end.y - first.y) < 0.01) {
+            chainStart.current = null;
+            return actions.setPendingWallStart(null);
+          }
         }
-        return actions.setPendingWallStart(p); // keep chaining from the last point
+        return actions.setPendingWallStart(end); // keep chaining from the last point
       }
       case "room":
         svg.current?.setPointerCapture(e.pointerId);
@@ -180,8 +255,11 @@ export function Editor() {
       }
       case "door":
       case "window": {
-        const hit = wallUnder(toWorld(e.clientX, e.clientY));
-        const r = hit ? actions.addOpening(editor.drawMode, hit.id, hit.t) : { ok: false, summary: "Click on a wall to place it." };
+        const at = toWorld(e.clientX, e.clientY);
+        const hit = wallUnder(at);
+        const host = hit && live.walls.find((w) => w.id === hit.id);
+        const swing = host && editor.drawMode === "door" ? swingToward(host, hit.t, at) : undefined;
+        const r = hit ? actions.addOpening(editor.drawMode, hit.id, hit.t, undefined, undefined, undefined, swing) : { ok: false, summary: "Click on a wall to place it." };
         return logActivity("human", `add_${editor.drawMode}`, r.summary, r.ok);
       }
       default:
@@ -192,7 +270,8 @@ export function Editor() {
   };
 
   const onMove = (e: ReactPointerEvent) => {
-    setCursor(snapped(e));
+    pointer.current = { p: toWorld(e.clientX, e.clientY), free: e.shiftKey };
+    setCursor(editor.drawMode === "wall" ? wallEnd(editor.pendingWallStart, pointer.current.p, live.walls, { free: e.shiftKey, scale: view.scale }) : snapped(e));
     if (!drag) return;
     if (drag.kind === "pan") {
       panBy(e.clientX - drag.lastX, e.clientY - drag.lastY);
@@ -204,6 +283,16 @@ export function Editor() {
       if (drag.what === "item") actions.moveItem(drag.id, x, y);
       else actions.updateRoom(drag.id, { x, y });
       if (!drag.moved) setDrag({ ...drag, moved: true });
+    } else if (drag.kind === "slide") {
+      const o = live.openings.find((x) => x.id === drag.id);
+      const w = o && live.walls.find((x) => x.id === o.wallId);
+      if (!o || !w) return;
+      const len = segLen(w.ax, w.ay, w.bx, w.by) || 1;
+      const t = projectT(toWorld(e.clientX, e.clientY), { x: w.ax, y: w.ay }, { x: w.bx, y: w.by });
+      // along the wall in 5 cm steps, kept inside it
+      const offset = Math.min(len, Math.max(0, snap(t * len)));
+      if (Math.abs(offset - o.t * len) > 1e-6) actions.editOpening(o.id, { offset });
+      if (!drag.moved) setDrag({ ...drag, moved: true });
     }
   };
 
@@ -211,6 +300,11 @@ export function Editor() {
     const d = drag;
     setDrag(null);
     if (!d) return;
+    if (d.kind === "slide") {
+      endGesture();
+      const o = store.getState().model.openings.find((x) => x.id === d.id);
+      if (d.moved && o) logActivity("human", "update_opening", `${o.kind === "door" ? "Door" : "Window"} slid along its wall.`);
+    }
     if (d.kind === "move") {
       endGesture();
       if (d.moved && d.what === "item") {
@@ -245,11 +339,33 @@ export function Editor() {
   const mark = (id: string) => (flagged.has(id) ? INK.flagged : selected.has(id) ? INK.selected : previewing && proposed.has(id) ? INK.proposed : null);
   const removed = previewing ? live.items.filter((i) => !model.items.some((x) => x.id === i.id)) : [];
   const start = editor.pendingWallStart;
+  // the wall a click or Enter would add: the typed length along the pointer's direction
+  const typedLength = Number(typed);
+  const wallPreview =
+    editor.drawMode === "wall" && start && cursor
+      ? typed && typedLength > 0 && pointer.current
+        ? wallEnd(start, pointer.current.p, live.walls, { free: pointer.current.free, length: typedLength, scale: k })
+        : cursor
+      : null;
+  // where a door or window would go, and for a door which way it would open
+  const openingGhost = (() => {
+    if ((editor.drawMode !== "door" && editor.drawMode !== "window") || previewing || !pointer.current) return null;
+    const hit = wallUnder(pointer.current.p);
+    const w = hit && live.walls.find((x) => x.id === hit.id);
+    if (!hit || !w) return null;
+    const door = editor.drawMode === "door";
+    const ghost: Opening = { id: "ghost", kind: editor.drawMode, wallId: w.id, t: hit.t, width: door ? 0.9 : 1.2, sill: door ? 0 : 0.9, height: door ? 2.1 : 1.2, ...(door && swingToward(w, hit.t, pointer.current.p)) };
+    return { ...live, walls: [w], openings: [ghost] };
+  })();
+  const selRoom = model.rooms.find((r) => r.id === editor.selectedRoomId);
+  const selItem = model.items.find((i) => i.id === editor.selectedItemId);
   const help: Partial<Record<typeof editor.drawMode, string>> = {
-    wall: " · click to chain walls · Esc to stop",
+    wall: start
+      ? " · click the next corner, or type a length + Enter · Shift: any angle · Esc ends the wall"
+      : " · click where the wall starts; it snaps to 15° steps and to other walls' ends",
     room: " · drag to draw a room; its walls come with it",
     block: editor.placingKind ? ` · click to place a ${blockById(editor.placingKind)?.label ?? "room"}; it snaps to its neighbours · Esc to stop` : "",
-    door: " · click a wall to add a door",
+    door: " · click a wall to add a door; it opens towards the side you click on, hinged on the nearer jamb · select it and press R to turn it",
     window: " · click a wall to add a window",
     place: editor.placingKind ? ` · click to place ${catalogByKind(editor.placingKind)?.label ?? ""} · Esc to stop` : "",
   };
@@ -277,14 +393,24 @@ export function Editor() {
         <FurnitureLayer items={model.items} k={k} mark={mark} movable={editable} onPress={(e, id) => grab(e, "item", id)} />
         <RemovedLayer items={removed} k={k} />
         <WallsLayer walls={model.walls} k={k} mark={mark} pickable={editable} onPress={pick(actions.selectWall)} />
-        <OpeningsLayer model={model} k={k} mark={mark} pickable={editable} onPress={pick(actions.selectOpening)} />
+        <OpeningsLayer model={model} k={k} mark={mark} pickable={editable} onPress={grabOpening} />
+        {openingGhost && (
+          <g pointerEvents="none" opacity={0.75}>
+            <OpeningsLayer model={openingGhost} k={k} mark={() => INK.selected} pickable={false} onPress={() => {}} />
+          </g>
+        )}
+        <RoomLabelsLayer rooms={model.rooms} k={k} />
         {route && <RouteLayer points={route.points} k={k} />}
+        {dims && <OverallDimensions model={model} k={k} />}
+        {dims && !previewing && selRoom && <RoomDimensions room={selRoom} k={k} />}
+        {dims && !previewing && selItem && <ItemDimensions item={selItem} rooms={model.rooms} k={k} />}
 
-        {editor.drawMode === "wall" && start && cursor && (
+        {editor.drawMode === "wall" && start && wallPreview && (
           <g pointerEvents="none">
-            <line x1={start.x * k} y1={start.y * k} x2={cursor.x * k} y2={cursor.y * k} stroke={INK.selected} strokeWidth={Math.max(3, 0.15 * k)} strokeDasharray="8 5" />
-            <text x={cursor.x * k + 10} y={cursor.y * k - 10} fontSize={12} fill={INK.selected} fontFamily="ui-monospace, monospace">
-              {segLen(start.x, start.y, cursor.x, cursor.y).toFixed(2)} m
+            <line x1={start.x * k} y1={start.y * k} x2={wallPreview.x * k} y2={wallPreview.y * k} stroke={INK.selected} strokeWidth={Math.max(3, 0.15 * k)} strokeDasharray="8 5" />
+            <circle cx={start.x * k} cy={start.y * k} r={4} fill={INK.selected} />
+            <text x={wallPreview.x * k + 12} y={wallPreview.y * k - 12} fontSize={12} fill={INK.selected} fontFamily="ui-monospace, monospace" stroke="var(--plan-paper)" strokeWidth={3} paintOrder="stroke">
+              {typed ? `${typed}▏ m` : `${segLen(start.x, start.y, wallPreview.x, wallPreview.y).toFixed(2)} m`} · {angleOf(start, wallPreview)}°
             </text>
           </g>
         )}
@@ -299,6 +425,9 @@ export function Editor() {
             stroke={INK.selected}
             strokeDasharray="6 4"
           />
+        )}
+        {drag?.kind === "room" && cursor && Math.abs(cursor.x - drag.from.x) > 0 && Math.abs(cursor.y - drag.from.y) > 0 && (
+          <RoomDimensions room={{ id: "", label: "", floor: "oak", x: Math.min(drag.from.x, cursor.x), y: Math.min(drag.from.y, cursor.y), w: Math.abs(cursor.x - drag.from.x), h: Math.abs(cursor.y - drag.from.y) }} k={k} />
         )}
         {ghost && (
           <g pointerEvents="none">
@@ -334,6 +463,9 @@ export function Editor() {
         </button>
         <button title="Fit the plan (F)" onClick={() => fit(extent)}>
           Fit
+        </button>
+        <button title="Show or hide measurements" aria-pressed={dims} className={dims ? "on" : ""} onClick={() => setUi({ dims: !dims })}>
+          Dimensions
         </button>
       </div>
       <div className="plan-readout">

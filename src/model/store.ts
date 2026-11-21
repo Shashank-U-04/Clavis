@@ -299,7 +299,8 @@ type Finish = "oak" | "tile" | "carpet" | "concrete";
 
 export const actions = {
   // walls
-  addWall: (ax: number, ay: number, bx: number, by: number, thickness = 0.15, height = 2.7) => apply({ op: "add_wall", ax, ay, bx, by, thickness, height }),
+  addWall: (ax: number, ay: number, bx: number, by: number, thickness = 0.15, height = 2.7, precise = false) =>
+    apply({ op: "add_wall", ax, ay, bx, by, thickness, height, ...(precise && { precise: true }) }),
   editWall: (id: string, patch: { ax?: number; ay?: number; bx?: number; by?: number; thickness?: number; height?: number }) => apply({ op: "update_wall", id, ...patch }),
   removeWall: (id: string) => apply({ op: "remove_wall", id }),
 
@@ -327,6 +328,7 @@ export const actions = {
   // furniture
   placeItem: (kind: string, x: number, y: number, rotation = 0) => apply({ op: "place_item", kind, x, y, rotation }),
   moveItem: (id: string, x?: number, y?: number, rotation?: number) => apply({ op: "move_item", id, x, y, rotation }),
+  resizeItem: (id: string, size: { w?: number; d?: number; h?: number; reset?: boolean }) => apply({ op: "resize_item", id, ...size }),
   removeItem: (id: string) => apply({ op: "remove_item", id }),
 
   // the design as a whole

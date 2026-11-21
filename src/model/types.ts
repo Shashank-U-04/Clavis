@@ -56,6 +56,10 @@ export interface Item {
   y: number;
   /** degrees; the direction the front faces — 0 south, 90 east, 180 north, 270 west */
   rotation: number;
+  /** this piece's own size, when the person changed it; otherwise the catalog's (see itemSize) */
+  w?: number;
+  d?: number;
+  h?: number;
 }
 
 /** A reference image (for example a scanned plan) laid under the drawing for tracing. */
