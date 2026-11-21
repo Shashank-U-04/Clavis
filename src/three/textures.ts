@@ -161,7 +161,7 @@ export const paving = () =>
 /** Mown grass: blades of many greens over a darker base, with soft patches of lighter and darker turf. */
 export const grass = () =>
   once("grass", () => ({
-    tile: 6,
+    tile: 9,
     map: canvas(
       512,
       (g, s, r) => {
@@ -175,7 +175,7 @@ export const grass = () =>
           const light = r() < 0.5;
           for (const [dx, dy] of [[0, 0], [s, 0], [-s, 0], [0, s], [0, -s]]) {
             const grad = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rad);
-            grad.addColorStop(0, light ? "rgba(170,180,110,0.10)" : "rgba(40,60,30,0.10)");
+            grad.addColorStop(0, light ? "rgba(170,180,110,0.05)" : "rgba(40,60,30,0.05)");
             grad.addColorStop(1, "rgba(0,0,0,0)");
             g.fillStyle = grad;
             g.fillRect(0, 0, s, s);
@@ -188,10 +188,15 @@ export const grass = () =>
           const tone = r();
           g.strokeStyle = tone < 0.5 ? `rgba(66,92,46,${0.4 + r() * 0.4})` : tone < 0.85 ? `rgba(118,142,82,${0.35 + r() * 0.35})` : `rgba(156,166,104,0.45)`;
           g.lineWidth = 0.8;
-          g.beginPath();
-          g.moveTo(x, y);
-          g.lineTo(x + (r() - 0.5) * 1.5, y - l);
-          g.stroke();
+          const lean = (r() - 0.5) * 1.5;
+          // blades near an edge are drawn on the far side too, so the tile repeats without a seam
+          for (const dx of x < 8 ? [0, s] : x > s - 8 ? [0, -s] : [0])
+            for (const dy of y < 8 ? [0, s] : y > s - 8 ? [0, -s] : [0]) {
+              g.beginPath();
+              g.moveTo(x + dx, y + dy);
+              g.lineTo(x + dx + lean, y + dy - l);
+              g.stroke();
+            }
         }
       },
       17,
