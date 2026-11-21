@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
-import { VILLA_SITE } from "@/components/figures/villaSite";
 import { HeroModel, type BuildStep } from "@/components/site/HeroModel";
 import type { CSSProperties } from "react";
 import { Frame, Section, Words } from "@/components/site/Sheet";
@@ -11,7 +10,8 @@ import { ButtonLink } from "@/components/ui/Button";
 import { CATALOG } from "@/model/catalog";
 import { analyzeModel } from "@/model/analysis";
 import { checkModel, summarizeIssues } from "@/model/issues";
-import { cedarVillaModel } from "@/model/templates";
+import { lindenHeightsModel } from "@/model/templates";
+import { levelsOf } from "@/model/levels";
 import { CHECK_COUNT } from "@/model/checks";
 import { localProposal } from "@/ai/local/engine";
 import { applyBatch } from "@/model/operations";
@@ -32,17 +32,17 @@ function sampleResult() {
 }
 
 /** The build log beside the hero model, counted from the design it shows. */
-function buildSteps(model: ReturnType<typeof cedarVillaModel>, overall: string, errors: number, warnings: number): BuildStep[] {
+function buildSteps(model: ReturnType<typeof lindenHeightsModel>, overall: string, errors: number, warnings: number): BuildStep[] {
   const doors = model.openings.filter((o) => o.kind === "door").length;
   const windows = model.openings.length - doors;
   const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
   return [
-    { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")}` },
+    { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")} · ${n(levelsOf(model).length, "floor")}` },
     { code: "002", title: "2D plan", detail: `${overall} · north up` },
     { code: "003", title: "Raise walls", detail: `${n(model.walls.length, "wall")} to ${Math.max(...model.walls.map((w) => w.height)).toFixed(2)} m` },
     { code: "004", title: "Openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
     { code: "005", title: "Furnish", detail: n(model.items.length, "piece") },
-    { code: "006", title: "Grounds", detail: "pool · terrace · garden" },
+    { code: "006", title: "Grounds", detail: "infinity pool · terraces · garden" },
     { code: "007", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}` },
     { code: "008", title: "3D model", detail: "drag to turn · zoom in and out" },
   ];
@@ -79,7 +79,7 @@ const steps = (sample: { rooms: number; items: number }) => [
 ];
 
 export default function Home() {
-  const model = cedarVillaModel();
+  const model = lindenHeightsModel();
   const analysis = analyzeModel(model);
   const env = analysis.metrics.envelope!;
   const counts = summarizeIssues(checkModel(model));
@@ -94,11 +94,11 @@ export default function Home() {
           <Frame className="px-5 py-8 md:px-12 md:py-10">
             <HeroModel
               model={model}
-              site={VILLA_SITE}
+              site={[]}
               front={{ x: -1, y: -0.55 }}
               elevation={11}
               steps={buildSteps(model, `${env.w.toFixed(2)} × ${env.h.toFixed(2)} m`, counts.error, counts.warning)}
-              caption="Cedar Villa · from 2D plan to 3D model"
+              caption="Linden Heights · from 2D plan to 3D model"
               side={
                 <div>
                   <p className="label text-ink-3">Sheet 01 · Title block</p>
@@ -222,12 +222,12 @@ export default function Home() {
       <Section
         sheet="04"
         title="The validator is the referee."
-        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is Cedar Villa's own room schedule, measured by that engine."
+        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is Linden Heights' own room schedule, all three floors, measured by that engine."
       >
         <div className="grid lg:grid-cols-[1fr_20rem]">
           <div className="overflow-x-auto border-b border-rule lg:border-b-0 lg:border-r">
             <table className="w-full min-w-[34rem] text-left">
-              <caption className="sr-only">Room schedule of Cedar Villa</caption>
+              <caption className="sr-only">Room schedule of Linden Heights</caption>
               <thead>
                 <tr className="label border-b border-rule text-ink-3">
                   <th className="px-5 py-3 font-normal md:px-8">Room</th>
