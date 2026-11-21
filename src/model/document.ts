@@ -23,7 +23,8 @@ const id = z.string().min(1).max(80).regex(/^[A-Za-z0-9_:.-]+$/);
 const n = z.number().finite();
 const pos = z.number().finite().positive();
 
-const WallSchema = z.object({ id, ax: n, ay: n, bx: n, by: n, thickness: pos.max(2), height: pos.max(10) }).strict();
+const level = id.optional();
+const WallSchema = z.object({ id, ax: n, ay: n, bx: n, by: n, thickness: pos.max(2), height: pos.max(10), level }).strict();
 const OpeningSchema = z
   .object({
     id,
@@ -38,10 +39,10 @@ const OpeningSchema = z
   })
   .strict();
 const RoomSchema = z
-  .object({ id, x: n, y: n, w: pos.max(500), h: pos.max(500), label: z.string().max(80), floor: z.enum(FLOOR_FINISHES) })
+  .object({ id, x: n, y: n, w: pos.max(500), h: pos.max(500), label: z.string().max(80), floor: z.enum(FLOOR_FINISHES), level })
   .strict();
 const ItemSchema = z
-  .object({ id, kind: z.string().min(1).max(80), x: n, y: n, rotation: n, w: pos.max(20).optional(), d: pos.max(20).optional(), h: pos.max(10).optional() })
+  .object({ id, kind: z.string().min(1).max(80), x: n, y: n, rotation: n, w: pos.max(20).optional(), d: pos.max(20).optional(), h: pos.max(10).optional(), level })
   .strict();
 const UnderlaySchema = z
   .object({
@@ -67,6 +68,10 @@ export const PlanModelSchema = z
     rooms: z.array(RoomSchema).max(500),
     items: z.array(ItemSchema).max(2000),
     underlay: UnderlaySchema.nullable(),
+    levels: z
+      .array(z.object({ id, name: z.string().min(1).max(60), elevation: n.min(-10).max(200), height: pos.max(10) }).strict())
+      .max(12)
+      .optional(),
   })
   .strict();
 
