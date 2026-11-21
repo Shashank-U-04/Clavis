@@ -18,7 +18,7 @@ describe("selection", () => {
   });
 
   it("names a selected piece, turns it a quarter each way, and deletes it in one undo step", () => {
-    const id = actions.placeItem("sofa", 2, 2, 0).id!;
+    const id = actions.placeItem("sofa", 2, 2, 0).id as string;
     actions.selectItem(id);
     expect(sel()).toMatchObject({ kind: "item", id, turnable: true });
     expect(sel()!.label.length).toBeGreaterThan(0);
@@ -36,9 +36,9 @@ describe("selection", () => {
   });
 
   it("deletes a selected wall, and cycles a door's swing but not a window's", () => {
-    const wall = actions.addWall(0, 0, 4, 0).id!;
-    const door = actions.addOpening("door", wall, 0.3).id!;
-    const win = actions.addOpening("window", wall, 0.75).id!;
+    const wall = actions.addWall(0, 0, 4, 0).id as string;
+    const door = actions.addOpening("door", wall, 0.3).id as string;
+    const win = actions.addOpening("window", wall, 0.75).id as string;
 
     actions.selectOpening(door);
     const before = store.getState().model.openings.find((o) => o.id === door)!;
