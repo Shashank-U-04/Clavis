@@ -22,6 +22,8 @@ import { boxesOverlap, segLen, wallBox, type Box } from "../model/geometry";
 import { itemBox, openingSpan } from "../model/issues";
 import { catalogByKind, itemSize } from "../model/catalog";
 import { buildContent, disposeGroup } from "./content";
+import { GROUND, elevationOf, levelAbove, levelBelow, levelOf, levelsOf, onLevel } from "../model/levels";
+import { isStair, stairProgress } from "../model/stairs";
 
 const EYE = 1.6;
 const STEP = 1.9; // metres per second, walking
@@ -77,7 +79,8 @@ function obstaclesOf(model: PlanModel): Box[] {
   }
   for (const it of model.items) {
     const c = catalogByKind(it.kind);
-    if (!c || c.isRug || (itemSize(it)?.h ?? c.h) < 0.3) continue;
+    // stairs are walked on, not walked round
+    if (!c || c.isRug || c.stair || (itemSize(it)?.h ?? c.h) < 0.3) continue;
     const box = itemBox(it);
     if (box) out.push(box);
   }
@@ -117,7 +120,11 @@ export class Viewer {
   private bounds = new THREE.Box3();
   private model: PlanModel | null = null;
   private pendingModel: PlanModel | null = null;
-  private obstacles: Box[] = [];
+  /** what blocks the walker, floor by floor */
+  private obstacles = new Map<string, Box[]>();
+  /** the floor the walker is on, and how high their feet are */
+  private walkLevel = GROUND;
+  private feet = 0;
   private doors: Door[] = [];
   private mode: CameraMode = "orbit";
   private keys = new Set<string>();
@@ -254,7 +261,8 @@ export class Viewer {
     this.model = model;
     this.scene.add(group);
     this.aimSun();
-    this.obstacles = obstaclesOf(model);
+    this.obstacles = new Map(levelsOf(model).map((l) => [l.id, obstaclesOf(onLevel(model, l.id))]));
+    if (!this.obstacles.has(this.walkLevel)) this.walkLevel = levelsOf(model)[0].id;
     this.doors = [];
     group.traverse((o) => {
       if (!o.userData.doorHinge) return;
@@ -283,7 +291,10 @@ export class Viewer {
     if (this.mode === "walk") {
       const pose = this.model ? entryPose(this.model) : null;
       this.camera.up.set(0, 1, 0);
-      this.camera.position.set(pose?.x ?? c.x, EYE, pose?.z ?? c.z);
+      // the walk starts at the front door, on the ground floor
+      this.walkLevel = this.model ? levelsOf(this.model)[0].id : GROUND;
+      this.feet = this.model ? elevationOf(this.model, this.walkLevel) : 0;
+      this.camera.position.set(pose?.x ?? c.x, this.feet + EYE, pose?.z ?? c.z);
       this.yaw = pose?.yaw ?? Math.PI;
       this.pitch = -0.05;
       this.aim();
@@ -447,7 +458,8 @@ export class Viewer {
     let dx = this.velocity.x * dt;
     let dz = this.velocity.z * dt;
     const p = this.camera.position;
-    const free = (x: number, z: number) => !this.obstacles.some((b) => boxesOverlap({ x, y: z, halfW: BODY, halfD: BODY, angle: 0 }, b));
+    const blocks = this.obstacles.get(this.walkLevel) ?? [];
+    const free = (x: number, z: number) => !blocks.some((b) => boxesOverlap({ x, y: z, halfW: BODY, halfD: BODY, angle: 0 }, b));
     // slide along walls: try the full step, then each axis on its own
     if (!free(p.x + dx, p.z + dz)) {
       if (free(p.x + dx, p.z)) (dz = 0), (this.velocity.z = 0);
@@ -456,7 +468,30 @@ export class Viewer {
     }
     p.x += dx;
     p.z += dz;
+    // on a stair the floor rises (or falls) under the walker; past halfway they are on the other floor
+    const under = this.groundUnder(p.x, p.z);
+    this.walkLevel = under.level;
+    this.feet = under.feet;
+    p.y += (this.feet + EYE - p.y) * Math.min(1, dt * 14);
     this.aim();
+  }
+
+  /** The floor under a point while walking: a stair's slope where there is one, else the current floor. */
+  private groundUnder(x: number, z: number): { level: string; feet: number } {
+    const m = this.model;
+    if (!m) return { level: this.walkLevel, feet: this.feet };
+    const below = levelBelow(m, this.walkLevel);
+    for (const it of m.items) {
+      if (!isStair(it)) continue;
+      const lower = levelOf(it);
+      if (lower !== this.walkLevel && lower !== below?.id) continue; // a stair up from here, or one coming up to here
+      const upper = levelAbove(m, lower);
+      const t = upper ? stairProgress(it, { x, y: z }) : null;
+      if (t === null || !upper) continue;
+      const from = elevationOf(m, lower);
+      return { level: t > 0.5 ? upper.id : lower, feet: from + t * (upper.elevation - from) };
+    }
+    return { level: this.walkLevel, feet: elevationOf(m, this.walkLevel) };
   }
 
   private loop = () => {
