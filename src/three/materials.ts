@@ -4,6 +4,7 @@
  */
 
 import * as THREE from "three";
+import { carpet, concrete, grass, oak, paving, plaster, tile, type Surface } from "./textures";
 
 function shared<M extends THREE.Material>(m: M): M {
   m.userData.shared = true;
@@ -12,26 +13,44 @@ function shared<M extends THREE.Material>(m: M): M {
 
 const standard = (color: string, roughness = 0.75, metalness = 0) => shared(new THREE.MeshStandardMaterial({ color, roughness, metalness }));
 
+/**
+ * A material with a drawn texture at its real size (geometry gets world-sized UVs from
+ * `userData.tile`, see kit.ts), or the plain `fallback` colour where nothing can be drawn.
+ */
+function textured(fallback: string, surface: Surface | null, roughness: number, tint = "#ffffff"): THREE.MeshStandardMaterial {
+  const m = standard(surface ? tint : fallback, roughness);
+  if (surface) {
+    m.map = surface.map;
+    m.userData.tile = surface.tile;
+  }
+  return m;
+}
+
 // ---- architecture ----
-export const wallMaterial = standard("#efe9df", 0.92);
-export const wallCapMaterial = standard("#d9d1c4", 0.9);
-export const frameMaterial = standard("#5d544b", 0.55);
+// smooth white render outside and in; slim dark metal frames, as modern houses have
+export const wallMaterial = textured("#f1eee8", plaster(), 0.9, "#fbfaf7");
+export const wallCapMaterial = standard("#e2ded6", 0.85);
+export const frameMaterial = standard("#2a2d31", 0.45, 0.55);
 export const doorMaterial = standard("#e8e0d2", 0.5);
 export const doorPanelMaterial = standard("#d3c7b4", 0.55);
 export const handleMaterial = standard("#b8a46c", 0.3, 0.85);
-export const sillMaterial = standard("#e6e1d8", 0.65);
+export const sillMaterial = standard("#e9e5dc", 0.55);
+/** Clear glass that mostly shows what is behind it and reflects the sky at a glance. */
 export const glassMaterial = shared(
-  new THREE.MeshPhysicalMaterial({ color: "#bcd6e6", roughness: 0.04, transmission: 0.85, transparent: true, opacity: 0.35, side: THREE.DoubleSide }),
+  new THREE.MeshPhysicalMaterial({ color: "#d6e7ef", roughness: 0.03, metalness: 0, transparent: true, opacity: 0.26, envMapIntensity: 1.8, side: THREE.DoubleSide, depthWrite: false }),
 );
-export const groundMaterial = standard("#3f4540", 1);
+/** The lawn the building stands on (tinted per studio theme in the viewer). */
+export const groundMaterial = textured("#6d8a58", grass(), 1);
+/** Stone paving, for terraces and pool surrounds. */
+export const pavingMaterial = textured("#ddd7cb", paving(), 0.8);
 export const lampShadeMaterial = shared(new THREE.MeshStandardMaterial({ color: "#f6efe0", emissive: "#ffe6b8", emissiveIntensity: 0.6, roughness: 0.8, side: THREE.DoubleSide }));
 export const cordMaterial = standard("#2b2826", 0.7);
 
 const FLOORS: Record<string, THREE.MeshStandardMaterial> = {
-  oak: standard("#c49a68", 0.62),
-  tile: standard("#d8d6d0", 0.35),
-  carpet: standard("#8f9a86", 1),
-  concrete: standard("#a8a7a2", 0.85),
+  oak: textured("#c49a68", oak(), 0.55),
+  tile: textured("#d8d6d0", tile(), 0.3),
+  carpet: textured("#8f9a86", carpet(), 1),
+  concrete: textured("#a8a7a2", concrete(), 0.8),
 };
 export const floorMaterial = (finish: string) => FLOORS[finish] ?? FLOORS.oak;
 
