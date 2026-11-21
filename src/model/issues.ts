@@ -337,7 +337,8 @@ function checkFurniture({ model, wallById, out }: Ctx) {
         out.push({ severity: "error", code: "items_overlap", message: `${cat.label} overlaps ${oc.label}.`, refs: [a.id, b.id] });
       }
     }
-    if (rooms.length === 0) return;
+    // outdoor pieces (pools, loungers, trees…) belong outside the rooms
+    if (rooms.length === 0 || cat.category === "outdoor") return;
     const host = roomAt(rooms, it);
     if (!rooms.some((r) => pointInRect(it, r, 0.05))) {
       out.push({ severity: "warning", code: "item_outside_rooms", message: `${cat.label} is not in any room.`, refs: [it.id] });
