@@ -68,6 +68,7 @@ export function surface(color: string, kind: "fabric" | "wood" | "metal" | "glos
   return m;
 }
 
-export const waterMaterial = shared(new THREE.MeshStandardMaterial({ color: "#a8cfe3", roughness: 0.05, transparent: true, opacity: 0.55 }));
+/** Clear pool water: blue from its tiled basin, glossy enough to mirror the sky. */
+export const waterMaterial = shared(new THREE.MeshStandardMaterial({ color: "#3d9cc9", roughness: 0.04, metalness: 0.15, transparent: true, opacity: 0.82, envMapIntensity: 1.4 }));
 export const screenMaterial = standard("#111417", 0.25, 0.3);
 export const leafMaterial = standard("#4f7d48", 0.85);
