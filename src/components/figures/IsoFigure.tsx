@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import type { FigureData } from "./sunsetFigure";
+import { SITE_TONES, type FigureData } from "./sunsetFigure";
 
 const TONE = {
   wall: { top: "#15171c", left: "#d6d0c2", right: "#c7c0b0" },
@@ -16,6 +16,7 @@ const TONE = {
   leaf: { top: "#fbfaf6", left: "#e9e4d8", right: "#dcd6c8" },
   glass: { top: "#9fb9c6", left: "#c4d8e2", right: "#b6ccd7" },
   rug: { top: "#e3d7c4", left: "#e3d7c4", right: "#e3d7c4" },
+  ...SITE_TONES,
 } as const;
 
 const TOUR_MS = 2600;
