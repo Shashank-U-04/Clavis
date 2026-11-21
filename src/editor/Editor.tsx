@@ -14,7 +14,8 @@ import { actions, beginGesture, endGesture, logActivity, store, useAppStore } fr
 import type { Opening } from "../model/types";
 import { snap, segLen, pointSegDist, projectT, type Pt } from "../model/geometry";
 import { wallEnd } from "./wallDraw";
-import { nextSwing, swingToward } from "./doorPlace";
+import { swingToward } from "./doorPlace";
+import { removeSelection, turnSelection } from "./selection";
 import { catalogByKind } from "../model/catalog";
 import { blockById, nextLabel, snapRect } from "../model/blocks";
 import { useSession } from "../ai/session";
@@ -130,30 +131,11 @@ export function Editor() {
       }
       if (key === "f" && !ctrl) return sendCommand("fit-plan");
       if (previewing) return; // nothing below edits a proposal being previewed
-      if (key === "delete" || key === "backspace") {
-        const removals: [string | null, (id: string) => { ok: boolean; summary: string }, string][] = [
-          [ed.selectedItemId, actions.removeItem, "remove_item"],
-          [ed.selectedOpeningId, actions.removeOpening, "remove_opening"],
-          [ed.selectedWallId, actions.removeWall, "remove_wall"],
-          [ed.selectedRoomId, actions.removeRoom, "remove_room"],
-        ];
-        const hit = removals.find(([id]) => id);
-        if (hit) {
-          const r = hit[1](hit[0]!);
-          logActivity("human", hit[2], r.summary, r.ok);
-          actions.selectEntity(null);
-        }
-        return;
-      }
-      const door = ed.selectedOpeningId ? store.getState().model.openings.find((o) => o.id === ed.selectedOpeningId && o.kind === "door") : undefined;
-      if (door && key === "r") {
-        const s = nextSwing(door);
-        const r = actions.setDoorSwing(door.id, s.hinge, s.side);
-        return logActivity("human", "set_door_swing", r.summary, r.ok);
-      }
+      if (key === "delete" || key === "backspace") return void removeSelection();
+      if (ed.selectedOpeningId && key === "r") return void turnSelection();
       const item = ed.selectedItemId ? store.getState().model.items.find((i) => i.id === ed.selectedItemId) : undefined;
       if (!item || ed.camera === "walk") return; // while walking, the arrows move the walker
-      if (key === "r") return void actions.moveItem(item.id, undefined, undefined, (item.rotation + (e.shiftKey ? 270 : 90)) % 360);
+      if (key === "r") return void turnSelection(e.shiftKey);
       const nudge = e.shiftKey ? 0.25 : 0.05;
       const step: Record<string, [number, number]> = { arrowleft: [-nudge, 0], arrowright: [nudge, 0], arrowup: [0, -nudge], arrowdown: [0, nudge] };
       if (step[key]) {
