@@ -222,7 +222,6 @@ function ViewSwitch() {
   const views = useUi((s) => s.views);
   const walking = useAppStore((s) => s.editor.camera === "walk");
   const screen = { views, walk: walking };
-  const all = countViews(views) === 3 && !walking;
   return (
     <div className="views" role="group" aria-label="What is on screen">
       {FEATURE_BUTTONS.map((b) => {
@@ -243,9 +242,6 @@ function ViewSwitch() {
           </button>
         );
       })}
-      <button className="view all" disabled={all} onClick={featureActions.all} title="Show the 2D plan, the 3D model and the chat together (0)">
-        All
-      </button>
     </div>
   );
 }

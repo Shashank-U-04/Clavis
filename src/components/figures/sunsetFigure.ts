@@ -19,8 +19,41 @@ import { AXIS_X_DEG, AXIS_Y_DEG, boxFaces, flatPolygon, paintOrder, project, typ
 
 export const CUT = 1.2;
 const SCALE = 40;
+/** drawings wider than this (in drawing units) set their text larger in proportion */
+const TEXT_AT = 760;
 
-export type SolidKind = "wall" | "glass" | "leaf" | "item" | "rug";
+export type SolidKind = "wall" | "glass" | "leaf" | "item" | "rug" | SiteKind;
+
+/** What grows or is laid around the house: drawn with it, but not part of the plan. */
+export type SiteKind = "lawn" | "deck" | "water" | "hedge" | "tree";
+export const SITE_KINDS: readonly SiteKind[] = ["lawn", "deck", "water", "hedge", "tree"];
+
+/** Shades for the site, shared by the figures: stone, water and planting, quiet beside the ink. */
+export const SITE_TONES = {
+  lawn: { top: "#e2e6d6", left: "#e2e6d6", right: "#e2e6d6" },
+  deck: { top: "#ede7db", left: "#d8d0c0", right: "#ccc3b2" },
+  water: { top: "#a3c9da", left: "#86b3c8", right: "#79a8be" },
+  hedge: { top: "#b3c2a1", left: "#9bac89", right: "#8d9e7c" },
+  tree: { top: "#a8ba96", left: "#90a37f", right: "#829572" },
+} as const satisfies Record<SiteKind, Record<string, string>>;
+
+/**
+ * One piece of the site, in plan metres (x east, y south, like the design): a box from
+ * (x0, y0) to (x1, y1), z0 to z1 high. `kind: "item"` draws it like furniture (a lounger, an
+ * outdoor table). Pieces sharing an id before a colon are built together. A `label` writes its
+ * name and area on the drawing, like a room's.
+ */
+export interface SitePiece {
+  id: string;
+  kind: SiteKind | "item";
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  z0?: number;
+  z1: number;
+  label?: string;
+}
 
 export interface FigureRoom {
   id: string;
@@ -72,6 +105,10 @@ export interface FigureData {
   arcs: string[];
   halo: { cx: number; cy: number; rx: number; ry: number };
   size: { w: number; h: number };
+  /** ground the house stands on (a lawn), drawn flat under everything, plan and dimensions included */
+  ground: { id: string; points: string }[];
+  /** how much larger than usual to set labels and dimensions, so a big drawing still reads */
+  textScale: number;
 }
 
 /** Plan (x east, y south) → figure world, turned so the north-west corner is nearest. */
@@ -203,7 +240,7 @@ function parts(kind: string, w: number, d: number, h: number): Part[] {
   }
 }
 
-export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureData {
+export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: readonly SitePiece[] = []): FigureData {
   const T = turner(model);
   const analysis = analyzeModel(model);
   const k = SCALE;
@@ -229,13 +266,13 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
   for (const o of model.openings) {
     if (o.kind !== "door") continue;
     const wall = model.walls.find((w) => w.id === o.wallId)!;
-    for (const leaf of doorLeaves(wall, o)) {
+    for (const [n, leaf] of doorLeaves(wall, o).entries()) {
       // the open leaf, standing on its hinge, and its swing traced on the floor
       const t = 0.025;
       solids.push({
         box: T.box(Math.min(leaf.hinge.x, leaf.open.x) - t, Math.min(leaf.hinge.y, leaf.open.y) - t, Math.max(leaf.hinge.x, leaf.open.x) + t, Math.max(leaf.hinge.y, leaf.open.y) + t, 0, Math.min(2.05, CUT)),
         kind: "leaf",
-        id: `${o.id}:leaf:${leaf.hinge.x}`,
+        id: `${o.id}:leaf:${n}`,
       });
       const a0 = Math.atan2(leaf.closed.y - leaf.hinge.y, leaf.closed.x - leaf.hinge.x);
       let a1 = Math.atan2(leaf.open.y - leaf.hinge.y, leaf.open.x - leaf.hinge.x);
@@ -275,6 +312,12 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
     });
   }
 
+  // the site: the ground first, then what stands on it, sorted with the house
+  for (const p of site) if (p.kind !== "lawn") solids.push({ box: T.box(p.x0, p.y0, p.x1, p.y1, p.z0 ?? 0, p.z1), kind: p.kind, id: p.id });
+  const ground = site
+    .filter((p) => p.kind === "lawn")
+    .map((p) => ({ id: p.id, points: flatPolygon([T.pt(p.x0, p.y0), T.pt(p.x1, p.y0), T.pt(p.x1, p.y1), T.pt(p.x0, p.y1)], 0, k) }));
+
   // rugs lie on the floor under everything else
   const flat = solids.filter((s) => s.kind === "rug");
   const standing = paintOrder(solids.filter((s) => s.kind !== "rug"));
@@ -285,13 +328,23 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
     const s = project(c.x, c.y, 0);
     return { id: r.id, label: r.label, area: rooms[i].area, x: s.x * k, y: s.y * k };
   });
+  for (const p of site) {
+    if (!p.label) continue;
+    const c = T.pt((p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2);
+    const s = project(c.x, c.y, p.z1);
+    labels.push({ id: p.id, label: p.label, area: Math.round(Math.abs((p.x1 - p.x0) * (p.y1 - p.y0)) * 10) / 10, x: s.x * k, y: s.y * k });
+  }
 
-  // overall dimensions along the two edges nearest the viewer, set out 0.9 m from the walls
+  // overall dimensions along the two edges nearest the viewer, set out 0.9 m from the walls,
+  // or 0.9 m beyond a terrace or pool on that side
   const walls = solids.filter((s) => s.kind === "wall").map((s) => s.box);
   const bx0 = Math.min(...walls.map((b) => b.x0));
   const bx1 = Math.max(...walls.map((b) => b.x1));
   const by0 = Math.min(...walls.map((b) => b.y0));
   const by1 = Math.max(...walls.map((b) => b.y1));
+  const paved = solids.filter((s) => s.kind === "deck" || s.kind === "water").map((s) => s.box);
+  const offX = 0.9 + Math.max(0, ...paved.map((b) => b.x1 - bx1));
+  const offY = 0.9 + Math.max(0, ...paved.map((b) => b.y1 - by1));
   const at = (x: number, y: number) => project(x, y, 0);
   const seg = (a: { x: number; y: number }, b: { x: number; y: number }) => `M ${(a.x * k).toFixed(1)} ${(a.y * k).toFixed(1)} L ${(b.x * k).toFixed(1)} ${(b.y * k).toFixed(1)}`;
   const dim = (a: [number, number], b: [number, number], tick: [number, number], angle: number, from: [number, number][]): FigureDim => {
@@ -308,13 +361,12 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
     });
     return { line: seg(pa, pb), ext, ticks: [tickAt(a), tickAt(b)], text: `${len.toFixed(2)} m`, x: m.x * k, y: m.y * k, angle };
   };
-  const off = 0.9;
   const dims = [
-    dim([bx0, by1 + off], [bx1, by1 + off], [0.18, 0.18], AXIS_X_DEG, [
+    dim([bx0, by1 + offY], [bx1, by1 + offY], [0.18, 0.18], AXIS_X_DEG, [
       [bx0, by1],
       [bx1, by1],
     ]),
-    dim([bx1 + off, by0], [bx1 + off, by1], [0.18, -0.18], AXIS_Y_DEG, [
+    dim([bx1 + offX, by0], [bx1 + offX, by1], [0.18, -0.18], AXIS_Y_DEG, [
       [bx1, by0],
       [bx1, by1],
     ]),
@@ -323,7 +375,8 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
   // frame the drawing, dimensions included
   const all = [
     ...ordered.flatMap((s) => s.faces.flatMap((f) => f.points.split(" ").map((p) => p.split(",").map(Number)))),
-    ...[at(bx0, by1 + off + 0.6), at(bx1, by1 + off + 0.6), at(bx1 + off + 0.6, by0), at(bx1 + off + 0.6, by1)].map((p) => [p.x * k, p.y * k]),
+    ...ground.flatMap((g) => g.points.split(" ").map((p) => p.split(",").map(Number))),
+    ...[at(bx0, by1 + offY + 0.6), at(bx1, by1 + offY + 0.6), at(bx1 + offX + 0.6, by0), at(bx1 + offX + 0.6, by1)].map((p) => [p.x * k, p.y * k]),
   ];
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
@@ -344,5 +397,7 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel()): FigureD
     arcs,
     halo: { cx: centre.x * k, cy: centre.y * k + 6, rx: w * 0.46, ry: h * 0.33 },
     size: { w, h },
+    ground,
+    textScale: Math.max(1, w / TEXT_AT),
   };
 }

@@ -2,18 +2,25 @@ import Link from "next/link";
 import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
 import { BuildFigure, type BuildStep } from "@/components/figures/BuildFigure";
 import { buildSunsetFigure } from "@/components/figures/sunsetFigure";
-import { Frame, Section } from "@/components/site/Sheet";
+import { VILLA_SITE } from "@/components/figures/villaSite";
+import type { CSSProperties } from "react";
+import { Frame, Section, Words } from "@/components/site/Sheet";
+import { CountUp } from "@/components/site/Motion";
 import { LogoMark } from "@/components/site/Logo";
 import { BriefBox } from "@/components/site/BriefBox";
 import { ButtonLink } from "@/components/ui/Button";
 import { CATALOG } from "@/model/catalog";
 import { analyzeModel } from "@/model/analysis";
 import { checkModel, summarizeIssues } from "@/model/issues";
-import { sunsetLoftModel } from "@/model/templates";
+import { cedarVillaModel } from "@/model/templates";
 import { CHECK_COUNT } from "@/model/checks";
 import { localProposal } from "@/ai/local/engine";
 import { applyBatch } from "@/model/operations";
 import { emptyModel } from "@/model/types";
+
+/** a delay for the opening animation, and a place in a staggered reveal */
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
+const at = (i: number) => ({ "--i": i }) as CSSProperties;
 
 const SAMPLE_BRIEF = "a three-bedroom house with a study, about 120 m²";
 
@@ -26,7 +33,7 @@ function sampleResult() {
 }
 
 /** The build log beside the hero drawing, counted from the design it draws. */
-function buildSteps(model: ReturnType<typeof sunsetLoftModel>, overall: string[], errors: number, warnings: number): BuildStep[] {
+function buildSteps(model: ReturnType<typeof cedarVillaModel>, overall: string[], errors: number, warnings: number): BuildStep[] {
   const doors = model.openings.filter((o) => o.kind === "door").length;
   const windows = model.openings.length - doors;
   const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
@@ -73,8 +80,8 @@ const steps = (sample: { rooms: number; items: number }) => [
 ];
 
 export default function Home() {
-  const model = sunsetLoftModel();
-  const figure = buildSunsetFigure(model);
+  const model = cedarVillaModel();
+  const figure = buildSunsetFigure(model, VILLA_SITE);
   const analysis = analyzeModel(model);
   const counts = summarizeIssues(checkModel(model));
   const rooms = analysis.rooms;
@@ -89,7 +96,7 @@ export default function Home() {
             <BuildFigure
               data={figure}
               steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)}
-              caption="Sunset Loft · built live from the plan"
+              caption="Cedar Villa · built live from the plan"
               side={
                 <div>
                   <p className="label text-ink-3">Sheet 01 · Title block</p>
@@ -117,16 +124,26 @@ export default function Home() {
           </Frame>
           <div className="grid border-t border-rule lg:grid-cols-[1fr_minmax(0,24rem)_minmax(0,16rem)]">
             <h1 className="border-b border-rule p-5 text-[clamp(1.9rem,7.6vw,4.4rem)] font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:p-8 lg:border-b-0 lg:border-r">
-              <span className="block whitespace-nowrap">Describe a home.</span>
-              <span className="block whitespace-nowrap">Walk through it.</span>
+              <span className="rise-line">
+                <span className="whitespace-nowrap" style={d(120)}>
+                  Describe a home.
+                </span>
+              </span>
+              <span className="rise-line">
+                <span className="whitespace-nowrap" style={d(260)}>
+                  <span className="marker-line">Walk through it.</span>
+                </span>
+              </span>
             </h1>
             <div className="flex flex-col justify-between gap-6 border-b border-rule p-5 md:p-8 lg:border-b-0 lg:border-r">
-              <p className="text-pretty text-ink-2">
+              <p className="fade-up text-pretty text-ink-2" style={d(450)}>
                 Clavis turns one sentence into a furnished floor plan in metres, checks every wall, door, window and piece of furniture against real geometry, and lets you walk through the result in 3D.
               </p>
-              <p className="label text-ink-3">Free to try · no account · runs in your browser</p>
+              <p className="fade-up label text-ink-3" style={d(600)}>
+                Free to try · no account · runs in your browser
+              </p>
             </div>
-            <div className="flex flex-col">
+            <div className="fade-up flex flex-col" style={d(700)}>
               <ButtonLink href="/new" className="flex-1 py-5">
                 Start designing
               </ButtonLink>
@@ -142,14 +159,16 @@ export default function Home() {
       <div className="border-b border-rule bg-ink text-paper">
         <dl className="mx-auto grid max-w-[1440px] grid-cols-2 md:grid-cols-4">
           {[
-            [String(CHECK_COUNT), "checks on every change"],
-            [String(CATALOG.length), "furniture pieces, true to size"],
-            ["0", "accounts needed to start"],
-            ["1", "sentence to a whole home"],
+            [CHECK_COUNT, "checks on every change"],
+            [CATALOG.length, "furniture pieces, true to size"],
+            [0, "accounts needed to start"],
+            [1, "sentence to a whole home"],
           ].map(([value, label], i) => (
-            <div key={label} className={`border-paper/15 p-5 md:p-8 ${i % 2 === 0 ? "border-r" : ""} md:border-r ${i < 2 ? "border-b md:border-b-0" : ""}`}>
+            <div key={String(label)} className={`border-paper/15 p-5 md:p-8 ${i % 2 === 0 ? "border-r" : ""} md:border-r ${i < 2 ? "border-b md:border-b-0" : ""}`}>
               <dt className="sr-only">{label}</dt>
-              <dd className="text-4xl font-semibold tracking-[-0.04em] md:text-6xl">{value}</dd>
+              <dd className="text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
+                <CountUp value={Number(value)} />
+              </dd>
               <dd className="label mt-3 text-paper/60">{label}</dd>
             </div>
           ))}
@@ -160,14 +179,20 @@ export default function Home() {
       <Section sheet="02" title="From one sentence to a home you can walk through." intro="Three steps, and you stay in charge of each one. Proposals are previews until you apply them, and every change can be undone.">
         <ol className="grid md:grid-cols-3">
           {STEPS.map((s, i) => (
-            <li key={s.n} className={`flex flex-col gap-6 border-rule p-5 md:p-8 ${i < 2 ? "border-b md:border-b-0 md:border-r" : ""}`}>
+            <li key={s.n} data-reveal style={at(i)} className={`flex flex-col gap-6 border-rule p-5 md:p-8 ${i < 2 ? "border-b md:border-b-0 md:border-r" : ""}`}>
               <div className="flex items-baseline justify-between">
                 <span className="label text-marker">Step {s.n}</span>
-                <span className="text-5xl font-semibold tracking-[-0.05em] text-paper-3">{s.n}</span>
+                <span className="drift text-5xl font-semibold tracking-[-0.05em] text-paper-3">{s.n}</span>
               </div>
               <h3 className="text-2xl font-semibold tracking-tight">{s.title}</h3>
               <p className="text-ink-2">{s.text}</p>
-              <pre className="mt-auto overflow-x-auto border border-rule bg-paper-2 p-4 font-mono text-[0.78rem] leading-relaxed text-ink-2">{s.specimen.join("\n")}</pre>
+              <pre data-reveal className="typing mt-auto overflow-x-auto border border-rule bg-paper-2 p-4 font-mono text-[0.78rem] leading-relaxed text-ink-2">
+                {s.specimen.map((line, j) => (
+                  <span key={j} className="tl" style={at(j)}>
+                    {line}
+                  </span>
+                ))}
+              </pre>
             </li>
           ))}
         </ol>
@@ -177,11 +202,11 @@ export default function Home() {
       <Section sheet="03" title="Everything the studio does." intro="One workspace for the whole loop: brief, plan, check, change, walk, save.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3">
           {CAPABILITIES.map((c, i) => (
-            <li key={c.title} className={`border-rule ${i % 3 !== 2 ? "lg:border-r" : ""} ${i % 2 === 0 ? "sm:border-r lg:border-r" : "sm:border-r-0"} ${i % 3 === 2 ? "lg:border-r-0" : ""} border-b`}>
+            <li key={c.title} data-reveal style={at(i % 3)} className={`border-rule ${i % 3 !== 2 ? "lg:border-r" : ""} ${i % 2 === 0 ? "sm:border-r lg:border-r" : "sm:border-r-0"} ${i % 3 === 2 ? "lg:border-r-0" : ""} border-b`}>
               <Link href={c.href} className="group flex h-full flex-col gap-4 p-5 hover:bg-paper-2 md:p-8">
                 <div className="flex items-start justify-between">
                   <c.icon size={22} strokeWidth={1.4} className="text-ink" aria-hidden="true" />
-                  <ArrowUpRight size={16} className="text-ink-3 transition-colors group-hover:text-marker" aria-hidden="true" />
+                  <ArrowUpRight size={16} className="text-ink-3 transition-[color,translate] duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-marker" aria-hidden="true" />
                 </div>
                 <h3 className="text-lg font-semibold tracking-tight">{c.title}</h3>
                 <p className="text-sm text-ink-2">{c.text}</p>
@@ -195,12 +220,12 @@ export default function Home() {
       <Section
         sheet="04"
         title="The validator is the referee."
-        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is the Sunset Loft's own room schedule, measured by that engine."
+        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is Cedar Villa's own room schedule, measured by that engine."
       >
         <div className="grid lg:grid-cols-[1fr_20rem]">
           <div className="overflow-x-auto border-b border-rule lg:border-b-0 lg:border-r">
             <table className="w-full min-w-[34rem] text-left">
-              <caption className="sr-only">Room schedule of the Sunset Loft</caption>
+              <caption className="sr-only">Room schedule of Cedar Villa</caption>
               <thead>
                 <tr className="label border-b border-rule text-ink-3">
                   <th className="px-5 py-3 font-normal md:px-8">Room</th>
@@ -211,8 +236,8 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {rooms.map((r) => (
-                  <tr key={r.id} className="border-b border-rule-soft last:border-0">
+                {rooms.map((r, i) => (
+                  <tr key={r.id} data-reveal style={at(i * 0.5)} className="border-b border-rule-soft last:border-0">
                     <td className="px-5 py-3 font-medium md:px-8">{r.label}</td>
                     <td className="px-3 py-3 text-right font-mono text-sm">{r.area.toFixed(1)} m²</td>
                     <td className={`px-3 py-3 text-right font-mono text-sm ${r.habitable && r.daylightRatio < 0.1 ? "text-marker" : ""}`}>{r.windows.length ? `${Math.round(r.daylightRatio * 100)} %` : "—"}</td>
@@ -223,7 +248,7 @@ export default function Home() {
               </tbody>
             </table>
           </div>
-          <div className="flex flex-col justify-between gap-8 p-5 md:p-8">
+          <div data-reveal style={at(2)} className="flex flex-col justify-between gap-8 p-5 md:p-8">
             <div>
               <p className="label text-ink-3">Findings</p>
               <p className="mt-3 text-5xl font-semibold tracking-[-0.04em]">
@@ -248,7 +273,7 @@ export default function Home() {
             { tag: "In your browser", name: "Clavis Local", points: ["Designs homes from a brief", "Furnishes, repairs and resizes rooms", "Answers questions with measured numbers", "Instant, private, free"] },
             { tag: "On the server", name: "Hosted model", points: ["Free-form requests in your own words", "Proposes edits as validated operations", "Explains what changed and why", "Key stays on the server"] },
           ].map((a, i) => (
-            <div key={a.name} className={`border-rule p-5 md:p-8 ${i === 0 ? "border-b md:border-b-0 md:border-r" : ""}`}>
+            <div key={a.name} data-reveal style={at(i * 2)} className={`border-rule p-5 md:p-8 ${i === 0 ? "border-b md:border-b-0 md:border-r" : ""}`}>
               <p className="label text-ink-3">{a.tag}</p>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight">{a.name}</h3>
               <ul className="mt-6 divide-y divide-rule-soft border-y border-rule-soft">
@@ -269,9 +294,11 @@ export default function Home() {
         <div className="mx-auto grid max-w-[1440px] gap-10 px-5 py-16 md:grid-cols-[1fr_minmax(0,36rem)] md:px-8 md:py-24">
           <div>
             <p className="label text-paper/50">Sheet 06</p>
-            <h2 className="mt-4 text-balance text-4xl font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:text-6xl">Start with a sentence.</h2>
+            <h2 data-reveal className="words mt-4 text-balance text-4xl font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:text-6xl">
+              <Words text="Start with a sentence." />
+            </h2>
           </div>
-          <div className="self-end">
+          <div data-reveal style={at(4)} className="self-end">
             <BriefBox dark />
             <p className="label mt-6 text-paper/45">
               Prefer to draw?{" "}

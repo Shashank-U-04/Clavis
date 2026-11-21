@@ -7,7 +7,7 @@ import { localProposal } from "@/ai/local/engine";
 import type { AssistantRequest } from "@/ai/contract";
 import { analyzeModel } from "@/model/analysis";
 import { applyBatch } from "@/model/operations";
-import { sunsetLoftModel, templateModel } from "@/model/templates";
+import { cedarVillaModel, sunsetLoftModel, templateModel } from "@/model/templates";
 import { emptyModel, type PlanModel } from "@/model/types";
 import { findTemplate } from "./catalogue";
 
@@ -16,6 +16,7 @@ export function buildTemplate(slug: string): PlanModel {
   const t = findTemplate(slug);
   if (!t || t.slug === "compact-two-bedroom") return { ...templateModel(), name: t?.name ?? "Compact two-bedroom" };
   if (t.slug === "sunset-loft") return sunsetLoftModel();
+  if (t.slug === "cedar-villa") return cedarVillaModel();
   const req: AssistantRequest = { mode: "design", instruction: t.brief!, context: { design: {} } };
   let n = 0;
   const out = applyBatch(emptyModel(), localProposal(req, emptyModel()).operations, (p) => `${p}_${(n++).toString(36)}`);

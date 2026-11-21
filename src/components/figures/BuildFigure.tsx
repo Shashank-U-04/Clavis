@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The Sunset Loft, built live. The plan is set out on the ground, the walls rise back to
+ * A home, built live. The plan is set out on the ground, the walls rise back to
  * front, doors and glazing go in, the furniture is lowered into place, and then a scan band
  * sweeps down the sheet turning the line drawing into a shaded one. Room labels and the
  * build log finish it. Every number on it comes from the real design.
@@ -16,7 +16,7 @@
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { boxFaces, type Box3 } from "./iso";
-import type { FigureData, SolidKind } from "./sunsetFigure";
+import { SITE_KINDS, SITE_TONES, type FigureData, type SiteKind, type SolidKind } from "./sunsetFigure";
 
 export interface BuildStep {
   code: string;
@@ -30,11 +30,13 @@ const RENDER = {
   leaf: { top: "#fbfaf6", left: "#e9e4d8", right: "#dcd6c8" },
   glass: { top: "#9fb9c6", left: "#c4d8e2", right: "#b6ccd7" },
   rug: { top: "#e3d7c4", left: "#e3d7c4", right: "#e3d7c4" },
+  ...SITE_TONES,
 } as const satisfies Record<SolidKind, Record<string, string>>;
 
 /** Phases of the build, in milliseconds from the start. */
 const PH = {
   plan: [0, 1500],
+  site: [300, 2200],
   walls: [1000, 4400],
   open: [4100, 5300],
   items: [5100, 7900],
@@ -57,8 +59,9 @@ interface Plan {
 
 /** When each solid starts and how it arrives: walls and openings rise, furniture is lowered. */
 function schedule(data: FigureData): Plan[] {
-  const kindOf = (k: SolidKind) => (k === "wall" ? "walls" : k === "glass" || k === "leaf" ? "open" : "items");
-  const groups: Record<string, string[]> = { walls: [], open: [], items: [] };
+  const isSite = (k: SolidKind) => SITE_KINDS.includes(k as SiteKind);
+  const kindOf = (k: SolidKind) => (k === "wall" ? "walls" : k === "glass" || k === "leaf" ? "open" : isSite(k) ? "site" : "items");
+  const groups: Record<string, string[]> = { walls: [], open: [], items: [], site: [] };
   for (const s of data.solids) {
     const ph = kindOf(s.kind);
     const key = ph === "walls" ? s.id : s.group;
@@ -70,7 +73,7 @@ function schedule(data: FigureData): Plan[] {
     const list = groups[ph];
     const i = list.indexOf(ph === "walls" ? s.id : s.group);
     const [a, b] = PH[ph];
-    const dur = ph === "walls" ? 650 : ph === "open" ? 450 : 550;
+    const dur = ph === "walls" ? 650 : ph === "open" ? 450 : ph === "site" ? 700 : 550;
     return { start: a + ((b - a - dur) * i) / Math.max(1, list.length - 1), dur, rise: ph !== "items" };
   });
 }
@@ -80,6 +83,7 @@ interface Els {
   faces: (SVGPolygonElement | null)[][];
   rooms: (SVGPolygonElement | null)[];
   plan: SVGGElement | null;
+  ground: SVGGElement | null;
   arcs: SVGGElement | null;
   clip: SVGRectElement | null;
   band: SVGGElement | null;
@@ -88,8 +92,9 @@ interface Els {
 
 const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: Els }) {
   const [vx, vy, vw] = data.viewBox.split(" ").map(Number);
+  const ts = data.textScale;
   return (
-    <svg viewBox={data.viewBox} className="mx-auto block max-h-[min(72vh,680px)] w-full select-none" role="img" aria-label="An isometric drawing of the Sunset Loft being built: walls, doors, windows and furniture.">
+    <svg viewBox={data.viewBox} className="mx-auto block max-h-[min(72vh,680px)] w-full select-none" role="img" aria-label="An isometric drawing of a home being built: walls, doors, windows, furniture and its grounds.">
       <defs>
         <pattern id="bf-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="4" stroke="#15171c" strokeWidth="0.5" strokeOpacity="0.18" />
@@ -98,6 +103,13 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
           <rect ref={(n) => void (els.clip = n)} x={vx} y={vy} width={vw} height={0} />
         </clipPath>
       </defs>
+
+      {/* the site's ground, under everything */}
+      <g ref={(n) => void (els.ground = n)} className="bf-ground" opacity={0}>
+        {data.ground.map((g) => (
+          <polygon key={g.id} points={g.points} fill={SITE_TONES.lawn.top} stroke="#81848b" strokeWidth={0.4} />
+        ))}
+      </g>
 
       {/* ground: room outlines and overall dimensions, drawn on */}
       <g ref={(n) => void (els.plan = n)} opacity={0} fill="none" stroke="#15171c" strokeLinejoin="round">
@@ -113,7 +125,7 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
             {d.ticks.map((t, j) => (
               <path key={j} d={t} strokeWidth={1} stroke="#15171c" />
             ))}
-            <text x={d.x} y={d.y - 4} transform={`rotate(${d.angle} ${d.x} ${d.y})`} textAnchor="middle" fontSize={8} fill="#43464d" stroke="none" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
+            <text x={d.x} y={d.y - 4 * ts} transform={`rotate(${d.angle} ${d.x} ${d.y})`} textAnchor="middle" fontSize={8 * ts} fill="#43464d" stroke="none" style={{ fontFamily: "var(--font-mono)", letterSpacing: "0.06em" }}>
               {d.text}
             </text>
           </g>
@@ -178,7 +190,7 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
       {/* room labels */}
       <g ref={(n) => void (els.notes = n)} className="bf-notes" opacity={0} pointerEvents="none" style={{ fontFamily: "var(--font-mono)" }}>
         {data.labels.map((l) => (
-          <g key={l.id} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)})`}>
+          <g key={l.id} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) scale(${ts.toFixed(2)})`}>
             <rect x={4} y={-8.5} width={Math.max(l.label.length, 7) * 4.9 + 6} height={18} fill="#f1f0ea" fillOpacity={0.88} />
             <rect x={-2.5} y={-2.5} width={5} height={5} fill="#2747d4" />
             <text x={6} y={-1} fontSize={7} fill="#15171c" style={{ letterSpacing: "0.08em" }}>
@@ -195,7 +207,7 @@ const Drawing = memo(function Drawing({ data, els }: { data: FigureData; els: El
 });
 
 export function BuildFigure({ data, steps, caption, side }: { data: FigureData; steps: BuildStep[]; caption: string; side?: ReactNode }) {
-  const els = useRef<Els>({ solids: [], faces: [], rooms: [], plan: null, arcs: null, clip: null, band: null, notes: null }).current;
+  const els = useRef<Els>({ solids: [], faces: [], rooms: [], plan: null, ground: null, arcs: null, clip: null, band: null, notes: null }).current;
   const plans = useRef<Plan[] | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const raf = useRef(0);
@@ -216,6 +228,7 @@ export function BuildFigure({ data, steps, caption, side }: { data: FigureData; 
         r.setAttribute("stroke-dashoffset", String(1 - pPlan));
       });
       els.plan?.setAttribute("opacity", t <= 0 ? "0" : "1");
+      els.ground?.setAttribute("opacity", String(easeOut(within(t, PH.site))));
       els.arcs?.setAttribute("opacity", String(within(t, PH.open)));
 
       data.solids.forEach((s, i) => {
@@ -286,7 +299,7 @@ export function BuildFigure({ data, steps, caption, side }: { data: FigureData; 
   return (
     <div ref={box} className="grid gap-8 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[minmax(0,25rem)_minmax(0,1fr)]">
       <noscript>
-        <style>{".bf-render{clip-path:none}.bf-notes{opacity:1}"}</style>
+        <style>{".bf-render{clip-path:none}.bf-notes,.bf-ground{opacity:1}"}</style>
       </noscript>
 
       {/* left: the brand, then the build progress and log; on phones the drawing sits between them */}

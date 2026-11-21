@@ -12,7 +12,7 @@ export default function TemplatesPage() {
       <SheetHeader
         sheet="D · Templates"
         title="Start from a home that works"
-        intro={`${cards.length} templates, each with no errors or warnings from the validator. Two are drawn by hand; the rest are laid out by Clavis Local from a one-line brief.`}
+        intro={`${cards.length} templates, each with no errors or warnings from the validator. Three are drawn by hand; the rest are laid out by Clavis Local from a one-line brief.`}
       />
       <TemplateGallery cards={cards} />
     </>
