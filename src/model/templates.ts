@@ -552,7 +552,7 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
   item("outdoor_dining", 12.6, -1.6, 0),
   item("parasol", 15.8, -1.8, 0),
   // planting
-  item("tree", -9, -3, 0),
+  item("tree", 26, -1, 0),
   item("tree", 23, -3, 0),
   item("tree", 23.5, 16.5, 0),
   item("tree", -9.5, 16, 0),
