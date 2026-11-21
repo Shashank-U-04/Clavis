@@ -17,12 +17,13 @@
  */
 
 import { z } from "zod";
-import type { Item, Opening, PlanModel, Room, Wall } from "./types";
+import type { Item, Level, Opening, PlanModel, Room, Wall } from "./types";
 import { emptyModel } from "./types";
 import { segLen, snap } from "./geometry";
 import { clampOpeningT } from "./issues";
 import { CATALOG, catalogByKind, ITEM_SIZE_LIMITS } from "./catalog";
 import { buildLayout, FLOOR_FINISHES, LayoutSpecSchema, SIDES } from "./layout";
+import { DEFAULT_STOREY, GROUND, levelOf, levelsOf, nextLevelName, tagLevel } from "./levels";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -45,6 +46,7 @@ const label = z.string().trim().min(1).max(60);
 const floor = z.enum(FLOOR_FINISHES);
 const catalogKind = z.enum(CATALOG.map((c) => c.kind) as [string, ...string[]]);
 const along = z.number().finite().min(0).max(1);
+const onLevel = ref.optional().describe("id of the level (floor) it goes on; default: the floor being edited");
 
 export const OPERATION_SCHEMAS = {
   add_wall: z
@@ -55,6 +57,7 @@ export const OPERATION_SCHEMAS = {
       thickness: metres(0.05, 0.5).optional().describe("default 0.15 m"),
       height: metres(2.1, 5).optional().describe("default 2.7 m"),
       precise: z.boolean().optional().describe("keep the points to the millimetre instead of the 5 cm grid (walls at an angle)"),
+      level: onLevel,
     })
     .strict()
     .describe("Add a straight wall between two points (metres, snapped to 5 cm unless precise)."),
@@ -114,6 +117,7 @@ export const OPERATION_SCHEMAS = {
       w: metres(0.5, 50), h: metres(0.5, 50),
       label,
       floor: floor.optional(),
+      level: onLevel,
     })
     .strict()
     .describe("Add a room floor rectangle (x, y = north-west corner). Does not create walls."),
@@ -139,6 +143,7 @@ export const OPERATION_SCHEMAS = {
       kind: catalogKind,
       x: coord, y: coord,
       rotation: degrees.optional().describe("which way the piece faces: 0 = south (+y), 90 = east, 180 = north, 270 = west"),
+      level: onLevel,
     })
     .strict()
     .describe("Place a catalog item with its centre at (x, y)."),
@@ -183,15 +188,32 @@ export const OPERATION_SCHEMAS = {
     .object({ op: z.literal("rename_plan"), name: z.string().trim().min(1).max(80) })
     .strict()
     .describe("Rename the design."),
-  build_layout: LayoutSpecSchema.extend({ op: z.literal("build_layout") })
+  build_layout: LayoutSpecSchema.extend({ op: z.literal("build_layout"), level: onLevel })
     .strict()
     .describe(
-      "Replace the whole plan with a new layout generated deterministically from a room program: rooms as rectangles on wall centrelines (they must tile without overlapping; shared edges become interior walls), doors between named rooms or to the exterior, windows on exterior sides. Removes existing furniture.",
+      "Replace one floor of the plan (the whole plan for a single-floor design) with a new layout generated deterministically from a room program: rooms as rectangles on wall centrelines (they must tile without overlapping; shared edges become interior walls), doors between named rooms or to the exterior, windows on exterior sides. Removes that floor's furniture.",
     ),
   clear_plan: z
     .object({ op: z.literal("clear_plan") })
     .strict()
     .describe("Erase every wall, opening, room and item."),
+  add_level: z
+    .object({
+      op: z.literal("add_level"),
+      as: alias.optional(),
+      name: label.optional().describe("default: First floor, Second floor…"),
+      height: metres(2.4, 6).optional().describe("floor to floor, default 3.0 m"),
+    })
+    .strict()
+    .describe("Add a floor on top of the building. It starts empty; walls, rooms and furniture are added to it by level id."),
+  update_level: z
+    .object({ op: z.literal("update_level"), id: ref, name: label.optional(), height: metres(2.4, 6).optional() })
+    .strict()
+    .describe("Rename a floor or change its floor-to-floor height; the floors above move with it."),
+  remove_level: z
+    .object({ op: z.literal("remove_level"), id: ref })
+    .strict()
+    .describe("Delete a floor (not the ground floor) with every wall, opening, room and item on it; the floors above move down."),
 } as const;
 
 export type OperationName = keyof typeof OPERATION_SCHEMAS;
@@ -213,6 +235,7 @@ export function isDestructive(op: DesignOperation, model?: PlanModel): boolean {
     case "remove_room":
     case "remove_item":
     case "clear_plan":
+    case "remove_level":
       return true;
     case "build_layout":
       return !model || model.walls.length + model.rooms.length + model.items.length > 0;
@@ -256,6 +279,8 @@ export interface BatchOutcome {
 export interface ApplyContext {
   newId: (prefix: string) => string;
   refs: Map<string, string>;
+  /** the floor being edited: where new walls, rooms and furniture go unless an operation says otherwise */
+  level?: string;
 }
 
 type Applied = { ok: true; model: PlanModel; summary: string; changed: string[]; created?: string; notes?: string[]; refs?: Record<string, string> };
@@ -312,15 +337,37 @@ function fitOpening(wall: Wall, o: Opening): { t: number; shifted: boolean } | F
   return { t: round(t, 4), shifted: Math.abs(t - o.t) > 1e-4 };
 }
 
+/** The level a new entity goes on: the one named, else the floor being edited, else the ground. */
+function targetLevel(model: PlanModel, ctx: ApplyContext, named: string | undefined): string | Failed {
+  const id = named !== undefined ? resolve(ctx, named) : (ctx.level ?? GROUND);
+  if (!levelsOf(model).some((l) => l.id === id)) return reject("not_found", `Level "${named ?? id}" does not exist. Use an exact level id.`);
+  return id;
+}
+
+/** Levels stacked from the ground up again after one changed height or was removed. */
+function restack(levels: Level[]): Level[] {
+  let at = 0;
+  return [...levels]
+    .sort((a, b) => a.elevation - b.elevation)
+    .map((l) => {
+      const next = { ...l, elevation: round(at) };
+      at += l.height;
+      return next;
+    });
+}
+
 export function applyOperation(model: PlanModel, op: DesignOperation, ctx: ApplyContext): Applied | Failed {
   switch (op.op) {
     case "add_wall": {
+      const lv = targetLevel(model, ctx, op.level);
+      if (isFail(lv)) return lv;
       const w: Wall = {
         id: ctx.newId("wall"),
         // precise: to the millimetre, so a wall drawn at an angle or to a typed length keeps it
         ...(op.precise ? { ax: mm(op.ax), ay: mm(op.ay), bx: mm(op.bx), by: mm(op.by) } : { ax: snap(op.ax), ay: snap(op.ay), bx: snap(op.bx), by: snap(op.by) }),
         thickness: op.thickness ?? 0.15,
         height: op.height ?? 2.7,
+        ...tagLevel(lv),
       };
       const len = segLen(w.ax, w.ay, w.bx, w.by);
       if (len < 0.2) return reject("precondition_failed", `Wall too short (${(len * 100).toFixed(0)} cm after snapping; minimum 20 cm).`);
@@ -440,11 +487,14 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
     }
 
     case "add_room": {
+      const lv = targetLevel(model, ctx, op.level);
+      if (isFail(lv)) return lv;
       const r: Room = {
         id: ctx.newId("room"),
         x: snap(op.x), y: snap(op.y), w: snap(op.w), h: snap(op.h),
         label: op.label,
         floor: op.floor ?? "oak",
+        ...tagLevel(lv),
       };
       if (r.w < 0.5 || r.h < 0.5) return reject("precondition_failed", "A room must be at least 0.5 × 0.5 m.");
       return done({ ...model, rooms: [...model.rooms, r] }, `Room "${r.label}" ${r.id} added (${r.w} × ${r.h} m).`, [r.id], { created: r.id });
@@ -473,8 +523,10 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
     }
 
     case "place_item": {
+      const lv = targetLevel(model, ctx, op.level);
+      if (isFail(lv)) return lv;
       const cat = catalogByKind(op.kind)!;
-      const it: Item = { id: ctx.newId("item"), kind: cat.kind, x: snap(op.x), y: snap(op.y), rotation: normDeg(op.rotation ?? 0) };
+      const it: Item = { id: ctx.newId("item"), kind: cat.kind, x: snap(op.x), y: snap(op.y), rotation: normDeg(op.rotation ?? 0), ...tagLevel(lv) };
       return done(
         { ...model, items: [...model.items, it] },
         `${cat.label} ${it.id} (${cat.w} × ${cat.d} m) placed at (${it.x.toFixed(2)}, ${it.y.toFixed(2)}).`,
@@ -489,7 +541,8 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
       const cat = catalogByKind(op.kind)!;
       const pos = placeAgainst(room, cat.w, cat.d, op.against, op.along ?? 0.5, op.gap ?? 0, op.rotation ?? 0);
       if (isFail(pos)) return pos;
-      const it: Item = { id: ctx.newId("item"), kind: cat.kind, x: round(pos.x), y: round(pos.y), rotation: normDeg(pos.rotation) };
+      // a piece placed in a room stands on that room's floor
+      const it: Item = { id: ctx.newId("item"), kind: cat.kind, x: round(pos.x), y: round(pos.y), rotation: normDeg(pos.rotation), ...tagLevel(levelOf(room)) };
       return done(
         { ...model, items: [...model.items, it] },
         `${cat.label} ${it.id} placed against the ${op.against === "center" ? "centre" : `${op.against} wall`} of "${room.label}".`,
@@ -545,18 +598,24 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
       return done({ ...model, name: op.name }, `Design renamed to "${op.name}".`, []);
 
     case "build_layout": {
-      const { op: _op, ...spec } = op;
+      const { op: _op, level: named, ...spec } = op;
+      const lv = targetLevel(model, ctx, named);
+      if (isFail(lv)) return lv;
       const built = buildLayout(spec, ctx.newId);
       if (!built.ok) return reject("precondition_failed", built.error.message);
+      // only this floor is replaced; the floors above and below stay as they are
+      const here = <T extends { level?: string }>(e: T) => levelOf(e) === lv;
+      const goneWalls = new Set(model.walls.filter(here).map((w) => w.id));
+      const tag = tagLevel(lv);
       const next: PlanModel = {
         ...model,
         name: spec.name ?? model.name,
-        walls: built.walls,
-        openings: built.openings,
-        rooms: built.rooms,
-        items: [],
+        walls: [...model.walls.filter((w) => !here(w)), ...built.walls.map((w) => ({ ...w, ...tag }))],
+        openings: [...model.openings.filter((o) => !goneWalls.has(o.wallId)), ...built.openings],
+        rooms: [...model.rooms.filter((r) => !here(r)), ...built.rooms.map((r) => ({ ...r, ...tag }))],
+        items: model.items.filter((i) => !here(i)),
       };
-      const removed = [...model.walls, ...model.openings, ...model.rooms, ...model.items].map((e) => e.id);
+      const removed = [...model.walls.filter(here), ...model.openings.filter((o) => goneWalls.has(o.wallId)), ...model.rooms.filter(here), ...model.items.filter(here)].map((e) => e.id);
       const added = [...built.walls, ...built.openings, ...built.rooms].map((e) => e.id);
       return done(
         next,
@@ -568,7 +627,46 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
 
     case "clear_plan": {
       const removed = [...model.walls, ...model.openings, ...model.rooms, ...model.items].map((e) => e.id);
-      return done({ ...emptyModel(), name: model.name, underlay: model.underlay }, "Plan cleared.", removed);
+      return done({ ...emptyModel(), name: model.name, underlay: model.underlay, ...(model.levels && { levels: model.levels }) }, "Plan cleared.", removed);
+    }
+
+    case "add_level": {
+      const levels = levelsOf(model);
+      const top = levels[levels.length - 1];
+      const lv: Level = { id: ctx.newId("level"), name: op.name ?? nextLevelName(levels.length), elevation: round(top.elevation + top.height), height: op.height ?? DEFAULT_STOREY };
+      return done({ ...model, levels: [...levels, lv] }, `${lv.name} (${lv.id}) added ${lv.elevation.toFixed(2)} m above the ground.`, [lv.id], { created: lv.id });
+    }
+
+    case "update_level": {
+      const levels = levelsOf(model);
+      const id = resolve(ctx, op.id);
+      const lv = levels.find((l) => l.id === id);
+      if (!lv) return reject("not_found", `Level "${op.id}" does not exist. Use an exact level id.`);
+      const next = restack(levels.map((l) => (l.id === id ? { ...l, name: op.name ?? l.name, height: op.height ?? l.height } : l)));
+      return done({ ...model, levels: next }, `${op.name ?? lv.name} updated.`, [lv.id]);
+    }
+
+    case "remove_level": {
+      const levels = levelsOf(model);
+      const id = resolve(ctx, op.id);
+      const lv = levels.find((l) => l.id === id);
+      if (!lv) return reject("not_found", `Level "${op.id}" does not exist. Use an exact level id.`);
+      if (id === GROUND || levels[0].id === id) return reject("precondition_failed", "The ground floor cannot be removed.");
+      const here = <T extends { level?: string }>(e: T) => levelOf(e) === id;
+      const gone = new Set(model.walls.filter(here).map((w) => w.id));
+      const removed = [...model.walls.filter(here), ...model.openings.filter((o) => gone.has(o.wallId)), ...model.rooms.filter(here), ...model.items.filter(here)].map((e) => e.id);
+      return done(
+        {
+          ...model,
+          levels: restack(levels.filter((l) => l.id !== id)),
+          walls: model.walls.filter((w) => !here(w)),
+          openings: model.openings.filter((o) => !gone.has(o.wallId)),
+          rooms: model.rooms.filter((r) => !here(r)),
+          items: model.items.filter((i) => !here(i)),
+        },
+        `${lv.name} removed${removed.length ? ` with ${removed.length} wall(s), opening(s), room(s) and item(s)` : ""}.`,
+        [lv.id, ...removed],
+      );
     }
   }
 }
@@ -622,7 +720,7 @@ export function describeSchemaError(err: z.ZodError): string {
  * original model is returned with the first failure. Input is `unknown` on purpose — it may
  * come straight from a language model.
  */
-export function applyBatch(model: PlanModel, ops: unknown, newId: (prefix: string) => string): BatchOutcome {
+export function applyBatch(model: PlanModel, ops: unknown, newId: (prefix: string) => string, opts: { level?: string } = {}): BatchOutcome {
   const steps: StepResult[] = [];
   const failed = (index: number, op: string, error: OpError): BatchOutcome => {
     steps.push({ index, op, ok: false, summary: error.message, changed: [], error });
@@ -633,7 +731,7 @@ export function applyBatch(model: PlanModel, ops: unknown, newId: (prefix: strin
   if (ops.length === 0) return failed(-1, "batch", { code: "invalid_input", message: "The batch is empty." });
   if (ops.length > 200) return failed(-1, "batch", { code: "invalid_input", message: "At most 200 operations per batch." });
 
-  const ctx: ApplyContext = { newId, refs: new Map() };
+  const ctx: ApplyContext = { newId, refs: new Map(), level: opts.level };
   let current = model;
   const changed = new Set<string>();
 
