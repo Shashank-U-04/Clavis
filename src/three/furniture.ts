@@ -312,7 +312,68 @@ const plant: Builder = (c) => {
   return g;
 };
 
+// ---------------------------------------------------------------------------
+// Stairs: you step on at the front (+z) and climb towards the back (−z), up the full height
+// ---------------------------------------------------------------------------
+
+const tread = () => wood("#b48a5c");
+const steel = surface("#2c2f33", "metal");
+const glassRail = new THREE.MeshPhysicalMaterial({ color: "#dfeef4", roughness: 0.05, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false });
+glassRail.userData.shared = true;
+
+/** A straight flight: oak treads on two steel stringers, a glass balustrade on the open side. */
+function straightStair(c: CatalogEntry): THREE.Group {
+  const { w, d, h } = c;
+  const steps = Math.max(3, Math.round(h / 0.18));
+  const rise = h / steps;
+  const going = d / steps;
+  const g = new THREE.Group();
+  for (let i = 0; i < steps; i++) {
+    // each tread at its height, a little deeper than its going so they read as one flight
+    g.add(slab(w - 0.04, 0.04, going + 0.03, tread()).at(0, (i + 1) * rise - 0.04, d / 2 - (i + 0.5) * going));
+  }
+  // stringers: sloped steel plates along both sides
+  for (const side of [-1, 1]) {
+    const plate = slab(0.03, 0.26, Math.hypot(d, h), steel).at(side * (w / 2 - 0.015), 0, 0);
+    plate.geometry.translate(0, -0.13, 0);
+    plate.rotation.x = Math.atan2(h, d);
+    plate.position.y = h / 2;
+    g.add(plate);
+  }
+  // a glass balustrade 0.9 m above the pitch line, on the right-hand side going up
+  const rail = slab(0.012, 0.9, Math.hypot(d, h), glassRail, false).at(w / 2 - 0.02, 0, 0);
+  rail.rotation.x = Math.atan2(h, d);
+  rail.position.y = h / 2 + 0.05;
+  g.add(rail);
+  return g;
+}
+
+/** A spiral stair: wedge treads turning round a steel column, with a handrail post at the top. */
+function spiralStair(c: CatalogEntry): THREE.Group {
+  const { w, h } = c;
+  const r = w / 2;
+  const steps = Math.max(8, Math.round(h / 0.2));
+  const rise = h / steps;
+  const turn = (Math.PI * 1.75) / steps; // most of a full turn, so the top lands beside the start
+  const g = assemble(post(0.06, h + 0.9, steel).at(0, 0, 0));
+  for (let i = 0; i < steps; i++) {
+    const wedge = new THREE.CylinderGeometry(r, r, 0.04, 12, 1, false, 0, turn * 1.15);
+    wedge.translate(0, (i + 1) * rise - 0.02, 0);
+    const m = new THREE.Mesh(wedge, tread());
+    m.castShadow = m.receiveShadow = true;
+    // start at the front (+z) and turn as it climbs
+    m.rotation.y = i * turn;
+    g.add(m);
+    // a baluster at the outer end of each tread
+    const a = i * turn + turn / 2;
+    g.add(post(0.012, 0.9, steel).at(Math.sin(a) * (r - 0.04), (i + 1) * rise, Math.cos(a) * (r - 0.04)));
+  }
+  return g;
+}
+
 const BUILDERS: Record<string, Builder> = {
+  stair_straight: straightStair,
+  stair_spiral: spiralStair,
   sofa,
   sofa_3: sofa3,
   armchair,
