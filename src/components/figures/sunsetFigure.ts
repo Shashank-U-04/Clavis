@@ -73,6 +73,8 @@ export interface FigureSolid {
   box: Box3;
   /** what it belongs to: a wall, an opening or a piece of furniture */
   group: string;
+  /** part of the grounds, not the house: never cut like a section */
+  site?: true;
 }
 
 export interface FigureLabel {
@@ -111,6 +113,8 @@ export interface FigureData {
   textScale: number;
   /** for a figure that can be turned: everything flat in world metres, and the point it turns about */
   world?: FigureWorld;
+  /** how high the drawing goes: CUT for a section, the tallest wall for a whole model */
+  top: number;
 }
 
 export interface FigureWorld {
@@ -147,8 +151,11 @@ function turner(m: PlanModel) {
   };
 }
 
-/** The pieces of one wall: solid runs, window sills and glass, cut at CUT. */
-function wallPieces(w: Wall, openings: Opening[], T: ReturnType<typeof turner>) {
+/**
+ * The pieces of one wall: solid runs, window sills and glass, cut at `top` (CUT for a section,
+ * the wall's own height for a whole model, which then also gets lintels over its openings).
+ */
+function wallPieces(w: Wall, openings: Opening[], T: ReturnType<typeof turner>, top = CUT) {
   const len = segLen(w.ax, w.ay, w.bx, w.by);
   const ux = (w.bx - w.ax) / len;
   const uy = (w.by - w.ay) / len;
@@ -168,15 +175,17 @@ function wallPieces(w: Wall, openings: Opening[], T: ReturnType<typeof turner>) 
   const out: { box: Box3; kind: SolidKind; id: string }[] = [];
   let cursor = -half; // walls run on centrelines; extend each end so corners close
   for (const h of holes) {
-    if (h.s > cursor + 1e-4) out.push({ box: along(cursor, h.s, 0, CUT), kind: "wall", id: `${w.id}:${cursor}` });
+    if (h.s > cursor + 1e-4) out.push({ box: along(cursor, h.s, 0, top), kind: "wall", id: `${w.id}:${cursor}` });
+    const head = Math.min(top, h.o.sill + h.o.height); // the top of the hole
     if (h.o.kind === "window") {
-      const sill = Math.min(h.o.sill, CUT);
+      const sill = Math.min(h.o.sill, top);
       if (sill > 0.01) out.push({ box: along(h.s, h.e, 0, sill), kind: "wall", id: `${h.o.id}:sill` });
-      if (sill < CUT) out.push({ box: along(h.s, h.e, sill, CUT, 0.03), kind: "glass", id: `${h.o.id}:glass` });
+      if (sill < head) out.push({ box: along(h.s, h.e, sill, head, 0.03), kind: "glass", id: `${h.o.id}:glass` });
     }
+    if (top - head > 0.01) out.push({ box: along(h.s, h.e, head, top), kind: "wall", id: `${h.o.id}:lintel` });
     cursor = Math.max(cursor, h.e);
   }
-  if (len + half > cursor + 1e-4) out.push({ box: along(cursor, len + half, 0, CUT), kind: "wall", id: `${w.id}:end` });
+  if (len + half > cursor + 1e-4) out.push({ box: along(cursor, len + half, 0, top), kind: "wall", id: `${w.id}:end` });
   return out;
 }
 
@@ -257,8 +266,11 @@ function parts(kind: string, w: number, d: number, h: number): Part[] {
   }
 }
 
-export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: readonly SitePiece[] = [], opts: { turnable?: boolean } = {}): FigureData {
+export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: readonly SitePiece[] = [], opts: { turnable?: boolean; full?: boolean } = {}): FigureData {
   const T = turner(model);
+  // a section stops at CUT; a whole model runs every wall and piece to its own height
+  const wallTop = (w: Wall) => (opts.full ? w.height : CUT);
+  const pieceTop = (h: number) => (opts.full ? h : Math.min(h, CUT - 0.02));
   const analysis = analyzeModel(model);
   const k = SCALE;
 
@@ -278,7 +290,7 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
   });
 
   const solids: { box: Box3; kind: SolidKind; id: string }[] = [];
-  for (const w of model.walls) solids.push(...wallPieces(w, model.openings.filter((o) => o.wallId === w.id), T));
+  for (const w of model.walls) solids.push(...wallPieces(w, model.openings.filter((o) => o.wallId === w.id), T, wallTop(w)));
 
   const arcs: string[] = [];
   const arcPoints: P2[][] = [];
@@ -289,7 +301,7 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
       // the open leaf, standing on its hinge, and its swing traced on the floor
       const t = 0.025;
       solids.push({
-        box: T.box(Math.min(leaf.hinge.x, leaf.open.x) - t, Math.min(leaf.hinge.y, leaf.open.y) - t, Math.max(leaf.hinge.x, leaf.open.x) + t, Math.max(leaf.hinge.y, leaf.open.y) + t, 0, Math.min(2.05, CUT)),
+        box: T.box(Math.min(leaf.hinge.x, leaf.open.x) - t, Math.min(leaf.hinge.y, leaf.open.y) - t, Math.max(leaf.hinge.x, leaf.open.x) + t, Math.max(leaf.hinge.y, leaf.open.y) + t, 0, Math.min(o.height - 0.05, wallTop(wall))),
         kind: "leaf",
         id: `${o.id}:leaf:${n}`,
       });
@@ -312,7 +324,7 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
     const r = (it.rotation * Math.PI) / 180;
     const across = { x: Math.cos(r), y: -Math.sin(r) };
     const front = { x: Math.sin(r), y: Math.cos(r) };
-    parts(c.kind, c.w, c.d, Math.min(c.h, CUT - 0.02)).forEach((p, i) => {
+    parts(c.kind, c.w, c.d, pieceTop(c.h)).forEach((p, i) => {
       // a part in the piece's own frame: lx across its width, ly towards its front, from its centre
       const corners = [
         [p.lx0, p.ly0],
@@ -339,7 +351,8 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
   // rugs lie on the floor under everything else
   const flat = solids.filter((s) => s.kind === "rug");
   const standing = paintOrder(solids.filter((s) => s.kind !== "rug"));
-  const ordered: FigureSolid[] = [...flat, ...standing].map((s) => ({ id: s.id, kind: s.kind, faces: boxFaces(s.box, k), box: s.box, group: s.id.split(":")[0] }));
+  const siteIds = new Set(site.map((p) => p.id));
+  const ordered: FigureSolid[] = [...flat, ...standing].map((s) => ({ id: s.id, kind: s.kind, faces: boxFaces(s.box, k), box: s.box, group: s.id.split(":")[0], ...(siteIds.has(s.id) && { site: true as const }) }));
 
   const pins: { x: number; y: number; z: number }[] = [];
   const labels: FigureLabel[] = model.rooms.map((r, i) => {
@@ -454,6 +467,7 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
     size: { w, h },
     ground,
     textScale: Math.max(1, restW / TEXT_AT),
+    top: opts.full ? Math.max(...model.walls.map((w) => w.height)) : CUT,
     ...(world && { world }),
   };
 }
