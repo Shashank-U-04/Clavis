@@ -135,9 +135,12 @@ try {
     await step("sign out", async () => {
       await A.page.goto(`${SITE}/profile`);
       await A.page.getByRole("button", { name: /Sign out/i }).first().click();
-      await A.page.waitForTimeout(4000);
+      // signing out sends any last changes first, then clears and goes home: wait for it to land
+      // rather than a fixed time, and say what the page showed if it never does
+      const home = await A.page.waitForURL((u) => new URL(u).pathname === "/", { timeout: 30000 }).then(() => true, () => false);
+      const said = home ? "" : await A.page.locator('[role="alert"], .text-marker, .bad').first().textContent({ timeout: 1000 }).catch(() => "");
       const left = await A.page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("clavis:u:")).length);
-      check("signing out clears the account's copy from the browser", left === 0, `${left} keys left`);
+      check("signing out clears the account's copy from the browser", home && left === 0, home ? `${left} keys left` : `still on ${new URL(A.page.url()).pathname}${said ? `: ${said.trim()}` : ""}`);
       const still = (await rows()).filter((x) => !x.deleted_at).length;
       check("the plan is still in the account after signing out", still >= 1);
     });
