@@ -56,7 +56,7 @@ export const LayoutWindowSchema = z
     side: z.enum(SIDES),
     width: z.number().finite().min(0.4).max(4).optional().describe("metres (default 1.2, reduced to fit)"),
     sill: z.number().finite().min(0).max(1.5).optional(),
-    height: z.number().finite().min(0.4).max(2.2).optional(),
+    height: z.number().finite().min(0.4).max(2.8).optional().describe("metres; up to 2.8 for floor-to-ceiling glazing in tall rooms"),
   })
   .strict();
 
