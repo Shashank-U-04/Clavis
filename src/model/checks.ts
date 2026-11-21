@@ -35,6 +35,10 @@ export const CHECK_CODES = [
   "bedroom_no_escape_window",
   "bath_needs_extract",
   "room_undersized",
+  // floors (analysis.ts)
+  "stair_no_floor_above",
+  "stair_lands_nowhere",
+  "stair_starts_nowhere",
 ] as const;
 
 export const CHECK_COUNT = CHECK_CODES.length;

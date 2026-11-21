@@ -12,6 +12,8 @@
  */
 
 import type { Issue, Opening, PlanModel, Room, Wall } from "./types";
+import { levelOf, levelsOf } from "./levels";
+import { stairLinks } from "./stairs";
 import { segLen, segPoint, type Pt } from "./geometry";
 
 export const ROOM_TYPES = ["bedroom", "living", "kitchen", "dining", "bath", "study", "hall", "utility", "other"] as const;
@@ -135,6 +137,9 @@ const r3 = (v: number) => Math.round(v * 1000) / 1000;
 
 export function analyzeModel(model: PlanModel): Analysis {
   const wallById = new Map(model.walls.map((w) => [w.id, w]));
+  // a door joins rooms on its own floor; floors are joined by stairs (below)
+  const roomsOn = new Map<string, Room[]>();
+  for (const r of model.rooms) roomsOn.set(levelOf(r), [...(roomsOn.get(levelOf(r)) ?? []), r]);
   const byRoom = new Map<string, { doors: string[]; windows: Opening[] }>(model.rooms.map((r) => [r.id, { doors: [], windows: [] }]));
   const links: DoorLink[] = [];
   const entrances: string[] = [];
@@ -142,7 +147,7 @@ export function analyzeModel(model: PlanModel): Analysis {
   for (const o of model.openings) {
     const wall = wallById.get(o.wallId);
     if (!wall) continue;
-    const [a, b] = openingSides(o, wall, model.rooms);
+    const [a, b] = openingSides(o, wall, roomsOn.get(levelOf(wall)) ?? []);
     for (const side of new Set([a, b])) {
       const slot = byRoom.get(side);
       if (!slot) continue;
@@ -155,7 +160,9 @@ export function analyzeModel(model: PlanModel): Analysis {
     }
   }
 
-  // breadth-first from the outside through doors: fewest doors to each room
+  for (const s of stairLinks(model)) if (s.a && s.b) links.push({ id: s.id, a: s.a, b: s.b });
+
+  // breadth-first from the outside through doors and stairs: fewest of them to each room
   const adj = new Map<string, { to: string; door: string }[]>();
   for (const l of links) {
     (adj.get(l.a) ?? adj.set(l.a, []).get(l.a)!).push({ to: l.b, door: l.id });
@@ -273,6 +280,19 @@ export function reviewFindings(model: PlanModel, a: Analysis = analyzeModel(mode
       message: "No door leads outside, so nobody can get in. Add an entrance door on an exterior wall.",
       refs: model.rooms.map((r) => r.id),
     });
+  }
+
+  // stairs: each must climb to a floor and land in a room there, from a room down here
+  const levelName = (id: string | null) => levelsOf(model).find((l) => l.id === id)?.name ?? "the floor above";
+  for (const s of stairLinks(model)) {
+    if (!s.to) {
+      out.push({ severity: "warning", code: "stair_no_floor_above", message: "This stair climbs to nothing: there is no floor above it. Add a floor, or remove the stair.", refs: [s.id] });
+      continue;
+    }
+    if (!s.b)
+      out.push({ severity: "warning", code: "stair_lands_nowhere", message: `This stair lands outside every room on ${levelName(s.to)}. Put a room (a landing or hall) where it arrives.`, refs: [s.id] });
+    if (!s.a)
+      out.push({ severity: "warning", code: "stair_starts_nowhere", message: "Nothing is in front of this stair's foot: it starts outside every room on its floor.", refs: [s.id] });
   }
 
   for (const r of a.rooms) {
