@@ -39,8 +39,15 @@ const CAT_LABEL: Record<CatalogCategory, string> = {
 /** The kind of piece within its room class, so a shelf reads Seating, Tables, Storage… */
 function typeOf(c: CatalogEntry): string {
   const t = c.tags ?? [];
-  if (c.isRug) return "Rugs";
   if (c.stair) return "Stairs";
+  if (t.includes("pool")) return "Pools";
+  if (t.includes("paving")) return "Paving";
+  if (t.includes("planting")) return "Planting";
+  if (t.includes("shade")) return "Shade";
+  if (t.includes("railing")) return "Railings";
+  if (t.includes("facade")) return "Facade";
+  if (t.includes("structure")) return "Structure";
+  if (c.isRug) return "Rugs";
   if (t.includes("bed")) return "Beds";
   if (t.includes("seating")) return "Seating";
   if (t.includes("table")) return "Tables";
