@@ -23,6 +23,7 @@ import { setUi, useUi } from "../studio/uiStore";
 import { ItemDimensions, OverallDimensions, RoomDimensions } from "./dimensions";
 import { onCommand, sendCommand } from "../three/events";
 import { extentOf, movedFar, useViewport } from "./useViewport";
+import { levelBelow, onLevel } from "../model/levels";
 import { FurnitureLayer, GridLayer, INK, OpeningsLayer, RemovedLayer, RoomLabelsLayer, RoomsLayer, RouteLayer, TracingLayer, WallsLayer } from "./layers";
 
 type Drag =
@@ -43,15 +44,21 @@ const angleOf = (a: Pt, b: Pt) => {
 };
 
 export function Editor() {
-  const live = useAppStore((s) => s.model);
+  const whole = useAppStore((s) => s.model);
   const editor = useAppStore((s) => s.editor);
+  // the plan shows, picks and snaps to the floor being edited; the floor below is a faint guide
+  const live = useMemo(() => onLevel(whole, editor.level), [whole, editor.level]);
+  const below = useMemo(() => {
+    const l = levelBelow(whole, editor.level);
+    return l ? onLevel(whole, l.id) : null;
+  }, [whole, editor.level]);
   const previewing = useSession((s) => {
     const t = s.turns.find((x) => x.id === s.previewTurnId);
     return t?.check?.preview?.ok ? t.check.preview : null;
   });
   const route = useUi((s) => s.route);
   const dims = useUi((s) => s.dims);
-  const model = previewing ? previewing.model : live;
+  const model = useMemo(() => (previewing ? onLevel(previewing.model, editor.level) : live), [previewing, editor.level, live]);
   const proposed = useMemo(() => new Set(previewing?.changedEntityIds ?? []), [previewing]);
 
   const svg = useRef<SVGSVGElement>(null);
@@ -69,8 +76,8 @@ export function Editor() {
   const chainStart = useRef<Pt | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
 
-  // ---- framing ----
-  const extent = useMemo(() => extentOf(model), [model]);
+  // ---- framing: the whole building, so changing floors does not move the view ----
+  const extent = useMemo(() => extentOf(previewing ? previewing.model : whole), [previewing, whole]);
   useEffect(() => {
     if (movedFar(framed.current, extent)) fit(extent);
   }, [extent, fit, framed]);
@@ -111,7 +118,7 @@ export function Editor() {
           const length = Number(typedRef.current);
           const at = pointer.current;
           if (!typedRef.current || !(length > 0) || !at) return;
-          const end = wallEnd(from, at.p, store.getState().model.walls, { free: at.free, length, scale: scaleRef.current });
+          const end = wallEnd(from, at.p, onLevel(store.getState().model, store.getState().editor.level).walls, { free: at.free, length, scale: scaleRef.current });
           const r = actions.addWall(from.x, from.y, end.x, end.y, undefined, undefined, true);
           logActivity("human", "add_wall", r.summary, r.ok);
           if (r.ok) actions.setPendingWallStart(end);
@@ -371,6 +378,11 @@ export function Editor() {
       >
         <GridLayer left={view.left} top={view.top} width={size.width} height={size.height} k={k} />
         <TracingLayer model={model} k={k} />
+        {below && (
+          <g pointerEvents="none" opacity={0.16} aria-hidden="true">
+            <WallsLayer walls={below.walls} k={k} mark={() => null} pickable={false} onPress={() => {}} />
+          </g>
+        )}
         <RoomsLayer rooms={model.rooms} k={k} mark={mark} movable={editable} onPress={(e, id) => grab(e, "room", id)} />
         <FurnitureLayer items={model.items} k={k} mark={mark} movable={editable} onPress={(e, id) => grab(e, "item", id)} />
         <RemovedLayer items={removed} k={k} />

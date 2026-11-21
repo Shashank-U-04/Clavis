@@ -27,6 +27,7 @@ import {
 } from "./geometry";
 import { catalogByKind, itemSize } from "./catalog";
 import { reviewFindings } from "./analysis";
+import { levelsOf, onLevel } from "./levels";
 
 /**
  * Tunable early-design heuristics (not building-code values for any jurisdiction).
@@ -358,13 +359,21 @@ function checkFurniture({ model, wallById, out }: Ctx) {
 export function checkModel(model: PlanModel): Issue[] {
   const broken = checkNumbers(model);
   if (broken.length) return assignIds(broken);
-  const ctx: Ctx = { model, wallById: new Map(model.walls.map((w) => [w.id, w])), out: [] };
-  checkWalls(ctx);
-  checkOpenings(ctx);
-  checkRooms(ctx);
-  checkFurniture(ctx);
-  ctx.out.push(...reviewFindings(model));
-  return assignIds(ctx.out);
+  const out: Draft[] = [];
+  // geometry is checked floor by floor: a wall upstairs never collides with a sofa downstairs
+  for (const level of levelsOf(model)) {
+    const here = onLevel(model, level.id);
+    const ctx: Ctx = { model: here, wallById: new Map(model.walls.map((w) => [w.id, w])), out };
+    checkWalls(ctx);
+    checkOpenings(ctx);
+    checkRooms(ctx);
+    checkFurniture(ctx);
+  }
+  // openings whose wall is missing belong to no floor: check them against the whole design
+  const orphans = model.openings.filter((o) => !model.walls.some((w) => w.id === o.wallId));
+  if (orphans.length) checkOpenings({ model: { ...model, walls: [], rooms: [], items: [], openings: orphans }, wallById: new Map(), out });
+  out.push(...reviewFindings(model));
+  return assignIds(out);
 }
 
 // ---------------------------------------------------------------------------

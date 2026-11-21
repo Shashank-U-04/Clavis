@@ -8,7 +8,7 @@ import { HABITABILITY } from "@/model/analysis";
 import { RULES } from "@/model/issues";
 
 type Code = (typeof CHECK_CODES)[number];
-export type CheckGroup = "Walls" | "Doors and windows" | "Rooms" | "Furniture" | "Circulation" | "Habitability";
+export type CheckGroup = "Walls" | "Doors and windows" | "Rooms" | "Furniture" | "Circulation" | "Habitability" | "Floors";
 
 const pct = (v: number) => `${Math.round(v * 100)} %`;
 const cm = (v: number) => `${Math.round(v * 100)} cm`;
@@ -50,6 +50,9 @@ export const CHECKS: Record<Code, { group: CheckGroup; text: string; severity: "
   },
   bath_needs_extract: { group: "Habitability", severity: "info", text: "A windowless bathroom: plan mechanical extract ventilation." },
   room_undersized: { group: "Habitability", severity: "warning", text: `A room below typical sizes — for a bedroom, ${bed.area} m² and a ${bed.side} m short side.` },
+  stair_no_floor_above: { group: "Floors", severity: "warning", text: "A stair on the top floor, climbing to nothing." },
+  stair_lands_nowhere: { group: "Floors", severity: "warning", text: "A stair whose top arrives outside every room on the floor above." },
+  stair_starts_nowhere: { group: "Floors", severity: "warning", text: "A stair whose foot starts outside every room on its own floor." },
 };
 
 export const GROUPS: CheckGroup[] = ["Walls", "Doors and windows", "Rooms", "Furniture", "Circulation", "Habitability"];

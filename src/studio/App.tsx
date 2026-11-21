@@ -18,6 +18,7 @@ import { ActivityFeed } from "./ActivityFeed";
 import { Welcome } from "./Welcome";
 import { BuildGuide } from "./BuildGuide";
 import { SelectionBar } from "./SelectionBar";
+import { FloorSwitch } from "./FloorSwitch";
 import { AssistantPanel } from "./panels/AssistantPanel";
 import { ReviewPanel, routePoints } from "./panels/ReviewPanel";
 import { InspectorPanel } from "./panels/InspectorPanel";
@@ -207,6 +208,7 @@ export function App() {
             <Editor />
             <PaneLabel>Plan</PaneLabel>
             <SelectionBar where="plan" />
+            <FloorSwitch />
             {guide && !(empty && welcome && !drawing) && <BuildGuide />}
           </section>
           <section ref={scenePane} className="pane scene-pane" aria-label="3D view" aria-hidden={!views.scene || undefined}>

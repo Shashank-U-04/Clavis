@@ -17,6 +17,7 @@ import { emptyModel } from "./types";
 import { checkModel, diffIssues } from "./issues";
 import { applyBatch, type DesignOperation, type StepResult } from "./operations";
 import { roomBlockOps } from "./blocks";
+import { GROUND, levelOf, levelsOf, onLevel } from "./levels";
 
 // ---------------------------------------------------------------------------
 // State
@@ -41,6 +42,8 @@ export interface EditorState {
   pendingWallStart: { x: number; y: number } | null;
   /** entities to emphasise in both views (the refs of a finding, the result of a change) */
   highlightIds: string[];
+  /** the floor being edited: the plan shows it, and new walls, rooms and furniture go on it */
+  level: string;
 }
 
 export type SaveStatus =
@@ -106,6 +109,7 @@ const startEditor = (): EditorState => ({
   placingKind: null,
   pendingWallStart: null,
   highlightIds: [],
+  level: GROUND,
 });
 
 export const store = createStore<AppState>(() => ({
@@ -181,6 +185,15 @@ export function endGesture() {
   }
 }
 
+/** The floor an entity is on, as an editor patch (nothing when it is not found). */
+function floorOf(id: string | null): { level?: string } {
+  if (!id) return {};
+  const m = store.getState().model;
+  const host = (wallId: string) => m.walls.find((w) => w.id === wallId);
+  const e = m.walls.find((x) => x.id === id) ?? m.rooms.find((x) => x.id === id) ?? m.items.find((x) => x.id === id) ?? host(m.openings.find((o) => o.id === id)?.wallId ?? "");
+  return e ? { level: levelOf(e) } : {};
+}
+
 /** Drop selections whose entity no longer exists (after undo, redo or loading). */
 function forgetMissingSelection() {
   const { model, editor } = store.getState();
@@ -191,6 +204,8 @@ function forgetMissingSelection() {
     exists(model.rooms, editor.selectedRoomId) &&
     exists(model.openings, editor.selectedOpeningId);
   if (!fine) store.setState((s) => ({ editor: { ...s.editor, ...noSelection } }));
+  // a floor that is gone (undo, another design) means editing the ground floor again
+  if (!levelsOf(model).some((l) => l.id === editor.level)) store.setState((s) => ({ editor: { ...s.editor, level: levelsOf(model)[0].id } }));
 }
 
 function travel(from: "undoStack" | "redoStack"): ActionResult {
@@ -219,8 +234,8 @@ const errorOf = (o: { error?: { code: string; message: string }; failedIndex?: n
 
 /** Validate and apply operations atomically: all of them, or none. */
 export function dispatch(ops: DesignOperation[] | unknown[]): DispatchResult {
-  const { model: before, revision } = store.getState();
-  const out = applyBatch(before, ops, uid);
+  const { model: before, revision, editor: ed } = store.getState();
+  const out = applyBatch(before, ops, uid, { level: ed.level });
   if (!out.ok) {
     return { ok: false, revision, changedEntityIds: [], created: {}, steps: out.steps, issues: issuesFor(before), error: errorOf(out), summary: out.error?.message ?? "Rejected." };
   }
@@ -238,8 +253,8 @@ export function dispatch(ops: DesignOperation[] | unknown[]): DispatchResult {
 
 /** Dry run: what these operations would do to the current design. Changes nothing. */
 export function preview(ops: unknown[]): PreviewResult {
-  const { model, revision } = store.getState();
-  const out = applyBatch(model, ops, uid);
+  const { model, revision, editor: ed } = store.getState();
+  const out = applyBatch(model, ops, uid, { level: ed.level });
   const issuesBefore = issuesFor(model);
   const issuesAfter = out.ok ? issuesFor(out.model) : issuesBefore;
   return {
@@ -315,7 +330,9 @@ export const actions = {
   addRoom: (x: number, y: number, w: number, h: number, label: string, floor: Finish = "oak") => apply({ op: "add_room", x, y, w, h, label, floor }),
   /** A room with walls round it, sharing walls already on its sides; one undo step. */
   addRoomBlock(x: number, y: number, w: number, h: number, label: string, floor: Finish = "oak"): ActionResult {
-    const r = dispatch(roomBlockOps(store.getState().model, { x, y, w, h }, label, floor));
+    // a ready-made room shares walls only with rooms on its own floor
+    const { model, editor: ed } = store.getState();
+    const r = dispatch(roomBlockOps(onLevel(model, ed.level), { x, y, w, h }, label, floor));
     const walls = r.steps.filter((s) => s.created?.startsWith("wall")).length;
     const id = r.steps.find((s) => s.created?.startsWith("room"))?.created;
     const summary = r.ok ? `Added ${label} (${w} × ${h} m) with ${walls === 0 ? "no new walls" : `${walls} new wall${walls === 1 ? "" : "s"}`}.` : r.summary;
@@ -336,7 +353,7 @@ export const actions = {
   /** Replace the design (new, open, template). Undoable. */
   loadModel(model: PlanModel, notes: Note[] = []) {
     setModel(model, true);
-    store.setState((s) => ({ notes, editor: { ...s.editor, ...noSelection, highlightIds: [] } }));
+    store.setState((s) => ({ notes, editor: { ...s.editor, ...noSelection, highlightIds: [], level: levelsOf(model)[0].id } }));
   },
   /** The tracing image is reference material, not design history. */
   setUnderlay(underlay: Underlay | null) {
@@ -361,11 +378,28 @@ export const actions = {
   setPendingWallStart: (pendingWallStart: { x: number; y: number } | null) => editor({ pendingWallStart }),
   setHighlight: (highlightIds: string[]) => editor({ highlightIds }),
 
-  // selection: one entity at a time
-  selectWall: (id: string | null) => editor({ ...noSelection, selectedWallId: id }),
-  selectItem: (id: string | null) => editor({ ...noSelection, selectedItemId: id }),
-  selectRoom: (id: string | null) => editor({ ...noSelection, selectedRoomId: id }),
-  selectOpening: (id: string | null) => editor({ ...noSelection, selectedOpeningId: id }),
+  // selection: one entity at a time; selecting something on another floor goes to that floor
+  selectWall: (id: string | null) => editor({ ...noSelection, selectedWallId: id, ...floorOf(id) }),
+  selectItem: (id: string | null) => editor({ ...noSelection, selectedItemId: id, ...floorOf(id) }),
+  selectRoom: (id: string | null) => editor({ ...noSelection, selectedRoomId: id, ...floorOf(id) }),
+  selectOpening: (id: string | null) => editor({ ...noSelection, selectedOpeningId: id, ...floorOf(id) }),
+
+  // floors
+  /** Edit another floor; the selection, a wall half drawn and anything being placed are dropped. */
+  setLevel: (level: string) => editor({ ...noSelection, level, pendingWallStart: null }),
+  /** Add a floor on top and start editing it. */
+  addLevel(name?: string): ActionResult {
+    const r = apply({ op: "add_level", ...(name && { name }) });
+    if (r.ok && typeof r.id === "string") actions.setLevel(r.id);
+    return r;
+  },
+  renameLevel: (id: string, name: string) => apply({ op: "update_level", id, name }),
+  setLevelHeight: (id: string, height: number) => apply({ op: "update_level", id, height }),
+  removeLevel(id: string): ActionResult {
+    const r = apply({ op: "remove_level", id });
+    if (r.ok) forgetMissingSelection();
+    return r;
+  },
   /** Select whatever kind of entity an id belongs to (null clears the selection). */
   selectEntity(id: string | null) {
     const m = store.getState().model;

@@ -12,7 +12,10 @@ import * as THREE from "three";
 import type { Opening, PlanModel, Room, Wall } from "../model/types";
 import { segLen } from "../model/geometry";
 import { openingSpan } from "../model/issues";
-import { post, slab } from "./kit";
+import { Part, post, slab } from "./kit";
+import { elevationOf, levelBelow, levelOf } from "../model/levels";
+import { isStair } from "../model/stairs";
+import { itemBox } from "../model/issues";
 import { worldUV } from "./textures";
 import {
   cordMaterial,
@@ -137,9 +140,40 @@ function buildWall(wall: Wall, openings: Opening[]): THREE.Group {
   return g;
 }
 
-function buildFloor(room: Room): THREE.Mesh {
-  const floor = slab(room.w, FLOOR_THICKNESS, room.h, floorMaterial(room.floor), false);
-  floor.position.set(room.x + room.w / 2, 0, room.y + room.h / 2);
+/** Upper floors stand on a structural slab this thick. */
+const SLAB = 0.2;
+
+/**
+ * A room's floor. On the ground it is a thin finish; upstairs it is a slab under the finish,
+ * with an opening wherever a stair from the floor below comes up through it.
+ */
+function buildFloor(room: Room, elevation: number, voids: { x0: number; y0: number; x1: number; y1: number }[]): THREE.Mesh {
+  const material = floorMaterial(room.floor);
+  const holes = voids
+    .map((v) => ({ x0: Math.max(v.x0, room.x), y0: Math.max(v.y0, room.y), x1: Math.min(v.x1, room.x + room.w), y1: Math.min(v.y1, room.y + room.h) }))
+    .filter((v) => v.x1 - v.x0 > 0.05 && v.y1 - v.y0 > 0.05);
+  if (elevation <= 0 && holes.length === 0) {
+    const floor = slab(room.w, FLOOR_THICKNESS, room.h, material, false);
+    floor.position.set(room.x + room.w / 2, elevation, room.y + room.h / 2);
+    floor.receiveShadow = true;
+    return floor;
+  }
+  // a slab drawn in plan (x, y) and extruded down: plan y becomes world z
+  const outline = new THREE.Shape([new THREE.Vector2(room.x, room.y), new THREE.Vector2(room.x + room.w, room.y), new THREE.Vector2(room.x + room.w, room.y + room.h), new THREE.Vector2(room.x, room.y + room.h)]);
+  for (const h of holes) outline.holes.push(new THREE.Path([new THREE.Vector2(h.x0, h.y0), new THREE.Vector2(h.x0, h.y1), new THREE.Vector2(h.x1, h.y1), new THREE.Vector2(h.x1, h.y0)]));
+  const depth = elevation > 0 ? SLAB + FLOOR_THICKNESS : FLOOR_THICKNESS;
+  const g = new THREE.ExtrudeGeometry(outline, { depth, bevelEnabled: false });
+  g.rotateX(Math.PI / 2); // the shape's y runs along world z; the extrusion now points down
+  g.translate(0, FLOOR_THICKNESS, 0);
+  const tile = material.userData.tile as number | undefined;
+  if (tile) {
+    // world-sized texture on the top face, as the flat floors have
+    const uv = g.getAttribute("uv");
+    const pos = g.getAttribute("position");
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / tile, pos.getZ(i) / tile);
+  }
+  const floor = new Part(g, material, false);
+  floor.position.y = elevation;
   floor.receiveShadow = true;
   return floor;
 }
@@ -174,16 +208,35 @@ export function buildArchitecture(model: PlanModel): BuiltArchitecture {
 
   for (const w of model.walls) {
     const g = buildWall(w, byWall.get(w.id) ?? []);
+    g.position.y = elevationOf(model, levelOf(w));
     g.userData.entityId = w.id;
     group.add(g);
   }
+  // stairwells: each upstairs floor is open over the stairs that climb to it
+  const stairwells = (level: string) => {
+    const below = levelBelow(model, level);
+    if (!below) return [];
+    return model.items.filter((it) => isStair(it) && levelOf(it) === below.id).flatMap((it) => {
+      const b = itemBox(it);
+      if (!b) return [];
+      // the rectangle the stair's footprint covers, whichever way it turns
+      const ex = Math.abs(Math.cos(b.angle)) * b.halfW + Math.abs(Math.sin(b.angle)) * b.halfD;
+      const ey = Math.abs(Math.sin(b.angle)) * b.halfW + Math.abs(Math.cos(b.angle)) * b.halfD;
+      return [{ x0: b.x - ex, y0: b.y - ey, x1: b.x + ex, y1: b.y + ey }];
+    });
+  };
   for (const r of model.rooms) {
-    const f = buildFloor(r);
+    const f = buildFloor(r, elevationOf(model, levelOf(r)), stairwells(levelOf(r)));
     f.userData.entityId = r.id;
     group.add(f);
   }
-  const ceiling = Math.max(2.4, ...model.walls.map((w) => w.height));
-  for (const r of model.rooms) group.add(buildLamp(r, ceiling));
+  for (const r of model.rooms) {
+    const level = levelOf(r);
+    const ceiling = Math.max(2.4, ...model.walls.filter((w) => levelOf(w) === level).map((w) => w.height));
+    const lamp = buildLamp(r, ceiling);
+    lamp.position.y += elevationOf(model, level);
+    group.add(lamp);
+  }
 
   const bounds = model.walls.length ? new THREE.Box3().setFromObject(group) : new THREE.Box3(new THREE.Vector3(-4, 0, -3), new THREE.Vector3(4, 3, 3));
 

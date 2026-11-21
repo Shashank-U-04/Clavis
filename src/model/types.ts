@@ -13,6 +13,8 @@ export interface Wall {
   by: number;
   thickness: number;
   height: number;
+  /** the level it stands on; absent = the ground floor (see levels.ts) */
+  level?: string;
 }
 
 export type OpeningKind = "door" | "window";
@@ -46,6 +48,8 @@ export interface Room {
   label: string;
   /** floor finish: oak | tile | carpet | concrete */
   floor: string;
+  /** the level it is on; absent = the ground floor */
+  level?: string;
 }
 
 /** A piece of furniture from the catalog, placed by its centre. */
@@ -60,6 +64,18 @@ export interface Item {
   w?: number;
   d?: number;
   h?: number;
+  /** the level it stands on; absent = the ground floor */
+  level?: string;
+}
+
+/** One floor of a building (see levels.ts). */
+export interface Level {
+  id: string;
+  name: string;
+  /** metres from the ground to this floor's top surface */
+  elevation: number;
+  /** floor to floor, metres */
+  height: number;
 }
 
 /** A reference image (for example a scanned plan) laid under the drawing for tracing. */
@@ -92,6 +108,8 @@ export interface PlanModel {
   rooms: Room[];
   items: Item[];
   underlay: Underlay | null;
+  /** the floors, ground up; absent = a single ground floor */
+  levels?: Level[];
 }
 
 /** Who made a change shown in the activity feed. */

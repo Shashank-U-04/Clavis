@@ -26,6 +26,8 @@ export const CATEGORY_ROOM: Record<string, RoomType[]> = {
   bath: ["bath"],
   office: ["study", "bedroom"],
   decor: ["living", "hall"],
+  structure: ["hall"],
+  outdoor: [],
 };
 
 export interface Pose {
