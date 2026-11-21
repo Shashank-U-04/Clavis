@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { boxFaces, paintOrder, project, type Box3 } from "../src/components/figures/iso";
 import { buildSunsetFigure, CUT } from "../src/components/figures/sunsetFigure";
 import { analyzeModel } from "../src/model/analysis";
-import { sunsetLoftModel } from "../src/model/templates";
+import { cedarVillaModel, sunsetLoftModel } from "../src/model/templates";
+import { VILLA_SITE } from "../src/components/figures/villaSite";
+import { checkModel, summarizeIssues } from "../src/model/issues";
 
 const box = (x0: number, y0: number, x1: number, y1: number, z0 = 0, z1 = 1): Box3 => ({ x0, y0, z0, x1, y1, z1 });
 
@@ -95,5 +97,30 @@ describe("the live build figure's data", () => {
     }
     const items = new Set(data.solids.filter((s) => s.kind === "item" || s.kind === "rug").map((s) => s.group));
     expect(items.size).toBe(model.items.filter((i) => i.kind).length);
+  });
+});
+
+describe("the villa figure on the landing page", () => {
+  const model = cedarVillaModel();
+  const data = buildSunsetFigure(model, VILLA_SITE);
+
+  it("is a valid design: no errors or warnings from the validator", () => {
+    const counts = summarizeIssues(checkModel(model));
+    expect(counts.error).toBe(0);
+    expect(counts.warning).toBe(0);
+  });
+
+  it("draws the lawn as ground, and the terrace, pool and trees as solids with their own groups", () => {
+    expect(data.ground.map((g) => g.id)).toEqual(["lawn"]);
+    expect(data.solids.some((s) => s.kind === "lawn")).toBe(false);
+    for (const kind of ["deck", "water", "hedge", "tree"] as const) expect(data.solids.some((s) => s.kind === kind)).toBe(true);
+    expect(data.labels.map((l) => l.label)).toEqual(expect.arrayContaining(["Pool", "Terrace"]));
+    expect(new Set(data.solids.map((s) => s.id)).size).toBe(data.solids.length); // React keys
+  });
+
+  it("still measures the house, not the grounds, and sets its text larger than the small drawings'", () => {
+    expect(data.dims.map((d) => d.text).sort()).toEqual(["14.60 m", "24.20 m"]);
+    expect(data.textScale).toBeGreaterThan(1.5);
+    expect(buildSunsetFigure().textScale).toBeCloseTo(1, 1);
   });
 });

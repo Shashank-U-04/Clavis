@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
 import { BuildFigure, type BuildStep } from "@/components/figures/BuildFigure";
 import { buildSunsetFigure } from "@/components/figures/sunsetFigure";
+import { VILLA_SITE } from "@/components/figures/villaSite";
 import { Frame, Section } from "@/components/site/Sheet";
 import { LogoMark } from "@/components/site/Logo";
 import { BriefBox } from "@/components/site/BriefBox";
@@ -9,7 +10,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { CATALOG } from "@/model/catalog";
 import { analyzeModel } from "@/model/analysis";
 import { checkModel, summarizeIssues } from "@/model/issues";
-import { sunsetLoftModel } from "@/model/templates";
+import { cedarVillaModel } from "@/model/templates";
 import { CHECK_COUNT } from "@/model/checks";
 import { localProposal } from "@/ai/local/engine";
 import { applyBatch } from "@/model/operations";
@@ -26,7 +27,7 @@ function sampleResult() {
 }
 
 /** The build log beside the hero drawing, counted from the design it draws. */
-function buildSteps(model: ReturnType<typeof sunsetLoftModel>, overall: string[], errors: number, warnings: number): BuildStep[] {
+function buildSteps(model: ReturnType<typeof cedarVillaModel>, overall: string[], errors: number, warnings: number): BuildStep[] {
   const doors = model.openings.filter((o) => o.kind === "door").length;
   const windows = model.openings.length - doors;
   const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
@@ -73,8 +74,8 @@ const steps = (sample: { rooms: number; items: number }) => [
 ];
 
 export default function Home() {
-  const model = sunsetLoftModel();
-  const figure = buildSunsetFigure(model);
+  const model = cedarVillaModel();
+  const figure = buildSunsetFigure(model, VILLA_SITE);
   const analysis = analyzeModel(model);
   const counts = summarizeIssues(checkModel(model));
   const rooms = analysis.rooms;
@@ -89,7 +90,7 @@ export default function Home() {
             <BuildFigure
               data={figure}
               steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)}
-              caption="Sunset Loft · built live from the plan"
+              caption="Cedar Villa · built live from the plan"
               side={
                 <div>
                   <p className="label text-ink-3">Sheet 01 · Title block</p>
@@ -195,12 +196,12 @@ export default function Home() {
       <Section
         sheet="04"
         title="The validator is the referee."
-        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is the Sunset Loft's own room schedule, measured by that engine."
+        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is Cedar Villa's own room schedule, measured by that engine."
       >
         <div className="grid lg:grid-cols-[1fr_20rem]">
           <div className="overflow-x-auto border-b border-rule lg:border-b-0 lg:border-r">
             <table className="w-full min-w-[34rem] text-left">
-              <caption className="sr-only">Room schedule of the Sunset Loft</caption>
+              <caption className="sr-only">Room schedule of Cedar Villa</caption>
               <thead>
                 <tr className="label border-b border-rule text-ink-3">
                   <th className="px-5 py-3 font-normal md:px-8">Room</th>
