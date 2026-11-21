@@ -15,7 +15,7 @@ import { openingSpan } from "@/model/issues";
 import { doorLeaves } from "@/model/drawing";
 import { segLen } from "@/model/geometry";
 import { sunsetLoftModel } from "@/model/templates";
-import { AXIS_X_DEG, AXIS_Y_DEG, boxFaces, flatPolygon, paintOrder, project, type Box3, type Face } from "./iso";
+import { AXIS_X_DEG, AXIS_Y_DEG, REST, boxFaces, flatPolygon, paintOrder, project, projector, type Box3, type Face, type P2 } from "./iso";
 
 export const CUT = 1.2;
 const SCALE = 40;
@@ -109,7 +109,24 @@ export interface FigureData {
   ground: { id: string; points: string }[];
   /** how much larger than usual to set labels and dimensions, so a big drawing still reads */
   textScale: number;
+  /** for a figure that can be turned: everything flat in world metres, and the point it turns about */
+  world?: FigureWorld;
 }
+
+export interface FigureWorld {
+  pivot: P2;
+  /** each room's floor corners, in the order of `rooms` */
+  rooms: P2[][];
+  /** each door swing's points on the floor, in the order of `arcs` */
+  arcs: P2[][];
+  /** where each label is pinned, in the order of `labels` */
+  labels: { x: number; y: number; z: number }[];
+  /** the corners of each piece of ground, in the order of `ground` */
+  ground: P2[][];
+}
+
+/** The turns sampled to find a frame the figure fits in however it is turned. */
+const FRAME_TURNS = 36;
 
 /** Plan (x east, y south) → figure world, turned so the north-west corner is nearest. */
 function turner(m: PlanModel) {
@@ -240,14 +257,15 @@ function parts(kind: string, w: number, d: number, h: number): Part[] {
   }
 }
 
-export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: readonly SitePiece[] = []): FigureData {
+export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: readonly SitePiece[] = [], opts: { turnable?: boolean } = {}): FigureData {
   const T = turner(model);
   const analysis = analyzeModel(model);
   const k = SCALE;
 
-  const rooms: FigureRoom[] = model.rooms.map((r) => {
+  const roomCorners = model.rooms.map((r) => [T.pt(r.x, r.y), T.pt(r.x + r.w, r.y), T.pt(r.x + r.w, r.y + r.h), T.pt(r.x, r.y + r.h)]);
+  const rooms: FigureRoom[] = model.rooms.map((r, ri) => {
     const a = analysis.rooms.find((x) => x.id === r.id)!;
-    const corners = [T.pt(r.x, r.y), T.pt(r.x + r.w, r.y), T.pt(r.x + r.w, r.y + r.h), T.pt(r.x, r.y + r.h)];
+    const corners = roomCorners[ri];
     return {
       id: r.id,
       label: r.label,
@@ -263,6 +281,7 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
   for (const w of model.walls) solids.push(...wallPieces(w, model.openings.filter((o) => o.wallId === w.id), T));
 
   const arcs: string[] = [];
+  const arcPoints: P2[][] = [];
   for (const o of model.openings) {
     if (o.kind !== "door") continue;
     const wall = model.walls.find((w) => w.id === o.wallId)!;
@@ -278,13 +297,12 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
       let a1 = Math.atan2(leaf.open.y - leaf.hinge.y, leaf.open.x - leaf.hinge.x);
       if (a1 - a0 > Math.PI) a1 -= 2 * Math.PI;
       if (a0 - a1 > Math.PI) a1 += 2 * Math.PI;
-      const pts = Array.from({ length: 17 }, (_, i) => {
+      const world = Array.from({ length: 17 }, (_, i) => {
         const a = a0 + ((a1 - a0) * i) / 16;
-        const p = T.pt(leaf.hinge.x + Math.cos(a) * leaf.radius, leaf.hinge.y + Math.sin(a) * leaf.radius);
-        const s = project(p.x, p.y, 0.005);
-        return `${(s.x * k).toFixed(1)},${(s.y * k).toFixed(1)}`;
+        return T.pt(leaf.hinge.x + Math.cos(a) * leaf.radius, leaf.hinge.y + Math.sin(a) * leaf.radius);
       });
-      arcs.push(`M ${pts.join(" L ")}`);
+      arcPoints.push(world);
+      arcs.push(arcPath(world, k, project));
     }
   }
 
@@ -314,23 +332,26 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
 
   // the site: the ground first, then what stands on it, sorted with the house
   for (const p of site) if (p.kind !== "lawn") solids.push({ box: T.box(p.x0, p.y0, p.x1, p.y1, p.z0 ?? 0, p.z1), kind: p.kind, id: p.id });
-  const ground = site
-    .filter((p) => p.kind === "lawn")
-    .map((p) => ({ id: p.id, points: flatPolygon([T.pt(p.x0, p.y0), T.pt(p.x1, p.y0), T.pt(p.x1, p.y1), T.pt(p.x0, p.y1)], 0, k) }));
+  const lawns = site.filter((p) => p.kind === "lawn");
+  const groundCorners = lawns.map((p) => [T.pt(p.x0, p.y0), T.pt(p.x1, p.y0), T.pt(p.x1, p.y1), T.pt(p.x0, p.y1)]);
+  const ground = lawns.map((p, i) => ({ id: p.id, points: flatPolygon(groundCorners[i], 0, k) }));
 
   // rugs lie on the floor under everything else
   const flat = solids.filter((s) => s.kind === "rug");
   const standing = paintOrder(solids.filter((s) => s.kind !== "rug"));
   const ordered: FigureSolid[] = [...flat, ...standing].map((s) => ({ id: s.id, kind: s.kind, faces: boxFaces(s.box, k), box: s.box, group: s.id.split(":")[0] }));
 
+  const pins: { x: number; y: number; z: number }[] = [];
   const labels: FigureLabel[] = model.rooms.map((r, i) => {
     const c = T.pt(r.x + r.w / 2, r.y + r.h / 2);
+    pins.push({ ...c, z: 0 });
     const s = project(c.x, c.y, 0);
     return { id: r.id, label: r.label, area: rooms[i].area, x: s.x * k, y: s.y * k };
   });
   for (const p of site) {
     if (!p.label) continue;
     const c = T.pt((p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2);
+    pins.push({ ...c, z: p.z1 });
     const s = project(c.x, c.y, p.z1);
     labels.push({ id: p.id, label: p.label, area: Math.round(Math.abs((p.x1 - p.x0) * (p.y1 - p.y0)) * 10) / 10, x: s.x * k, y: s.y * k });
   }
@@ -373,11 +394,45 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
   ];
 
   // frame the drawing, dimensions included
-  const all = [
+  const all: number[][] = [
     ...ordered.flatMap((s) => s.faces.flatMap((f) => f.points.split(" ").map((p) => p.split(",").map(Number)))),
     ...ground.flatMap((g) => g.points.split(" ").map((p) => p.split(",").map(Number))),
     ...[at(bx0, by1 + offY + 0.6), at(bx1, by1 + offY + 0.6), at(bx1 + offX + 0.6, by0), at(bx1 + offX + 0.6, by1)].map((p) => [p.x * k, p.y * k]),
   ];
+  const restXs = all.map((p) => p[0]);
+  const restW = Math.max(...restXs) - Math.min(...restXs) + 56;
+
+  // a figure that can be turned turns about the middle of everything it draws, and its frame
+  // holds it at every turn
+  let world: FigureWorld | undefined;
+  if (opts.turnable) {
+    const boxes = ordered.map((s) => s.box);
+    const flatPts = [...groundCorners.flat(), ...boxes.flatMap((b) => [{ x: b.x0, y: b.y0 }, { x: b.x1, y: b.y1 }])];
+    const pivot = {
+      x: (Math.min(...flatPts.map((p) => p.x)) + Math.max(...flatPts.map((p) => p.x))) / 2,
+      y: (Math.min(...flatPts.map((p) => p.y)) + Math.max(...flatPts.map((p) => p.y))) / 2,
+    };
+    const corners = (b: Box3) =>
+      [b.z0, b.z1].flatMap((z) => [
+        [b.x0, b.y0, z],
+        [b.x1, b.y0, z],
+        [b.x0, b.y1, z],
+        [b.x1, b.y1, z],
+      ]);
+    for (let i = 0; i < FRAME_TURNS; i++) {
+      const P = projector({ ...REST, turn: (2 * Math.PI * i) / FRAME_TURNS }, pivot);
+      for (const b of boxes)
+        for (const [x, y, z] of corners(b)) {
+          const q = P(x, y, z);
+          all.push([q.x * k, q.y * k]);
+        }
+      for (const c of groundCorners.flat()) {
+        const q = P(c.x, c.y, 0);
+        all.push([q.x * k, q.y * k]);
+      }
+    }
+    world = { pivot, rooms: roomCorners, arcs: arcPoints, labels: pins, ground: groundCorners };
+  }
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
   const pad = 28;
@@ -398,6 +453,16 @@ export function buildSunsetFigure(model: PlanModel = sunsetLoftModel(), site: re
     halo: { cx: centre.x * k, cy: centre.y * k + 6, rx: w * 0.46, ry: h * 0.33 },
     size: { w, h },
     ground,
-    textScale: Math.max(1, w / TEXT_AT),
+    textScale: Math.max(1, restW / TEXT_AT),
+    ...(world && { world }),
   };
+}
+
+/** A door swing on the floor as an SVG path, seen through `P`. */
+export function arcPath(pts: P2[], k: number, P: (x: number, y: number, z: number) => P2): string {
+  const at = pts.map((p) => {
+    const q = P(p.x, p.y, 0.005);
+    return `${(q.x * k).toFixed(1)},${(q.y * k).toFixed(1)}`;
+  });
+  return `M ${at.join(" L ")}`;
 }
