@@ -40,12 +40,12 @@ function buildSteps(model: ReturnType<typeof cedarVillaModel>, overall: string[]
   return [
     { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")}` },
     { code: "002", title: "Set out", detail: overall.join(" × ") },
-    { code: "003", title: "Raise walls", detail: n(model.walls.length, "wall") },
+    { code: "003", title: "Draw walls", detail: `${n(model.walls.length, "wall")} · plan cut at 1.20 m` },
     { code: "004", title: "Cut openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
     { code: "005", title: "Furnish", detail: n(model.items.length, "piece") },
-    { code: "006", title: "Render", detail: "section cut at 1.20 m" },
-    { code: "007", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}` },
-    { code: "008", title: "Ready", detail: "walk in at the door" },
+    { code: "006", title: "Lift to 3D", detail: "2D plan → axonometric" },
+    { code: "007", title: "Raise walls", detail: `to ${Math.max(...model.walls.map((w) => w.height)).toFixed(2)} m · lintels in` },
+    { code: "008", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")} · drag to turn` },
   ];
 }
 
@@ -81,7 +81,7 @@ const steps = (sample: { rooms: number; items: number }) => [
 
 export default function Home() {
   const model = cedarVillaModel();
-  const figure = buildSunsetFigure(model, VILLA_SITE, { turnable: true });
+  const figure = buildSunsetFigure(model, VILLA_SITE, { turnable: true, full: true });
   const analysis = analyzeModel(model);
   const counts = summarizeIssues(checkModel(model));
   const rooms = analysis.rooms;
@@ -96,7 +96,7 @@ export default function Home() {
             <BuildFigure
               data={figure}
               steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)}
-              caption="Cedar Villa · built live from the plan"
+              caption="Cedar Villa · from 2D plan to 3D model"
               side={
                 <div>
                   <p className="label text-ink-3">Sheet 01 · Title block</p>

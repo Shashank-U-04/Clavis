@@ -176,3 +176,36 @@ describe("turning a figure", () => {
       }
   });
 });
+
+describe("a whole model, not a section", () => {
+  const model = cedarVillaModel();
+  const full = buildSunsetFigure(model, VILLA_SITE, { turnable: true, full: true });
+  const cut = buildSunsetFigure(model, VILLA_SITE, { turnable: true });
+
+  it("runs the walls to their full height, with lintels over doors and windows", () => {
+    const top = Math.max(...model.walls.map((w) => w.height));
+    expect(full.top).toBeCloseTo(top, 6);
+    expect(cut.top).toBe(CUT);
+    const walls = full.solids.filter((s) => s.kind === "wall");
+    expect(Math.max(...walls.map((s) => s.box.z1))).toBeCloseTo(top, 6);
+    const lintels = full.solids.filter((s) => s.id.endsWith(":lintel"));
+    expect(lintels.length).toBe(model.openings.length);
+    expect(cut.solids.some((s) => s.id.endsWith(":lintel"))).toBe(false);
+    for (const l of lintels) expect(l.box.z1).toBeCloseTo(top, 6);
+  });
+
+  it("glazes each window from its sill to its head", () => {
+    for (const o of model.openings.filter((x) => x.kind === "window")) {
+      const glass = full.solids.find((s) => s.id === `${o.id}:glass`)!;
+      expect(glass.box.z0).toBeCloseTo(o.sill, 6);
+      expect(glass.box.z1).toBeCloseTo(o.sill + o.height, 6);
+    }
+  });
+
+  it("marks the grounds, so a plan cut never reaches the trees", () => {
+    const trees = full.solids.filter((s) => s.kind === "tree");
+    expect(trees.length).toBeGreaterThan(0);
+    expect(trees.every((s) => s.site)).toBe(true);
+    expect(full.solids.filter((s) => s.kind === "wall").some((s) => s.site)).toBe(false);
+  });
+});
