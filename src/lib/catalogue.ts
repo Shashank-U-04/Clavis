@@ -1,7 +1,7 @@
 /**
  * The template catalogue: the starting points offered by /new, /templates and the studio.
  *
- * Three are drawn by hand (src/model/templates.ts). The rest are laid out by Clavis Local, the
+ * Four are drawn by hand (src/model/templates.ts). The rest are laid out by Clavis Local, the
  * rule-based engine, from a one-line brief — deterministic, so the same template always comes
  * out the same, and never the output of a language model. The UI says which is which.
  *
@@ -22,6 +22,13 @@ export interface TemplateEntry {
 }
 
 export const TEMPLATES: readonly TemplateEntry[] = [
+  {
+    slug: "linden-heights",
+    name: "Linden Heights",
+    blurb: "A 600 m² house on three floors: glazed living over a garden and an infinity pool, five bedrooms, a home cinema, a sky lounge and two terraces.",
+    maker: "hand",
+    featured: true,
+  },
   {
     slug: "cedar-villa",
     name: "Cedar Villa",

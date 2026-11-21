@@ -294,3 +294,276 @@ export function cedarVillaModel(): PlanModel {
   let n = 0;
   return applyBatch(emptyModel(), CEDAR_VILLA, (prefix) => `${prefix}_${(n++).toString(36)}`).model;
 }
+
+/** A piece placed on a given floor (by the alias its add_level was given). */
+const on = (level: string, kind: string, x: number, y: number, rotation = 0): DesignOperation => ({ op: "place_item", kind, x, y, rotation, level: `$${level}` });
+
+let railings = 0;
+/** A run of glass balustrade cut to `width`, on a given floor. */
+const glass = (level: string, x: number, y: number, rotation: number, width: number): DesignOperation[] => {
+  const as = `rail${railings++}`;
+  return [
+    { op: "place_item", as, kind: "railing_glass", x, y, rotation, level: `$${level}` },
+    { op: "resize_item", id: `$${as}`, w: width },
+  ];
+};
+
+/**
+ * Linden Heights — a three-floor house of about 640 m², built only from the library. The
+ * ground floor opens to the north and west: a glazed living room, dining and an island kitchen
+ * along the garden front, an entrance hall with the stair, and a study, home cinema, powder
+ * room, utility and guest bedroom behind. Upstairs, the main suite with its en-suite and
+ * dressing room, three bedrooms and a bathroom, and a stone terrace over the living room. At
+ * the top, a sky lounge with a bar, a gym, and a roof terrace. An infinity pool on a stone
+ * terrace runs along the west front.
+ */
+export const LINDEN_HEIGHTS: DesignOperation[] = [
+  { op: "rename_plan", name: "Linden Heights" },
+  { op: "update_level", id: "ground", height: 3.4 },
+  { op: "add_level", as: "first", height: 3.4 },
+  { op: "add_level", as: "second", height: 3.4, name: "Second floor" },
+
+  // ---- ground floor -------------------------------------------------------
+  {
+    op: "build_layout",
+    name: "Linden Heights",
+    wallHeight: 3,
+    rooms: [
+      { as: "living", label: "Living room", x: 0, y: 0, w: 9, h: 7, floor: "oak" },
+      { as: "dining", label: "Dining", x: 9, y: 0, w: 5, h: 7, floor: "oak" },
+      { as: "kitchen", label: "Kitchen", x: 14, y: 0, w: 6, h: 7, floor: "tile" },
+      { as: "hall", label: "Entrance hall", x: 0, y: 7, w: 20, h: 2.4, floor: "tile" },
+      { as: "study", label: "Study", x: 0, y: 9.4, w: 5, h: 5, floor: "oak" },
+      { as: "cinema", label: "Home cinema", x: 5, y: 9.4, w: 5, h: 5, floor: "carpet" },
+      { as: "powder", label: "Powder room", x: 10, y: 9.4, w: 2.5, h: 5, floor: "tile" },
+      { as: "utility", label: "Utility", x: 12.5, y: 9.4, w: 2.5, h: 5, floor: "tile" },
+      { as: "guest", label: "Guest bedroom", x: 15, y: 9.4, w: 5, h: 5, floor: "carpet" },
+    ],
+    doors: [
+      { from: "hall", to: "exterior", side: "west", width: 1.8 },
+      { from: "living", to: "exterior", side: "north", width: 2.4, position: 1 },
+      { from: "living", to: "hall", width: 1.6, position: 0.3 },
+      { from: "dining", to: "living", width: 2.4 },
+      { from: "kitchen", to: "dining", width: 1.6 },
+      { from: "kitchen", to: "hall", position: 0.85 },
+      { from: "study", to: "hall", position: 0.5 },
+      { from: "cinema", to: "hall", position: 0.2 },
+      { from: "powder", to: "hall", width: 0.8 },
+      { from: "utility", to: "hall", width: 0.8 },
+      { from: "guest", to: "hall", position: 0.5 },
+    ],
+    windows: [
+      { room: "living", side: "west", width: 4, height: 2.6, sill: 0 },
+      { room: "living", side: "north", width: 3.6, height: 2.6, sill: 0.2 },
+      { room: "dining", side: "north", width: 3.6, height: 2.6, sill: 0.2 },
+      { room: "kitchen", side: "north", width: 2.8, height: 1.4, sill: 1.05 },
+      { room: "kitchen", side: "east", width: 2.4, height: 1.4, sill: 1.05 },
+      { room: "study", side: "west", width: 2.4, height: 2 },
+      { room: "study", side: "south", width: 1.6 },
+      { room: "powder", side: "south", width: 0.8, sill: 1.5, height: 0.8 },
+      { room: "utility", side: "south", width: 0.6, sill: 1.4, height: 0.9 },
+      { room: "guest", side: "south", width: 2.6, height: 1.6 },
+      { room: "guest", side: "east", width: 1.6, height: 1.6 },
+    ],
+  },
+  // living: two seating groups facing the glass, a fireplace on the hall wall, a grand piano
+  item("rug", 3, 3.5, 90),
+  item("sofa_3", 4.3, 3.5, 270),
+  item("coffee_table", 3, 3.5, 90),
+  item("armchair", 3, 1.6, 0),
+  item("armchair", 3, 5.4, 180),
+  against("fireplace", "living", "south", 0.75),
+  item("grand_piano", 7.3, 2.0, 0),
+  item("plant", 0.5, 0.5, 0),
+  item("plant", 8.5, 6.5, 0),
+  // dining for eight, a sideboard on the hall wall
+  item("dining_table_oval", 11.5, 3.2, 90),
+  item("dining_chair", 10.745, 2.6, 90),
+  item("dining_chair", 10.745, 3.2, 90),
+  item("dining_chair", 10.745, 3.8, 90),
+  item("dining_chair", 12.255, 2.6, 270),
+  item("dining_chair", 12.255, 3.2, 270),
+  item("dining_chair", 12.255, 3.8, 270),
+  against("sideboard", "dining", "south", 0.4),
+  // kitchen: a run along the east wall, an island, a bar against the hall wall
+  item("kitchen_sink_unit", 19.58, 0.8, 270),
+  item("kitchen_counter", 19.58, 2.6, 270),
+  item("kitchen_hob_unit", 19.58, 4.4, 270),
+  item("fridge", 19.54, 5.35, 270),
+  item("kitchen_island", 16.4, 2.6, 90),
+  // hall: the stair climbs east from beside the entrance
+  item("stair_straight", 9, 7.65, 270),
+  // study, cinema, powder room, utility, guest bedroom
+  against("desk", "study", "west", 0.45),
+  against("bookshelf", "study", "east", 0.5),
+  against("cinema_screen", "cinema", "south", 0.5),
+  against("cinema_recliners", "cinema", "north", 0.5, 1),
+  against("toilet", "powder", "east", 0.7),
+  against("sink", "powder", "west", 0.7),
+  against("counter_unit", "utility", "east", 0.7),
+  against("bed_double", "guest", "south", 0.5),
+  item("nightstand", 16.425, 13.95, 180),
+  item("nightstand", 18.575, 13.95, 180),
+  against("wardrobe", "guest", "west", 0.35),
+
+  // ---- first floor ----------------------------------------------------------
+  {
+    op: "build_layout",
+    level: "$first",
+    wallHeight: 3,
+    rooms: [
+      { as: "main", label: "Main bedroom", x: 4, y: 0, w: 8, h: 7, floor: "oak" },
+      { as: "ensuite", label: "En-suite", x: 12, y: 0, w: 4, h: 7, floor: "tile" },
+      { as: "dress", label: "Dressing room", x: 16, y: 0, w: 4, h: 7, floor: "oak" },
+      { as: "landing", label: "Landing", x: 4, y: 7, w: 16, h: 2.4, floor: "oak" },
+      { as: "bed2", label: "Bedroom 2", x: 4, y: 9.4, w: 5, h: 5, floor: "carpet" },
+      { as: "bath2", label: "Bathroom", x: 9, y: 9.4, w: 3, h: 5, floor: "tile" },
+      { as: "bed3", label: "Bedroom 3", x: 12, y: 9.4, w: 4, h: 5, floor: "carpet" },
+      { as: "bed4", label: "Bedroom 4", x: 16, y: 9.4, w: 4, h: 5, floor: "carpet" },
+    ],
+    doors: [
+      { from: "main", to: "landing", position: 0.2 },
+      { from: "main", to: "exterior", side: "west", width: 1.8 },
+      { from: "ensuite", to: "main", width: 0.9, position: 0.8 },
+      { from: "dress", to: "landing", position: 0.5 },
+      { from: "bed2", to: "landing", position: 0.5 },
+      { from: "bath2", to: "landing", width: 0.8 },
+      { from: "bed3", to: "landing", position: 0.5 },
+      { from: "bed4", to: "landing", position: 0.5 },
+    ],
+    windows: [
+      { room: "main", side: "north", width: 4, height: 2.4, sill: 0.2 },
+      { room: "ensuite", side: "north", width: 1.6, sill: 1.3, height: 1.1 },
+      { room: "dress", side: "north", width: 1.6, sill: 1.2, height: 1 },
+      { room: "bed2", side: "south", width: 2.4, height: 1.6 },
+      { room: "bed2", side: "west", width: 1.6, height: 1.5 },
+      { room: "bath2", side: "south", width: 0.9, sill: 1.4, height: 0.9 },
+      { room: "bed3", side: "south", width: 2.4, height: 1.6 },
+      { room: "bed4", side: "south", width: 2.4, height: 1.6 },
+      { room: "bed4", side: "east", width: 1.6, height: 1.5 },
+    ],
+  },
+  // main suite
+  against("bed_double", "main", "east", 0.45),
+  on("first", "nightstand", 11.7, 2.19, 270),
+  on("first", "nightstand", 11.7, 4.29, 270),
+  against("sofa", "main", "south", 0.8),
+  on("first", "rug", 9.5, 3.15, 90),
+  against("freestanding_tub", "ensuite", "north", 0.5, 0.4),
+  against("double_vanity", "ensuite", "south", 0.35),
+  against("shower", "ensuite", "east", 0.75),
+  against("toilet", "ensuite", "west", 0.2),
+  against("walk_in_wardrobe", "dress", "west", 0.5),
+  against("walk_in_wardrobe", "dress", "east", 0.5),
+  // the landing: the stair to the top floor climbs east from its middle
+  on("first", "stair_straight", 15, 7.65, 270),
+  // bedrooms and the bathroom
+  against("bed_double", "bed2", "south", 0.5),
+  on("first", "nightstand", 5.425, 13.95, 180),
+  on("first", "nightstand", 7.575, 13.95, 180),
+  against("wardrobe", "bed2", "east", 0.3),
+  against("bathtub", "bath2", "south", 0.5),
+  against("toilet", "bath2", "east", 0.3),
+  against("sink", "bath2", "west", 0.3),
+  against("bed_double", "bed3", "south", 0.5),
+  on("first", "nightstand", 12.925, 13.95, 180),
+  on("first", "nightstand", 15.075, 13.95, 180),
+  against("bed_double", "bed4", "south", 0.5),
+  on("first", "nightstand", 16.925, 13.95, 180),
+  on("first", "nightstand", 19.075, 13.95, 180),
+  // a stone terrace over the living room, behind glass
+  ...[2, 6, 10, 12.4].map((y) => on("first", "stone_terrace", 1.92, y)),
+  ...[1, 3, 5, 7, 9, 11, 13].map((y) => on("first", "railing_glass", 0.06, y, 90)),
+  ...[1.05, 2.95].flatMap((x) => glass("first", x, 0.06, 0, 1.84)),
+  ...[1.05, 2.95].flatMap((x) => glass("first", x, 14.34, 180, 1.84)),
+  on("first", "outdoor_sofa", 1.6, 3.5, 90),
+  on("first", "planter", 3.0, 0.5, 0),
+  on("first", "planter", 3.0, 13.9, 180),
+
+  // ---- second floor ----------------------------------------------------------
+  {
+    op: "build_layout",
+    level: "$second",
+    wallHeight: 3,
+    rooms: [
+      { as: "lounge", label: "Sky lounge", x: 12, y: 0, w: 8, h: 7, floor: "oak" },
+      { as: "top", label: "Upper landing", x: 12, y: 7, w: 8, h: 2.4, floor: "oak" },
+      { as: "gym", label: "Gym", x: 12, y: 9.4, w: 8, h: 5, floor: "concrete" },
+    ],
+    doors: [
+      { from: "lounge", to: "top", width: 1.6, position: 0.3 },
+      { from: "gym", to: "top", position: 0.5 },
+      { from: "lounge", to: "exterior", side: "west", width: 2.4, position: 0.8 },
+    ],
+    windows: [
+      { room: "lounge", side: "north", width: 4, height: 2.4, sill: 0.2 },
+      { room: "lounge", side: "east", width: 4, height: 2.4, sill: 0.2 },
+      { room: "gym", side: "south", width: 4, height: 1.8 },
+      { room: "gym", side: "east", width: 3, height: 1.8 },
+    ],
+  },
+  against("sofa_3", "lounge", "south", 0.85),
+  on("second", "coffee_table", 17.8, 4.9, 0),
+  on("second", "armchair", 17.0, 3.2, 0),
+  on("second", "armchair", 18.6, 3.2, 0),
+  against("bar_counter", "lounge", "west", 0),
+  on("second", "bar_stool", 13.0, 0.9, 270),
+  on("second", "bar_stool", 13.0, 1.6, 270),
+  // the roof terrace over the first floor's west half
+  on("second", "stone_terrace", 6.0, 2.0, 0),
+  on("second", "stone_terrace", 6.0, 6.0, 0),
+  on("second", "stone_terrace", 6.0, 10.0, 0),
+  on("second", "stone_terrace", 6.0, 12.4, 0),
+  on("second", "stone_terrace", 10.0, 2.0, 0),
+  on("second", "stone_terrace", 10.0, 6.0, 0),
+  on("second", "stone_terrace", 10.0, 10.0, 0),
+  on("second", "stone_terrace", 10.0, 12.4, 0),
+  ...[1, 3, 5, 7, 9, 11, 13].map((y) => on("second", "railing_glass", 4.06, y, 90)),
+  ...[5.1, 7.05, 9, 10.95].flatMap((x) => glass("second", x, 0.06, 0, 1.9)),
+  ...[5.1, 7.05, 9, 10.95].flatMap((x) => glass("second", x, 14.34, 180, 1.9)),
+  on("second", "sun_lounger", 5.5, 4, 0),
+  on("second", "sun_lounger", 6.6, 4, 0),
+  on("second", "sun_lounger", 7.7, 4, 0),
+  on("second", "parasol", 9.8, 4.2, 0),
+  on("second", "outdoor_dining", 8, 10.6, 0),
+  on("second", "planter", 4.8, 13.9, 180),
+  on("second", "planter", 11.0, 13.9, 180),
+
+  // ---- the grounds ----------------------------------------------------------
+  // an infinity pool along the west front, on a stone terrace, with loungers
+  item("stone_terrace", -2.12, 2, 0),
+  item("stone_terrace", -2.12, 6, 0),
+  item("stone_terrace", -2.12, 10, 0),
+  item("stone_terrace", -2.12, 12.4, 0),
+  item("stone_terrace", -6.12, 2, 0),
+  item("stone_terrace", -6.12, 6, 0),
+  item("stone_terrace", -6.12, 10, 0),
+  item("stone_terrace", -6.12, 12.4, 0),
+  item("pool_infinity", -5.6, 7.2, 0),
+  item("sun_lounger", -2.4, 3.2, 270),
+  item("sun_lounger", -2.4, 4.4, 270),
+  item("sun_lounger", -2.4, 5.6, 270),
+  // a terrace with an outdoor sofa set and a fire pit along the north front
+  item("timber_deck", 4, -1.62, 0),
+  item("timber_deck", 8, -1.62, 0),
+  item("timber_deck", 12, -1.62, 0),
+  item("outdoor_sofa", 3.5, -2.6, 0),
+  item("fire_pit", 3.5, -1.2, 0),
+  item("outdoor_dining", 12.6, -1.6, 0),
+  item("parasol", 15.8, -1.8, 0),
+  // planting
+  item("tree", -9, -3, 0),
+  item("tree", 23, -3, 0),
+  item("tree", 23.5, 16.5, 0),
+  item("tree", -9.5, 16, 0),
+  item("hedge", 24.3, 4, 90),
+  item("hedge", 24.3, 7, 90),
+  item("hedge", 24.3, 10, 90),
+  item("planter", 21, -0.8, 0),
+];
+
+/** Linden Heights as a ready design. */
+export function lindenHeightsModel(): PlanModel {
+  let n = 0;
+  return applyBatch(emptyModel(), LINDEN_HEIGHTS, (prefix) => `${prefix}_${(n++).toString(36)}`).model;
+}
