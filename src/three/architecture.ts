@@ -13,6 +13,7 @@ import type { Opening, PlanModel, Room, Wall } from "../model/types";
 import { segLen } from "../model/geometry";
 import { openingSpan } from "../model/issues";
 import { post, slab } from "./kit";
+import { worldUV } from "./textures";
 import {
   cordMaterial,
   doorMaterial,
@@ -186,7 +187,11 @@ export function buildArchitecture(model: PlanModel): BuiltArchitecture {
 
   const bounds = model.walls.length ? new THREE.Box3().setFromObject(group) : new THREE.Box3(new THREE.Vector3(-4, 0, -3), new THREE.Vector3(4, 3, 3));
 
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(60, 48), groundMaterial);
+  // a lawn out to the horizon, its grass at real size
+  const lawn = new THREE.PlaneGeometry(900, 900);
+  const tile = groundMaterial.userData.tile as number | undefined;
+  if (tile) worldUV(lawn, tile);
+  const ground = new THREE.Mesh(lawn, groundMaterial);
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.01;
   ground.receiveShadow = true;
