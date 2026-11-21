@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
-import { BuildFigure, type BuildStep } from "@/components/figures/BuildFigure";
-import { buildSunsetFigure } from "@/components/figures/sunsetFigure";
 import { VILLA_SITE } from "@/components/figures/villaSite";
+import { HeroModel, type BuildStep } from "@/components/site/HeroModel";
 import type { CSSProperties } from "react";
 import { Frame, Section, Words } from "@/components/site/Sheet";
 import { CountUp } from "@/components/site/Motion";
@@ -32,20 +31,20 @@ function sampleResult() {
   return { rooms: out.model.rooms.length, items: out.model.items.length };
 }
 
-/** The build log beside the hero drawing, counted from the design it draws. */
-function buildSteps(model: ReturnType<typeof cedarVillaModel>, overall: string[], errors: number, warnings: number): BuildStep[] {
+/** The build log beside the hero model, counted from the design it shows. */
+function buildSteps(model: ReturnType<typeof cedarVillaModel>, overall: string, errors: number, warnings: number): BuildStep[] {
   const doors = model.openings.filter((o) => o.kind === "door").length;
   const windows = model.openings.length - doors;
   const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
   return [
     { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")}` },
-    { code: "002", title: "Set out", detail: overall.join(" × ") },
-    { code: "003", title: "Draw walls", detail: `${n(model.walls.length, "wall")} · plan cut at 1.20 m` },
-    { code: "004", title: "Cut openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
+    { code: "002", title: "2D plan", detail: `${overall} · north up` },
+    { code: "003", title: "Raise walls", detail: `${n(model.walls.length, "wall")} to ${Math.max(...model.walls.map((w) => w.height)).toFixed(2)} m` },
+    { code: "004", title: "Openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
     { code: "005", title: "Furnish", detail: n(model.items.length, "piece") },
-    { code: "006", title: "Lift to 3D", detail: "2D plan → axonometric" },
-    { code: "007", title: "Raise walls", detail: `to ${Math.max(...model.walls.map((w) => w.height)).toFixed(2)} m · lintels in` },
-    { code: "008", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")} · drag to turn` },
+    { code: "006", title: "Grounds", detail: "pool · terrace · garden" },
+    { code: "007", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}` },
+    { code: "008", title: "3D model", detail: "drag to turn · zoom in and out" },
   ];
 }
 
@@ -81,8 +80,8 @@ const steps = (sample: { rooms: number; items: number }) => [
 
 export default function Home() {
   const model = cedarVillaModel();
-  const figure = buildSunsetFigure(model, VILLA_SITE, { turnable: true, full: true });
   const analysis = analyzeModel(model);
+  const env = analysis.metrics.envelope!;
   const counts = summarizeIssues(checkModel(model));
   const rooms = analysis.rooms;
   const STEPS = steps(sampleResult());
@@ -93,9 +92,12 @@ export default function Home() {
       <section className="border-b border-rule">
         <div className="mx-auto max-w-[1440px]">
           <Frame className="px-5 py-8 md:px-12 md:py-10">
-            <BuildFigure
-              data={figure}
-              steps={buildSteps(model, figure.dims.map((d) => d.text), counts.error, counts.warning)}
+            <HeroModel
+              model={model}
+              site={VILLA_SITE}
+              front={{ x: -1, y: -0.55 }}
+              elevation={11}
+              steps={buildSteps(model, `${env.w.toFixed(2)} × ${env.h.toFixed(2)} m`, counts.error, counts.warning)}
               caption="Cedar Villa · from 2D plan to 3D model"
               side={
                 <div>
