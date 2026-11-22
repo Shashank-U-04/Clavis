@@ -82,7 +82,7 @@ await step("judges", async () => {
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
   check("judges sign in with the prefilled form", true, new URL(page.url()).pathname);
   await page.goto(`${SITE}/plans`);
-  for (const name of ["Sunset Loft", "Family House", "Compact Two-Bedroom", "Studio Apartment"]) {
+  for (const name of ["Linden Heights", "Cedar Villa", "Sunset Loft", "Compact two-bedroom"]) {
     const ok = await page.getByRole("link", { name: new RegExp(name, "i") }).first().waitFor({ timeout: 20000 }).then(() => true, () => false);
     check(`judges see "${name}"`, ok);
   }

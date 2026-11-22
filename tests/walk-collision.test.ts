@@ -8,6 +8,7 @@ import type { PlanModel } from "../src/model/types";
 const house = lindenHeightsModel();
 const ground = onLevel(house, levelsOf(house)[0].id);
 const solids = solidsOf(ground);
+const hall = ground.rooms.find((r) => r.label === "Entrance hall")!;
 const shut = () => false;
 const allOpen = () => true;
 
@@ -22,13 +23,13 @@ function walk(from: { x: number; y: number }, to: { x: number; y: number }, open
 
 describe("walking: walls stop you, shut doors stop you, you slide along both", () => {
   it("a wall stops the walker, even running at it", () => {
-    // from the middle of the hall (y 6.4 to 10) straight north into the dining room's wall (no door there)
-    const end = walk({ x: 11.5, y: 8.5 }, { x: 11.5, y: 3 }, allOpen);
-    expect(end.y).toBeGreaterThan(6.4 + 0.05 + WALKER_RADIUS - 0.01);
+    // from the middle of the hall straight north into the dining room's wall (no door there)
+    const end = walk({ x: 11.5, y: hall.y + hall.h / 2 }, { x: 11.5, y: 3 }, allOpen);
+    expect(end.y).toBeGreaterThan(hall.y + WALKER_RADIUS - 0.01);
   });
 
   it("a shut door stops the walker; once it is open they walk through", () => {
-    const study = ground.openings.find((o) => o.kind === "door" && ground.walls.find((w) => w.id === o.wallId)!.ay === 10 && openingCenter(ground.walls.find((w) => w.id === o.wallId)!, o).x < 5)!;
+    const study = ground.openings.find((o) => o.kind === "door" && Math.abs(ground.walls.find((w) => w.id === o.wallId)!.ay - (hall.y + hall.h)) < 0.2 && openingCenter(ground.walls.find((w) => w.id === o.wallId)!, o).x < 5)!;
     const c = openingCenter(ground.walls.find((w) => w.id === study.wallId)!, study);
     const from = { x: c.x, y: c.y - 1.2 };
     const to = { x: c.x, y: c.y + 1.2 };
@@ -37,8 +38,8 @@ describe("walking: walls stop you, shut doors stop you, you slide along both", (
   });
 
   it("walking into a wall at an angle slides along it rather than stopping", () => {
-    const from = { x: 3, y: 8.5 };
-    const end = walk(from, { x: 7, y: 4.5 }, shut); // north-east, into the living room's wall
+    const from = { x: 3, y: hall.y + hall.h / 2 };
+    const end = walk(from, { x: 7, y: hall.y - 2 }, shut); // north-east, into the living room's wall
     expect(end.x).toBeGreaterThan(5.5); // kept going east along the wall
   });
 
