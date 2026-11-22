@@ -38,7 +38,7 @@ export const ROOM_BLOCKS: RoomBlock[] = [
   { id: "bathroom", label: "Bathroom", w: 2.4, h: 2.8, floor: "tile", note: "bath or shower" },
   { id: "wc", label: "WC", w: 1.5, h: 2.0, floor: "tile", note: "toilet and basin" },
   { id: "study", label: "Study", w: 2.8, h: 3.0, floor: "oak", note: "a desk and shelves" },
-  { id: "hall", label: "Hall", w: 1.4, h: 4.0, floor: "oak", note: "joins the rooms" },
+  { id: "hall", label: "Hall", w: 1.8, h: 4.0, floor: "oak", note: "joins the rooms" },
   { id: "utility", label: "Utility", w: 2.0, h: 2.4, floor: "tile", note: "laundry and storage" },
 ];
 
