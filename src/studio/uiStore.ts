@@ -7,6 +7,7 @@ import type { Pt } from "../model/geometry";
 import { actions, store } from "../model/store";
 import { ALL_VIEWS, readTheme, readViews, soloFeature, soloView, toggleFeature, toggleView, type Feature, type Screen, type ThemePref, type ViewKey, type Views } from "./views";
 import { applyTheme } from "../lib/theme";
+import { isGroupId, type GroupId } from "./libraryGroups";
 
 export type RightTab = "assistant" | "review" | "inspect" | "project";
 
@@ -17,7 +18,7 @@ interface UiState {
   rightTab: RightTab;
   /** the library drawer beside the tool strip, and which shelf it shows */
   library: boolean;
-  libraryTab: "rooms" | "furniture";
+  libraryTab: GroupId;
   /** the step-by-step guide for building a plan by hand */
   guide: boolean;
   /** a circulation route drawn over the plan: entrance → room, through door centres */
@@ -38,7 +39,7 @@ const saved = (): Partial<UiState> => {
       theme: readTheme(v.theme),
       feedOpen: typeof v.feedOpen === "boolean" ? v.feedOpen : undefined,
       library: typeof v.library === "boolean" ? v.library : undefined,
-      libraryTab: v.libraryTab === "rooms" || v.libraryTab === "furniture" ? v.libraryTab : undefined,
+      libraryTab: isGroupId(v.libraryTab) ? v.libraryTab : v.libraryTab === "furniture" ? "living" : undefined,
       guide: typeof v.guide === "boolean" ? v.guide : undefined,
       dims: typeof v.dims === "boolean" ? v.dims : undefined,
     };
@@ -82,7 +83,9 @@ export const setUi = (p: Partial<UiState>) => {
 };
 
 /** Open the library on a shelf, or close it when that shelf is already showing. */
-export function openLibrary(tab: "rooms" | "furniture", toggle = true) {
+/** Open a group's shelf ("furniture" opens the first furniture group); a second click closes it. */
+export function openLibrary(group: GroupId | "furniture", toggle = true) {
+  const tab: GroupId = group === "furniture" ? "living" : group;
   const s = ui.getState();
   if (toggle && s.library && s.libraryTab === tab) return setUi({ library: false });
   if (!s.views.plan && !s.views.scene) setUi({ views: { ...s.views, plan: true } });
