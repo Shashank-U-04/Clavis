@@ -39,6 +39,7 @@ export const CHECK_CODES = [
   "stair_no_floor_above",
   "stair_lands_nowhere",
   "stair_starts_nowhere",
+  "door_onto_stairwell",
 ] as const;
 
 export const CHECK_COUNT = CHECK_CODES.length;

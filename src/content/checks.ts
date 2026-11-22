@@ -53,6 +53,7 @@ export const CHECKS: Record<Code, { group: CheckGroup; text: string; severity: "
   stair_no_floor_above: { group: "Floors", severity: "warning", text: "A stair on the top floor, climbing to nothing." },
   stair_lands_nowhere: { group: "Floors", severity: "warning", text: "A stair whose top arrives outside every room on the floor above." },
   stair_starts_nowhere: { group: "Floors", severity: "warning", text: "A stair whose foot starts outside every room on its own floor." },
+  door_onto_stairwell: { group: "Floors", severity: "error", text: `A door upstairs whose ${cm(RULES.doorClearDepth)} clear zone reaches over the opening a stair comes up through.` },
 };
 
 export const GROUPS: CheckGroup[] = ["Walls", "Doors and windows", "Rooms", "Furniture", "Circulation", "Habitability"];
