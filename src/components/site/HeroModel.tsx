@@ -70,8 +70,11 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     setTouch(coarse);
 
-    import("@/three/showcase")
-      .then(({ Showcase }) => {
+    // the model waits for its real trees and plants (a few seconds at most), so the opening
+    // never swaps them in halfway through
+    const plants = import("@/three/plants").then(({ loadPlants }) => Promise.race([loadPlants(), new Promise((r) => setTimeout(r, 6000))]));
+    Promise.all([import("@/three/showcase"), plants])
+      .then(([{ Showcase }]) => {
         if (cancelled) return;
         const s = new Showcase(el, model, site, { front, elevation, touch: coarse });
         show.current = s;

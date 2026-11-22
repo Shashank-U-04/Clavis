@@ -10,13 +10,16 @@ import { buildFurniture } from "./furniture";
 import { catalogByKind, isResized, itemSize } from "../model/catalog";
 import { elevationOf, levelAbove, levelOf } from "../model/levels";
 
+/** A steady number from an id, so a tree or hedge keeps its look from one rebuild to the next. */
+const seedOf = (id: string) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 100000;
+
 /** Furniture stands on the floor slabs, not on the ground under them. */
 const FLOOR_TOP = 0.04;
 
 export function buildContent(model: PlanModel): { group: THREE.Group; bounds: THREE.Box3 } {
   const { group, bounds } = buildArchitecture(model);
   for (const item of model.items) {
-    const piece = buildFurniture(item.kind);
+    const piece = buildFurniture(item.kind, seedOf(item.id));
     if (!piece) continue;
     const level = levelOf(item);
     piece.position.set(item.x, elevationOf(model, level) + FLOOR_TOP, item.y);
@@ -45,7 +48,8 @@ const materialsOf = (o: THREE.Object3D): THREE.Material[] => {
  */
 export function disposeGroup(root: THREE.Object3D): void {
   root.traverse((o) => {
-    (o as THREE.Mesh).geometry?.dispose();
+    const geometry = (o as THREE.Mesh).geometry;
+    if (geometry && !geometry.userData.shared) geometry.dispose();
     for (const m of materialsOf(o)) {
       if (m.userData.shared) continue;
       for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose();

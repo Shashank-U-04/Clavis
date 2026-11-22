@@ -28,6 +28,7 @@ import { buildContent, disposeGroup } from "./content";
 import { GROUND, elevationOf, levelAbove, levelBelow, levelOf, levelsOf, onLevel } from "../model/levels";
 import { isStair, stairProgress } from "../model/stairs";
 import { Avatar, EYE_HEIGHT, STATURE } from "./avatar";
+import { loadPlants } from "./plants";
 import { walkView, type WalkView } from "./walkView";
 
 const STEP = 1.4; // metres per second: an ordinary walking pace
@@ -194,6 +195,10 @@ export class Viewer {
     this.fitCanvas();
     this.listen();
     this.loop();
+    // the real trees and plants arrive a moment later: build the scene again with them
+    void loadPlants().then((ok) => {
+      if (ok && this.model && !this.pendingModel) this.pendingModel = this.model;
+    });
   }
 
   // ---- public ------------------------------------------------------------------

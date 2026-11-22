@@ -3,6 +3,7 @@
  * stands on y = 0 and faces +z, which is the direction the item's `rotation` points to.
  */
 
+import { realPlant } from "./plants";
 import * as THREE from "three";
 import { catalogByKind, type CatalogEntry } from "../model/catalog";
 import { assemble, blob, legs, pillow, post, slab } from "./kit";
@@ -702,10 +703,19 @@ const BUILDERS: Record<string, Builder> = {
   plant,
 };
 
-/** The 3D model for a catalog kind, or a plain block for kinds without a dedicated model. */
-export function buildFurniture(kind: string): THREE.Group | null {
+/**
+ * The 3D model for a catalog kind, or a plain block for kinds without a dedicated model. Plants
+ * are the real ones once they have loaded (see plants.ts); `seed` picks which tree, and how a
+ * hedge or planter is planted, so the same piece always looks the same.
+ */
+export function buildFurniture(kind: string, seed = 0): THREE.Group | null {
   const c = catalogByKind(kind);
   if (!c) return null;
+  const real = realPlant(kind, c, seed);
+  if (real) {
+    real.name = kind;
+    return real;
+  }
   const build = BUILDERS[kind];
   const g = build ? build(c) : assemble(slab(c.w, c.h, c.d, surface(c.color, "matte")));
   g.name = kind;
