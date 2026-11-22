@@ -2,7 +2,9 @@
 
 /*
  * Clavis site design tokens: a drafting-table palette. Cool paper, blue-black ink, ruled lines and
- * one blueprint-blue marker colour. The studio keeps its own dark theme (studio/studio.css).
+ * one blueprint-blue marker colour. In the dark theme (html.dark, see lib/theme.ts) the sheet
+ * becomes a drawing board at night: dark paper, pale ink, a brighter marker. The studio has its
+ * own tokens for both themes (studio/studio.css) and follows the same choice.
  */
 @theme {
   --color-paper: #f1f0ea;
@@ -30,6 +32,27 @@
       opacity: 0.35;
     }
   }
+}
+
+/* the dark theme: the same names, night colours */
+html.dark {
+  --color-paper: #121417;
+  --color-paper-2: #1a1d21;
+  --color-paper-3: #24282d;
+  --color-ink: #ecebe5;
+  --color-ink-2: #b7b9bd;
+  --color-ink-3: #7d8187;
+  --color-rule: #34383e;
+  --color-rule-soft: #262a2f;
+  --color-marker: #7b93ff;
+  --color-marker-soft: #222c55;
+  --color-night: #0a0c0e;
+}
+
+/* panels drawn in ink on the light sheet stay dark at night: their ink is a darker board, their paper pale */
+html.dark .stay-dark {
+  --color-ink: #1d2126;
+  --color-paper: #ecebe5;
 }
 
 @layer base {

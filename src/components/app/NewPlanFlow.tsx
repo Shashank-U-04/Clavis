@@ -167,7 +167,7 @@ export function NewPlanFlow({ templates }: { templates: TemplateCardData[] }) {
                           <label className={`flex h-full cursor-pointer items-center gap-3 p-3 ${on ? "bg-paper-2 shadow-[inset_3px_0_0_var(--color-marker)]" : "hover:bg-paper-2/60"}`}>
                             <input type="radio" name="template" value={t.slug} checked={on} onChange={() => setSlug(t.slug)} className="sr-only" />
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={t.thumb} alt="" className="aspect-[4/3] w-24 shrink-0 border border-rule-soft bg-white object-contain p-1" />
+                            <img src={t.thumb} alt="" className="aspect-[4/3] w-24 shrink-0 border border-rule-soft bg-paper object-contain p-1" />
                             <span className="min-w-0">
                               <span className="block font-medium">{t.name}</span>
                               <span className="label mt-1 block text-[0.62rem] text-ink-3">
