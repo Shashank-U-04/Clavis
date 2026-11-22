@@ -1,18 +1,22 @@
 /**
  * The landing page's model: a design and its grounds, rendered the way the studio renders
- * them, that visitors can turn and zoom. It opens as the 2D plan seen from straight above,
- * north up, then the house rises out of the plan while the camera swings round to the front,
- * and the trees grow in.
+ * them, that visitors can turn and zoom.
  *
- * Interaction (OrbitControls): drag to turn, right-drag or two fingers to pan. Zoom with the
- * buttons, Ctrl/⌘ + scroll, or a pinch — a plain scroll wheel keeps scrolling the page.
- * It draws only while something moves, and not at all while off screen.
+ * It opens as the 2D plan seen from straight above, north up, and is then built floor by floor
+ * while the camera circles the house: the ground floor's walls rise wall by wall and its rooms
+ * are furnished, the next floor's slabs are lowered on, its walls rise and its rooms are
+ * furnished, and so on to the top; then the roof goes on, the pool, terraces and garden come
+ * in, and the camera settles at the front. Every frame of the opening is worked out from the
+ * time alone (`pose`), so it never jumps and a replay starts exactly where the first one did.
+ *
+ * Interaction (OrbitControls): drag to turn, right-drag or two fingers to pan, scroll or pinch
+ * to zoom. It draws only while something moves, and not at all while off screen.
  */
 
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlanModel, Room } from "../model/types";
-import { elevationOf, levelAbove, levelOf } from "../model/levels";
+import { elevationOf, levelAbove, levelOf, levelsOf } from "../model/levels";
 import { catalogByKind } from "../model/catalog";
 import type { SitePiece } from "../components/figures/sunsetFigure";
 import { buildContent, disposeGroup } from "./content";
@@ -26,15 +30,27 @@ const INK = new THREE.Color("#15171c");
 const CAP = wallCapMaterial.color.clone();
 
 const roofMaterial = surface("#eeede8", "matte");
+/** How deep a roof slab is; a roof over a lower wing sits flush with the floor beside it. */
+const ROOF_DEPTH = 0.2;
+
+/** One roof slab, and the floor (index from the ground) whose build it belongs to. */
+interface RoofSlab {
+  mesh: THREE.Object3D;
+  /** a roof over a lower wing goes on with the floor above it; the top roof goes on last */
+  withLevel: number | null;
+}
 
 /**
- * A flat roof over every room that has no room above it, out to the walls' outer faces and
- * resting on the tallest wall of its floor. A room mostly covered by the floor above is left
- * to that floor's slab.
+ * A flat roof over every room that has no room above it, out to the walls' outer faces. Over a
+ * lower wing it is level with the floor above (the walls reach up to it); over the top floor it
+ * rests on that floor's tallest wall. A room mostly covered by the floor above is left to that
+ * floor's slab.
  */
-function buildRoof(model: PlanModel): THREE.Group {
-  const roof = new THREE.Group();
-  roof.name = "roof";
+function buildRoof(model: PlanModel): { group: THREE.Group; slabs: RoofSlab[] } {
+  const group = new THREE.Group();
+  group.name = "roof";
+  const slabs: RoofSlab[] = [];
+  const levels = levelsOf(model);
   const edge = Math.max(0.1, ...model.walls.map((w) => w.thickness)) / 2 + 0.02;
   const overlap = (a: Room, b: Room) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
   for (const r of model.rooms) {
@@ -42,22 +58,66 @@ function buildRoof(model: PlanModel): THREE.Group {
     const above = levelAbove(model, level);
     const covered = above ? model.rooms.filter((o) => levelOf(o) === above.id).reduce((sum, o) => sum + overlap(r, o), 0) : 0;
     if (covered > r.w * r.h * 0.5) continue;
-    const top = elevationOf(model, level) + Math.max(2.4, ...model.walls.filter((w) => levelOf(w) === level).map((w) => w.height));
-    roof.add(slab(r.w + edge * 2, 0.24, r.h + edge * 2, roofMaterial).at(r.x + r.w / 2, top, r.y + r.h / 2));
+    const wallTop = Math.max(2.4, ...model.walls.filter((w) => levelOf(w) === level).map((w) => w.height));
+    // just under the floor finish above, so the two never fight over the same surface
+    const bottom = above ? above.elevation - ROOF_DEPTH - 0.01 : elevationOf(model, level) + wallTop;
+    const mesh = slab(r.w + edge * 2, ROOF_DEPTH, r.h + edge * 2, roofMaterial).at(r.x + r.w / 2, bottom, r.y + r.h / 2);
+    group.add(mesh);
+    slabs.push({ mesh, withLevel: above ? levels.findIndex((l) => l.id === above.id) : null });
   }
-  return roof;
+  return { group, slabs };
 }
 
-/** Phases of the opening, in milliseconds. */
-const RISE: [number, number] = [700, 3300];
-const SWING: [number, number] = [300, 3900];
-const GROW: [number, number] = [2600, 4200];
-const ROOF: [number, number] = [3500, 4400];
-export const INTRO_MS = 4400;
-
 const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+/** ease in and out (cubic) */
 const ease = (v: number) => (v < 0.5 ? 4 * v * v * v : 1 - (-2 * v + 2) ** 3 / 2);
-const within = (t: number, [a, b]: [number, number]) => clamp((t - a) / (b - a));
+/** a gentler ease for long camera moves: no sudden rush in the middle */
+const glide = (v: number) => 0.5 - Math.cos(Math.PI * v) / 2;
+/** ease out with a touch of settle, for pieces lowered into place */
+const land = (v: number) => 1 - (1 - v) ** 3;
+const span = (t: number, at: number, ms: number) => clamp((t - at) / ms);
+
+/** The opening's rhythm (ms). */
+const PLAN_HOLD = 1300; // the flat plan, from above, before anything rises
+const SLAB_MS = 900; // an upper floor's slabs are lowered on
+const WALLS_MS = 2100; // a floor's walls rise, one after another
+const WALL_MS = 1000; // …each wall takes this long
+const FURNISH_MS = 1500; // a floor's rooms are furnished, piece after piece
+const PIECE_MS = 650;
+const ROOF_MS = 1100;
+const GROUNDS_MS = 2000;
+const SETTLE_MS = 1600; // the camera comes round to the front
+const TURN_DELAY = 900; // the camera tilts this long before it starts to circle
+
+/** Outdoor pieces that grow in rather than being set down. */
+const PLANTS = /tree|hedge|planter|shrub|bush/;
+
+/** How a piece of the house comes in. */
+type Arrival = "rise" | "lower" | "drop" | "grow";
+
+interface Piece {
+  obj: THREE.Object3D;
+  y: number;
+  scale: THREE.Vector3;
+  at: number;
+  ms: number;
+  how: Arrival;
+  /** how far above its place a lowered or dropped piece starts */
+  from: number;
+  /** a piece already there in the flat plan (the ground floor's walls and floors) */
+  inPlan: boolean;
+}
+
+/** The moments the page's build log follows (ms from the start of the opening). */
+export interface ShowcaseTimeline {
+  /** the camera starts down from the plan */
+  lift: number;
+  /** each floor starts building, from the ground up */
+  levels: number[];
+  roof: number;
+  grounds: number;
+  end: number;
+}
 
 export interface ShowcaseOptions {
   /** where the camera rests, as a direction from the house in plan (x east, y south) */
@@ -71,16 +131,14 @@ export interface ShowcaseOptions {
 export class Showcase {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(38, 1, 0.1, 1500);
+  private camera = new THREE.PerspectiveCamera(38, 1, 0.3, 900);
   private controls: OrbitControls;
   private daylight: Daylight;
   private house: THREE.Group;
   private site: THREE.Group;
   private roof: THREE.Group;
-  /** 0 = roof off (lifted away), 1 = roof on */
-  private roofOn = 0;
-  private roofTarget = 1;
-  private trees: THREE.Object3D[] = [];
+  private pieces: Piece[] = [];
+  readonly timeline: ShowcaseTimeline;
   private centre = new THREE.Vector3();
   private radius = 10;
   private rest = { position: new THREE.Vector3(), target: new THREE.Vector3() };
@@ -92,7 +150,6 @@ export class Showcase {
   private tween: { t0: number; ms: number; from: THREE.Vector3; to: THREE.Vector3; target0: THREE.Vector3; target1: THREE.Vector3 } | null = null;
   private resize: ResizeObserver;
   private seen: IntersectionObserver;
-  private cleanups: (() => void)[] = [];
 
   constructor(
     private mount: HTMLElement,
@@ -118,13 +175,11 @@ export class Showcase {
       const m = (o as THREE.Mesh).material;
       if ((o as THREE.Light).isLight || m === lampShadeMaterial || m === cordMaterial) o.visible = false;
     });
-    // the lawn stays where it is while the house rises out of its plan
+    // the lawn stays where it is while the house is built on it
     const ground = group.getObjectByName("ground");
     this.site = buildSite(sitePieces);
-    this.site.traverse((o) => {
-      if (o.userData.grows) this.trees.push(o);
-    });
-    this.roof = buildRoof(model);
+    const roof = buildRoof(model);
+    this.roof = roof.group;
     this.scene.add(this.house, this.site, this.roof);
     if (ground) this.scene.attach(ground);
 
@@ -144,11 +199,13 @@ export class Showcase {
     this.radius = Math.max(6, framed.getSize(new THREE.Vector3()).setY(0).length() / 2);
     this.daylight.aim(all.getCenter(new THREE.Vector3()), all.getSize(new THREE.Vector3()).setY(0).length() / 2 + 2);
 
+    this.timeline = this.schedule(model, roof.slabs);
+
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     Object.assign(this.controls, {
       enableDamping: true,
       dampingFactor: 0.08,
-      enableZoom: opts.touch, // pinch on phones; Ctrl/⌘ + scroll and the buttons elsewhere
+      zoomSpeed: 0.7,
       minDistance: this.radius * 0.35,
       maxDistance: this.radius * 3.5,
       minPolarAngle: 0.05,
@@ -160,18 +217,6 @@ export class Showcase {
     // on a phone one finger scrolls the page until the visitor chooses to explore the model
     this.setTouch(!opts.touch);
 
-    this.placeViews();
-    this.camera.position.copy(this.rest.position);
-    this.controls.target.copy(this.rest.target);
-
-    const onWheel = (e: WheelEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || !this.controls.enabled) return; // a plain wheel scrolls the page
-      e.preventDefault();
-      this.zoom(e.deltaY < 0 ? 0.88 : 1 / 0.88, false);
-    };
-    this.renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
-    this.cleanups.push(() => this.renderer.domElement.removeEventListener("wheel", onWheel));
-
     this.resize = new ResizeObserver(() => this.fit());
     this.resize.observe(mount);
     this.seen = new IntersectionObserver(([e]) => {
@@ -180,7 +225,82 @@ export class Showcase {
     });
     this.seen.observe(mount);
     this.fit();
+    // until the opening plays, the frame shows its first moment: the flat plan from above
+    this.pose(0);
     this.loop();
+  }
+
+  /**
+   * When each piece of the house comes in. Floors are built from the ground up; on each, the
+   * walls rise in a sweep across the plan and then the rooms are furnished the same way. The
+   * design's outdoor pieces (pool, terraces, loungers, trees) wait for the grounds, after the roof.
+   */
+  private schedule(model: PlanModel, roofs: RoofSlab[]): ShowcaseTimeline {
+    const levels = levelsOf(model);
+    const indexOf = (id: string) => Math.max(0, levels.findIndex((l) => l.id === id));
+    const byId = new Map<string, { level: number; kind: "wall" | "room" | "item" | "outdoor" | "plant"; x: number; y: number }>();
+    for (const w of model.walls) byId.set(w.id, { level: indexOf(levelOf(w)), kind: "wall", x: (w.ax + w.bx) / 2, y: (w.ay + w.by) / 2 });
+    for (const r of model.rooms) byId.set(r.id, { level: indexOf(levelOf(r)), kind: "room", x: r.x + r.w / 2, y: r.y + r.h / 2 });
+    for (const it of model.items) {
+      // pools, terraces and outdoor furniture are set down; trees, hedges and planters grow
+      const outdoor = catalogByKind(it.kind)?.category === "outdoor";
+      const kind = !outdoor ? "item" : PLANTS.test(it.kind) ? "plant" : "outdoor";
+      byId.set(it.id, { level: indexOf(levelOf(it)), kind, x: it.x, y: it.y });
+    }
+
+    // a sweep across the plan, from the corner the camera starts nearest to: 0 … 1
+    const sweep = (x: number, y: number) => x * 0.8 + y * 0.6;
+    const order = (list: { x: number; y: number }[]) => {
+      const values = list.map((p) => sweep(p.x, p.y));
+      const lo = Math.min(...values);
+      const hi = Math.max(...values);
+      return (p: { x: number; y: number }) => (hi - lo < 1e-6 ? 0 : (sweep(p.x, p.y) - lo) / (hi - lo));
+    };
+
+    const groups = new Map<string, { obj: THREE.Object3D; level: number; x: number; y: number }[]>();
+    const add = (key: string, entry: { obj: THREE.Object3D; level: number; x: number; y: number }) => groups.set(key, [...(groups.get(key) ?? []), entry]);
+    for (const obj of this.house.children) {
+      const info = byId.get(obj.userData.entityId);
+      if (!info || !obj.visible) continue;
+      add(info.kind === "outdoor" || info.kind === "plant" ? info.kind : `${info.kind}:${info.level}`, { obj, level: info.level, x: info.x, y: info.y });
+    }
+
+    const piece = (obj: THREE.Object3D, at: number, ms: number, how: Arrival, from = 0, inPlan = false) =>
+      this.pieces.push({ obj, y: obj.position.y, scale: obj.scale.clone(), at, ms, how, from, inPlan });
+    const stagger = (key: string, at: number, total: number, each: number, how: Arrival, from = 0, inPlan = false) => {
+      const list = groups.get(key) ?? [];
+      const rank = order(list);
+      for (const e of list) piece(e.obj, at + rank(e) * Math.max(0, total - each), each, how, from, inPlan);
+    };
+
+    const starts: number[] = [];
+    let t = PLAN_HOLD;
+    for (let i = 0; i < levels.length; i++) {
+      starts.push(t);
+      if (i > 0) {
+        // the floor's slabs are lowered on, and the roofs over the wing below with them
+        stagger(`room:${i}`, t, SLAB_MS, SLAB_MS * 0.7, "lower", 2.6);
+        for (const r of roofs) if (r.withLevel === i) piece(r.mesh, t, SLAB_MS * 0.7, "lower", 2.6);
+        t += SLAB_MS * 0.75;
+      } else {
+        // the ground floor's rooms are the plan itself
+        stagger("room:0", 0, 0, 0, "lower", 0, true);
+      }
+      stagger(`wall:${i}`, t, WALLS_MS, WALL_MS, "rise", 0, i === 0);
+      stagger(`item:${i}`, t + WALLS_MS * 0.75, FURNISH_MS, PIECE_MS, "drop", 0.9);
+      t += WALLS_MS * 0.75 + FURNISH_MS * 0.55;
+    }
+    const roofAt = t;
+    const top = roofs.filter((r) => r.withLevel === null);
+    top.forEach((r, i) => piece(r.mesh, roofAt + (top.length > 1 ? (i / (top.length - 1)) * ROOF_MS * 0.4 : 0), ROOF_MS * 0.6, "lower", 3));
+    const groundsAt = roofAt + ROOF_MS * 0.6;
+    stagger("outdoor", groundsAt, GROUNDS_MS * 0.7, 700, "drop", 0.6);
+    stagger("plant", groundsAt + GROUNDS_MS * 0.3, GROUNDS_MS * 0.7, 900, "grow");
+    let n = 0;
+    this.site.traverse((o) => {
+      if (o.userData.grows) piece(o, groundsAt + GROUNDS_MS * 0.3 + ((n++ * 7) % 10) * GROUNDS_MS * 0.05, 900, "grow");
+    });
+    return { lift: PLAN_HOLD * 0.7, levels: starts, roof: roofAt, grounds: groundsAt, end: groundsAt + GROUNDS_MS + SETTLE_MS * 0.5 };
   }
 
   /** The resting view (from the front, looking down a little) and the plan view (straight down, north up). */
@@ -202,23 +322,18 @@ export class Showcase {
     return (this.radius * fill) / Math.sin(Math.min(v, h));
   }
 
-  /** Play the opening: from the flat plan, up into the model. */
+  /** Play the opening: from the flat plan, up into the finished house. */
   playIntro(reduceMotion: boolean) {
-    this.roofTarget = 1; // every opening ends with the roof on
     this.tween = null;
     if (reduceMotion) return this.finishIntro();
     this.intro = { t0: performance.now() };
     this.controls.enabled = false;
-    this.dirty = true;
+    this.pose(0);
   }
 
   private finishIntro() {
     this.intro = null;
-    this.roofOn = this.roofTarget;
-    this.placeRoof();
-    this.house.scale.y = 1;
-    wallCapMaterial.color.copy(CAP);
-    for (const t of this.trees) t.scale.setScalar(1);
+    this.pose(Infinity);
     this.camera.up.set(0, 1, 0);
     this.camera.position.copy(this.rest.position);
     this.controls.target.copy(this.rest.target);
@@ -227,69 +342,80 @@ export class Showcase {
     this.dirty = true;
   }
 
-  private stepIntro(now: number) {
-    const t = now - this.intro!.t0;
-    const rise = ease(within(t, RISE));
-    const swing = ease(within(t, SWING));
-    const grow = ease(within(t, GROW));
-    // the roof settles on last
-    this.roofOn = this.roofTarget * ease(within(t, ROOF));
-    this.placeRoof();
-    // the house rises out of its own plan
-    this.house.scale.y = 0.004 + rise * 0.996;
-    wallCapMaterial.color.copy(INK).lerp(CAP, clamp(rise * 4));
-    for (const tr of this.trees) tr.scale.setScalar(Math.max(0.001, grow));
-    // the camera swings from straight above (north up) round and down to the front
-    const from = this.plan.position.clone().sub(this.plan.target);
-    const to = this.rest.position.clone().sub(this.rest.target);
-    const sFrom = new THREE.Spherical().setFromVector3(from);
-    const sTo = new THREE.Spherical().setFromVector3(to);
-    // the plan view has no direction of its own: start it facing north so the turn reads
-    sFrom.theta = Math.PI;
-    let dTheta = sTo.theta - sFrom.theta;
+  /** The house and the camera `t` ms into the opening. */
+  private pose(t: number) {
+    for (const p of this.pieces) {
+      const raw = span(t, p.at, p.ms);
+      const o = p.obj;
+      o.position.y = p.y;
+      o.scale.copy(p.scale);
+      if (p.how === "rise") {
+        // a wall grows up from its footprint; in the flat plan it is a low ink outline
+        const s = p.inPlan ? 0.025 + 0.975 * ease(raw) : ease(raw);
+        o.visible = s > 0.001;
+        o.scale.y = p.scale.y * Math.max(0.001, s);
+      } else if (p.how === "lower") {
+        const s = land(raw);
+        o.visible = p.inPlan || raw > 0;
+        o.position.y = p.y + (1 - s) * p.from;
+      } else if (p.how === "drop") {
+        const s = land(raw);
+        o.visible = raw > 0;
+        o.position.y = p.y + (1 - s) * p.from;
+        o.scale.multiplyScalar(Math.max(0.001, 0.6 + 0.4 * s));
+      } else {
+        const s = land(raw);
+        o.visible = raw > 0;
+        o.scale.multiplyScalar(Math.max(0.001, s));
+      }
+    }
+    // wall tops: ink in the plan, plaster once the ground floor stands
+    const groundWalls = this.timeline.levels[0] ?? PLAN_HOLD;
+    wallCapMaterial.color.copy(INK).lerp(CAP, span(t, groundWalls, WALLS_MS * 0.5));
+    if (Number.isFinite(t)) this.poseCamera(t);
+    this.dirty = true;
+  }
+
+  /**
+   * The camera: straight down on the plan, north up; then it tilts down over the house and
+   * circles it once while it is built, looking a little higher as the floors go up, and comes
+   * round to the front as the garden grows in.
+   */
+  private poseCamera(t: number) {
+    const { lift, end } = this.timeline;
+    const tilt = ease(span(t, lift, 2200));
+    // the circling starts once the camera has tilted well off the vertical: turning while it
+    // still looks straight down would spin the picture on the spot
+    const turn = glide(span(t, lift + TURN_DELAY, end - lift - TURN_DELAY));
+    const settle = ease(span(t, end - SETTLE_MS * 1.4, SETTLE_MS * 1.4));
+
+    const from = new THREE.Spherical().setFromVector3(this.plan.position.clone().sub(this.plan.target));
+    const to = new THREE.Spherical().setFromVector3(this.rest.position.clone().sub(this.rest.target));
+    // the plan view has no direction of its own: start it from the south, looking north, so as
+    // the camera tilts down north stays at the top of the picture (from the north side it
+    // would have to roll half a turn on the way down, which shows as a jolt)
+    from.theta = 0;
+    let dTheta = to.theta - from.theta;
     if (dTheta > Math.PI) dTheta -= 2 * Math.PI;
     if (dTheta < -Math.PI) dTheta += 2 * Math.PI;
-    const s = new THREE.Spherical(sFrom.radius + (sTo.radius - sFrom.radius) * swing, Math.max(0.0001, sFrom.phi + (sTo.phi - sFrom.phi) * swing), sFrom.theta + dTheta * swing);
-    const target = this.plan.target.clone().lerp(this.rest.target, swing);
-    this.camera.position.copy(target).add(new THREE.Vector3().setFromSpherical(s));
+    // once all the way round, plus whatever is left to reach the front
+    const theta = from.theta + (dTheta + (dTheta >= 0 ? 2 * Math.PI : -2 * Math.PI)) * turn;
+    // while circling it looks down at about 30°, so every floor and the roof can be seen
+    const orbit = { phi: THREE.MathUtils.degToRad(60), radius: to.radius * 1.12 };
+    const phi = from.phi + (orbit.phi - from.phi) * tilt + (to.phi - orbit.phi) * settle;
+    const radius = from.radius + (orbit.radius - from.radius) * tilt + (to.radius - orbit.radius) * settle;
+
+    // the eye follows the building up as floors are added
+    const built = this.timeline.levels.length ? clamp((t - this.timeline.levels[0]) / Math.max(1, this.timeline.roof - this.timeline.levels[0])) : 1;
+    const target = this.plan.target.clone().lerp(this.rest.target, tilt);
+    target.y = this.plan.target.y + (this.rest.target.y - this.plan.target.y) * tilt * (0.55 + 0.45 * built);
+    target.lerp(this.rest.target, settle);
+
+    this.camera.position.copy(target).add(new THREE.Vector3().setFromSpherical(new THREE.Spherical(radius, Math.max(0.0001, phi), theta)));
     // north up while looking straight down, then the world's up as the camera comes down
-    this.camera.up.set(0, 0, -1).lerp(new THREE.Vector3(0, 1, 0), clamp(swing * 3)).normalize();
+    this.camera.up.set(0, 0, -1).lerp(new THREE.Vector3(0, 1, 0), clamp(tilt * 3)).normalize();
     this.camera.lookAt(target);
     this.controls.target.copy(target);
-    this.dirty = true;
-    if (t >= INTRO_MS) this.finishIntro();
-  }
-
-  /** Put the roof on (true) or lift it off to look inside (false). */
-  setRoof(on: boolean) {
-    this.roofTarget = on ? 1 : 0;
-    this.dirty = true;
-  }
-
-  get roofShown(): boolean {
-    return this.roofTarget === 1;
-  }
-
-  /** The roof hovers above the house and fades as it lifts off. */
-  private placeRoof() {
-    const lift = 1 - this.roofOn;
-    this.roof.position.y = lift * 4;
-    this.roof.visible = this.roofOn > 0.01;
-    this.dirty = true;
-  }
-
-  /** Zoom in (factor < 1) or out (> 1), smoothly or at once. */
-  zoom(factor: number, smooth = true) {
-    if (this.intro) this.finishIntro();
-    const offset = this.camera.position.clone().sub(this.controls.target);
-    const len = THREE.MathUtils.clamp(offset.length() * factor, this.controls.minDistance, this.controls.maxDistance);
-    const to = this.controls.target.clone().add(offset.setLength(len));
-    if (!smooth) {
-      this.camera.position.copy(to);
-      this.dirty = true;
-      return;
-    }
-    this.tween = { t0: performance.now(), ms: 320, from: this.camera.position.clone(), to, target0: this.controls.target.clone(), target1: this.controls.target.clone() };
   }
 
   /** Back to the front view. */
@@ -300,14 +426,20 @@ export class Showcase {
 
   /** Whether the visitor has moved away from the front view. */
   get moved(): boolean {
-    return this.camera.position.distanceTo(this.rest.position) > 0.2 || this.controls.target.distanceTo(this.rest.target) > 0.2;
+    return !this.intro && (this.camera.position.distanceTo(this.rest.position) > 0.2 || this.controls.target.distanceTo(this.rest.target) > 0.2);
+  }
+
+  /** Whether the opening is still playing. */
+  get playing(): boolean {
+    return this.intro !== null;
   }
 
   /** Let one finger turn the model (true) or scroll the page (false). */
   setTouch(on: boolean) {
     this.controls.enableRotate = on || !this.opts.touch;
     this.controls.enablePan = on || !this.opts.touch;
-    this.controls.enableZoom = on && this.opts.touch;
+    // the scroll wheel zooms on a computer; on a phone, a pinch once exploring
+    this.controls.enableZoom = on || !this.opts.touch;
     this.renderer.domElement.style.touchAction = on || !this.opts.touch ? "none" : "pan-y";
   }
 
@@ -320,11 +452,14 @@ export class Showcase {
     this.renderer.domElement.style.height = "100%";
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    const wasAtRest = !this.moved;
+    const wasAtRest = !this.moved && !this.intro && this.controls?.enabled;
     this.placeViews();
-    if (wasAtRest && !this.intro) {
+    if (wasAtRest) {
       this.camera.position.copy(this.rest.position);
       this.controls.target.copy(this.rest.target);
+    } else if (!this.intro && !this.controls.enabled && this.timeline) {
+      // still waiting to open: keep showing the plan, framed to the new size
+      this.pose(0);
     }
     this.dirty = true;
   }
@@ -333,7 +468,11 @@ export class Showcase {
     this.frame = requestAnimationFrame(this.loop);
     if (!this.visible) return;
     const now = performance.now();
-    if (this.intro) this.stepIntro(now);
+    if (this.intro) {
+      const t = now - this.intro.t0;
+      if (t >= this.timeline.end) this.finishIntro();
+      else this.pose(t);
+    }
     if (this.tween) {
       const p = ease(clamp((now - this.tween.t0) / this.tween.ms));
       this.camera.position.lerpVectors(this.tween.from, this.tween.to, p);
@@ -341,14 +480,7 @@ export class Showcase {
       this.dirty = true;
       if (p >= 1) this.tween = null;
     }
-    if (!this.intro) {
-      this.controls.update();
-      if (Math.abs(this.roofOn - this.roofTarget) > 1e-3) {
-        this.roofOn += (this.roofTarget - this.roofOn) * 0.16;
-        if (Math.abs(this.roofOn - this.roofTarget) < 1e-3) this.roofOn = this.roofTarget;
-        this.placeRoof();
-      }
-    }
+    if (!this.intro && this.controls.enabled) this.controls.update();
     if (!this.dirty) return;
     this.dirty = false;
     this.renderer.render(this.scene, this.camera);
@@ -358,7 +490,6 @@ export class Showcase {
     cancelAnimationFrame(this.frame);
     this.resize.disconnect();
     this.seen.disconnect();
-    for (const c of this.cleanups) c();
     this.controls.dispose();
     disposeGroup(this.house);
     disposeGroup(this.site);

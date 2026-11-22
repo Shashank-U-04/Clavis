@@ -11,7 +11,7 @@ import { CATALOG } from "@/model/catalog";
 import { analyzeModel } from "@/model/analysis";
 import { checkModel, summarizeIssues } from "@/model/issues";
 import { lindenHeightsModel } from "@/model/templates";
-import { levelsOf } from "@/model/levels";
+import { levelsOf, onLevel } from "@/model/levels";
 import { CHECK_COUNT } from "@/model/checks";
 import { localProposal } from "@/ai/local/engine";
 import { applyBatch } from "@/model/operations";
@@ -33,19 +33,30 @@ function sampleResult() {
 
 /** The build log beside the hero model, counted from the design it shows. */
 function buildSteps(model: ReturnType<typeof lindenHeightsModel>, overall: string, errors: number, warnings: number): BuildStep[] {
-  const doors = model.openings.filter((o) => o.kind === "door").length;
-  const windows = model.openings.length - doors;
   const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
-  return [
-    { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")} · ${n(levelsOf(model).length, "floor")}` },
-    { code: "002", title: "2D plan", detail: `${overall} · north up` },
-    { code: "003", title: "Raise walls", detail: `${n(model.walls.length, "wall")} to ${Math.max(...model.walls.map((w) => w.height)).toFixed(2)} m` },
-    { code: "004", title: "Openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
-    { code: "005", title: "Furnish", detail: n(model.items.length, "piece") },
-    { code: "006", title: "Grounds", detail: "infinity pool · terraces · garden" },
-    { code: "007", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}` },
-    { code: "008", title: "3D model", detail: "drag to turn · zoom in and out" },
+  const code = (i: number) => String(i + 1).padStart(3, "0");
+  const indoor = (kind: string) => CATALOG.find((c) => c.kind === kind)?.category !== "outdoor";
+  // one line per floor, as the model builds them from the ground up
+  const floors: BuildStep[] = levelsOf(model).map((level) => {
+    const on = onLevel(model, level.id);
+    const openings = on.openings.length;
+    return {
+      code: "",
+      title: level.name,
+      detail: `${n(on.rooms.length, "room")} · ${n(on.walls.length, "wall")} · ${n(openings, "opening")} · ${n(on.items.filter((it) => indoor(it.kind)).length, "piece")}`,
+      cue: `level:${levelsOf(model).indexOf(level)}`,
+    };
+  });
+  const steps: BuildStep[] = [
+    { code: "", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")} · ${n(levelsOf(model).length, "floor")}`, cue: "start" },
+    { code: "", title: "2D plan", detail: `${overall} · north up`, cue: "plan" },
+    ...floors,
+    { code: "", title: "Roof", detail: "flat roofs · open terraces", cue: "roof" },
+    { code: "", title: "Grounds", detail: `${n(model.items.filter((it) => !indoor(it.kind)).length, "piece")} · pool · terraces · garden`, cue: "grounds" },
+    { code: "", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}`, cue: "checks" },
+    { code: "", title: "3D model", detail: "drag to turn · scroll to zoom", cue: "model" },
   ];
+  return steps.map((s, i) => ({ ...s, code: code(i) }));
 }
 
 const CAPABILITIES = [
@@ -83,7 +94,6 @@ export default function Home() {
   const analysis = analyzeModel(model);
   const env = analysis.metrics.envelope!;
   const counts = summarizeIssues(checkModel(model));
-  const rooms = analysis.rooms;
   const STEPS = steps(sampleResult());
 
   return (
@@ -218,58 +228,8 @@ export default function Home() {
         </ul>
       </Section>
 
-      {/* ---------------------------------------------------------------- validator */}
-      <Section
-        sheet="04"
-        title="The validator is the referee."
-        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is Linden Heights' own room schedule, all three floors, measured by that engine."
-      >
-        <div className="grid lg:grid-cols-[1fr_20rem]">
-          <div className="overflow-x-auto border-b border-rule lg:border-b-0 lg:border-r">
-            <table className="w-full min-w-[34rem] text-left">
-              <caption className="sr-only">Room schedule of Linden Heights</caption>
-              <thead>
-                <tr className="label border-b border-rule text-ink-3">
-                  <th className="px-5 py-3 font-normal md:px-8">Room</th>
-                  <th className="px-3 py-3 text-right font-normal">Clear floor</th>
-                  <th className="px-3 py-3 text-right font-normal">Daylight</th>
-                  <th className="px-3 py-3 text-right font-normal">Windows</th>
-                  <th className="px-5 py-3 text-right font-normal md:px-8">Doors from entrance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rooms.map((r, i) => (
-                  <tr key={r.id} data-reveal style={at(i * 0.5)} className="border-b border-rule-soft last:border-0">
-                    <td className="px-5 py-3 font-medium md:px-8">{r.label}</td>
-                    <td className="px-3 py-3 text-right font-mono text-sm">{r.area.toFixed(1)} m²</td>
-                    <td className={`px-3 py-3 text-right font-mono text-sm ${r.habitable && r.daylightRatio < 0.1 ? "text-marker" : ""}`}>{r.windows.length ? `${Math.round(r.daylightRatio * 100)} %` : "—"}</td>
-                    <td className="px-3 py-3 text-right font-mono text-sm">{r.windows.length}</td>
-                    <td className="px-5 py-3 text-right font-mono text-sm md:px-8">{r.depth ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div data-reveal style={at(2)} className="flex flex-col justify-between gap-8 p-5 md:p-8">
-            <div>
-              <p className="label text-ink-3">Findings</p>
-              <p className="mt-3 text-5xl font-semibold tracking-[-0.04em]">
-                {counts.error} <span className="text-ink-3">/</span> {counts.warning}
-              </p>
-              <p className="label mt-2 text-ink-2">errors / warnings</p>
-            </div>
-            <p className="text-sm text-ink-2">
-              {analysis.metrics.carpetArea.toFixed(1)} m² of clear floor in a {analysis.metrics.envelope!.w.toFixed(1)} × {analysis.metrics.envelope!.h.toFixed(1)} m footprint. Rules of thumb for early design, not a building-code review.
-            </p>
-            <ButtonLink href="/features/validation" variant="outline">
-              All {CHECK_COUNT} checks
-            </ButtonLink>
-          </div>
-        </div>
-      </Section>
-
       {/* ---------------------------------------------------------------- assistants */}
-      <Section sheet="05" title="Two assistants, one referee." intro="Clavis Local answers first, in your browser, with no key and nothing sent anywhere. What it doesn't understand goes to a hosted model. Either way you see a checked preview before anything changes.">
+      <Section sheet="04" title="Two assistants, the same checks." intro="Clavis Local answers first, in your browser, with no key and nothing sent anywhere. What it doesn't understand goes to a hosted model. Either way you see a checked preview before anything changes.">
         <div className="grid md:grid-cols-2">
           {[
             { tag: "In your browser", name: "Clavis Local", points: ["Designs homes from a brief", "Furnishes, repairs and resizes rooms", "Answers questions with measured numbers", "Instant, private, free"] },

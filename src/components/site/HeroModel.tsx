@@ -2,26 +2,39 @@
 
 /**
  * The landing page's hero: a real 3D model of the house and its grounds that opens as the 2D
- * plan and rises into the building, then can be turned and zoomed. The 3D code is loaded only
+ * plan and is built floor by floor, the build log beside it following each stage, and can then
+ * be turned (drag) and zoomed (scroll wheel or pinch). The 3D code is loaded only
  * in the browser; while it loads the frame shows the sky it will open into. A browser that
  * cannot start WebGL gets the drafted drawing of the same house instead.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Hand, Minus, Plus, RotateCcw } from "lucide-react";
+import { Hand, RotateCcw } from "lucide-react";
 import type { PlanModel } from "@/model/types";
 import type { SitePiece } from "@/components/figures/sunsetFigure";
-import type { Showcase } from "@/three/showcase";
+import type { Showcase, ShowcaseTimeline } from "@/three/showcase";
 
 export interface BuildStep {
   code: string;
   title: string;
   detail: string;
+  /**
+   * When the line lights up, as a moment of the model's opening: "start", "plan", "level:<n>"
+   * (the nth floor from the ground starts building), "roof", "grounds", "checks" or "model".
+   */
+  cue?: string;
 }
 
-/** When each line of the log lights up during the opening (ms), and how long it runs. */
-const STEP_AT = [0, 300, 700, 1500, 2200, 2600, 3800, 4300];
-const OPENING_MS = 4400;
+/** When a line of the log lights up (ms into the opening). */
+function cueAt(cue: string | undefined, t: ShowcaseTimeline): number {
+  if (!cue || cue === "start") return 0;
+  if (cue === "plan") return t.lift * 0.5;
+  if (cue.startsWith("level:")) return t.levels[Number(cue.slice(6))] ?? t.roof;
+  if (cue === "roof") return t.roof;
+  if (cue === "grounds") return t.grounds;
+  if (cue === "checks") return t.grounds + (t.end - t.grounds) * 0.55;
+  return t.end - 300;
+}
 
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -33,7 +46,6 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
   const [moved, setMoved] = useState(false);
   const [touch, setTouch] = useState(false);
   const [exploring, setExploring] = useState(false);
-  const [roof, setRoof] = useState(true);
   const timers = useRef<number[]>([]);
 
   /** Play the opening, with the log lighting up line by line alongside it. */
@@ -42,11 +54,10 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
     timers.current = [];
     const still = reduceMotion();
     s.playIntro(still);
-    setRoof(true);
     if (still) return setStep(steps.length);
     setStep(-1);
-    STEP_AT.forEach((at, i) => timers.current.push(window.setTimeout(() => setStep(i), at)));
-    timers.current.push(window.setTimeout(() => setStep(steps.length), OPENING_MS));
+    steps.forEach((st, i) => timers.current.push(window.setTimeout(() => setStep(i), cueAt(st.cue, s.timeline))));
+    timers.current.push(window.setTimeout(() => setStep(steps.length), s.timeline.end));
   };
   const [Fallback, setFallback] = useState<ReactNode>(null);
 
@@ -142,7 +153,7 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
           <span className="label text-right text-ink-2">{caption}</span>
         </div>
         <div className="relative overflow-hidden border border-rule" style={{ background: "linear-gradient(#5b8fca, #cfe1ee 62%, #7f9a66 62%, #62804c)" }}>
-          <div ref={mount} className="h-[clamp(380px,62vw,560px)] w-full cursor-grab active:cursor-grabbing lg:h-[clamp(460px,72vh,780px)]" aria-label="A 3D model of the house: drag to turn it, use the buttons or Ctrl and scroll to zoom" role="img" />
+          <div ref={mount} className="h-[clamp(380px,62vw,560px)] w-full cursor-grab active:cursor-grabbing lg:h-[clamp(460px,72vh,780px)]" aria-label="A 3D model of the house: drag to turn it, scroll to zoom" role="img" />
           {state === "loading" && <p className="label absolute inset-0 grid place-items-center text-paper">Loading the 3D model…</p>}
           {state === "ready" && (
             <div className="absolute bottom-3 right-3 flex gap-1">
@@ -151,31 +162,13 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
                   <Hand size={14} aria-hidden="true" /> {exploring ? "Done" : "Explore in 3D"}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  show.current?.setRoof(!roof);
-                  setRoof(!roof);
-                }}
-                aria-pressed={!roof}
-                className={`label flex h-9 items-center border px-3 backdrop-blur ${roof ? "border-rule bg-paper/85 text-ink hover:text-marker" : "border-marker bg-marker text-paper"}`}
-                title={roof ? "Lift the roof off to look inside" : "Put the roof back on"}
-              >
-                {roof ? "Look inside" : "Roof on"}
-              </button>
-              <button type="button" onClick={() => show.current?.zoom(0.8)} className="grid h-9 w-9 place-items-center border border-rule bg-paper/85 text-ink backdrop-blur hover:text-marker" aria-label="Zoom in">
-                <Plus size={16} aria-hidden="true" />
-              </button>
-              <button type="button" onClick={() => show.current?.zoom(1.25)} className="grid h-9 w-9 place-items-center border border-rule bg-paper/85 text-ink backdrop-blur hover:text-marker" aria-label="Zoom out">
-                <Minus size={16} aria-hidden="true" />
-              </button>
               <button type="button" onClick={() => show.current?.reset()} disabled={!moved} className="grid h-9 w-9 place-items-center border border-rule bg-paper/85 text-ink backdrop-blur hover:text-marker disabled:opacity-40" aria-label="Back to the front view">
                 <RotateCcw size={15} aria-hidden="true" />
               </button>
             </div>
           )}
         </div>
-        <p className="label pt-2 text-ink-3">{touch ? "Tap Explore in 3D, then drag to turn and pinch to zoom" : "Drag to turn · right-drag to move · Ctrl + scroll or + / − to zoom"}</p>
+        <p className="label pt-2 text-ink-3">{touch ? "Tap Explore in 3D, then drag to turn and pinch to zoom" : "Drag to turn · right-drag to move · scroll to zoom"}</p>
       </div>
     </div>
   );
