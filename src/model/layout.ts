@@ -17,6 +17,7 @@
 
 import { z } from "zod";
 import type { Opening, Room, Wall } from "./types";
+import { DEFAULT_CEILING } from "./levels";
 import { snap } from "./geometry";
 
 export const FLOOR_FINISHES = ["oak", "tile", "carpet", "concrete"] as const;
@@ -100,7 +101,7 @@ const key = (v: number) => Math.round(v * 1000);
 export function buildLayout(spec: LayoutSpec, newId: (prefix: string) => string): LayoutResult {
   const extT = spec.exteriorThickness ?? 0.2;
   const intT = spec.interiorThickness ?? 0.1;
-  const height = spec.wallHeight ?? 2.7;
+  const height = spec.wallHeight ?? DEFAULT_CEILING;
 
   const rooms = spec.rooms.map((r) => ({ ...r, x: snap(r.x), y: snap(r.y), w: snap(r.w), h: snap(r.h) }));
 

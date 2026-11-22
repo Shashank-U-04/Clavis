@@ -64,7 +64,7 @@ const CAPABILITIES = [
   { icon: ScanSearch, title: "A validator on every change", text: "Walls, openings, furniture clearances, daylight, escape windows and the route to every room.", href: "/features/validation" },
   { icon: Compass, title: "Edit in words or by hand", text: "Add a bedroom, make the kitchen bigger, move the sofa — or build it yourself from ready-made rooms that bring their walls.", href: "/features/ai-design" },
   { icon: Box, title: "Plan and 3D side by side", text: "The 3D model follows every edit. Orbit around it or look straight down like a plan.", href: "/features/3d" },
-  { icon: Footprints, title: "Walk through it", text: "Step in at the front door at eye height. Walls stop you; doorways let you through.", href: "/features/3d" },
+  { icon: Footprints, title: "Walk through it", text: "Step in at the front door with a figure at real size, from behind or through its eyes. Walls stop you; doorways let you through.", href: "/features/3d" },
   { icon: FileDown, title: "Keep and share", text: "Projects save as you work. Export a printable plan, the design file or a 3D model.", href: "/features/projects" },
 ];
 
@@ -84,8 +84,8 @@ const steps = (sample: { rooms: number; items: number }) => [
   {
     n: "03",
     title: "Walk",
-    text: "Press Walk and step in at the front door, at eye height. Change something in the plan and the house changes around you.",
-    specimen: ["  eye height   1.60 m", "  move         W A S D", "  look         drag", "  doors        click to open"],
+    text: "Press Walk and step in at the front door with a figure 1.75 m tall. Change something in the plan and the house changes around you.",
+    specimen: ["  figure       1.75 m", "  move         W A S D", "  camera       drag · scroll", "  doors        click to open"],
   },
 ];
 

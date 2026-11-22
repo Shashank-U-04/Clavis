@@ -7,7 +7,7 @@
  * resolved, kept or introduced.
  */
 
-import type { Issue, Opening, PlanModel, Room, Wall } from "./types";
+import type { Issue, Item, Opening, PlanModel, Room, Wall } from "./types";
 import {
   boxCorners,
   boxesOverlap,
@@ -286,6 +286,13 @@ export function itemBox(it: { kind: string; x: number; y: number; rotation: numb
   return c ? { x: it.x, y: it.y, halfW: c.w / 2, halfD: c.d / 2, angle: (-it.rotation * Math.PI) / 180 } : null;
 }
 
+/** What of a piece stands on the floor: its footprint, or only its trunk for a tree whose crown spreads above. */
+function groundBox(it: Item): Box | null {
+  const box = itemBox(it);
+  const trunk = catalogByKind(it.kind)?.trunk;
+  return box && trunk ? { ...box, halfW: trunk / 2, halfD: trunk / 2 } : box;
+}
+
 function checkFurniture({ model, wallById, out }: Ctx) {
   const { walls, openings, rooms, items } = model;
   const wallBoxes = walls.map((w) => ({ w, box: wallBox(w) }));
@@ -309,7 +316,7 @@ function checkFurniture({ model, wallById, out }: Ctx) {
       out.push({ severity: "error", code: "item_unknown", message: `Item ${it.id} is of unknown kind "${it.kind}".`, refs: [it.id] });
       return;
     }
-    const box = itemBox(it)!;
+    const box = groundBox(it)!;
     const tall = itemSize(it)!.h;
     // paving, decks and pools are walked over: they run up to walls and past doors
     const ground = cat.category === "outdoor" && !!cat.isRug;
@@ -334,7 +341,7 @@ function checkFurniture({ model, wallById, out }: Ctx) {
     for (const other of items.slice(i + 1)) {
       const oc = catalogByKind(other.kind);
       if (!oc || cat.isRug || oc.isRug) continue; // rugs lie under other pieces
-      if (boxesOverlap(box, itemBox(other)!, 0.01)) {
+      if (boxesOverlap(box, groundBox(other)!, 0.01)) {
         const [a, b] = it.id < other.id ? [it, other] : [other, it];
         out.push({ severity: "error", code: "items_overlap", message: `${cat.label} overlaps ${oc.label}.`, refs: [a.id, b.id] });
       }
@@ -359,6 +366,41 @@ function checkFurniture({ model, wallById, out }: Ctx) {
   });
 }
 
+/**
+ * A door must open onto floor. Upstairs, the stair from the floor below comes up through an
+ * opening in the slab; a door whose clear zone (0.8 m either side) reaches over that opening
+ * opens onto the drop.
+ */
+function checkStairwells(model: PlanModel, out: Draft[]) {
+  const levels = levelsOf(model);
+  const wallById = new Map(model.walls.map((w) => [w.id, w]));
+  levels.forEach((level, i) => {
+    const below = levels[i - 1];
+    if (!below) return;
+    const wells = model.items
+      .filter((it) => (it.level ?? levels[0].id) === below.id && !!catalogByKind(it.kind)?.stair)
+      .flatMap((it) => {
+        const b = itemBox(it);
+        if (!b) return [];
+        // the rectangle the stair's footprint covers, whichever way it turns
+        const halfW = Math.abs(Math.cos(b.angle)) * b.halfW + Math.abs(Math.sin(b.angle)) * b.halfD;
+        const halfD = Math.abs(Math.sin(b.angle)) * b.halfW + Math.abs(Math.cos(b.angle)) * b.halfD;
+        return [{ it, box: { x: b.x, y: b.y, halfW, halfD, angle: 0 } as Box }];
+      });
+    if (!wells.length) return;
+    for (const o of model.openings) {
+      const wall = wallById.get(o.wallId);
+      if (o.kind !== "door" || !wall || (wall.level ?? levels[0].id) !== level.id) continue;
+      const c = openingCenter(wall, o);
+      const zone: Box = { x: c.x, y: c.y, halfW: o.width / 2, halfD: wall.thickness / 2 + RULES.doorClearDepth, angle: Math.atan2(wall.by - wall.ay, wall.bx - wall.ax) };
+      for (const { it, box } of wells) {
+        if (!boxesOverlap(zone, box)) continue;
+        out.push({ severity: "error", code: "door_onto_stairwell", message: `Door ${o.id} opens onto the stairwell of the stair coming up from ${below.name.toLowerCase()}.`, refs: [o.id, it.id] });
+      }
+    }
+  });
+}
+
 export function checkModel(model: PlanModel): Issue[] {
   const broken = checkNumbers(model);
   if (broken.length) return assignIds(broken);
@@ -375,6 +417,7 @@ export function checkModel(model: PlanModel): Issue[] {
   // openings whose wall is missing belong to no floor: check them against the whole design
   const orphans = model.openings.filter((o) => !model.walls.some((w) => w.id === o.wallId));
   if (orphans.length) checkOpenings({ model: { ...model, walls: [], rooms: [], items: [], openings: orphans }, wallById: new Map(), out });
+  checkStairwells(model, out);
   out.push(...reviewFindings(model));
   return assignIds(out);
 }

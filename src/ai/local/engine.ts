@@ -433,6 +433,7 @@ function unsupported(text: string): Draft {
 
 const CODE_TEXT: Record<string, string> = {
   item_blocks_door: "furniture blocking a door",
+  door_onto_stairwell: "a door opening onto a stairwell",
   item_blocks_window: "furniture in front of a window",
   items_overlap: "overlapping furniture",
   item_through_wall: "furniture through a wall",

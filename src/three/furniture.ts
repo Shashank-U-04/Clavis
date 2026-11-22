@@ -3,6 +3,7 @@
  * stands on y = 0 and faces +z, which is the direction the item's `rotation` points to.
  */
 
+import { realPlant } from "./plants";
 import * as THREE from "three";
 import { catalogByKind, type CatalogEntry } from "../model/catalog";
 import { assemble, blob, legs, pillow, post, slab } from "./kit";
@@ -320,8 +321,11 @@ const tread = () => wood("#b48a5c");
 const steel = surface("#2c2f33", "metal");
 const glassRail = new THREE.MeshPhysicalMaterial({ color: "#dfeef4", roughness: 0.05, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false });
 glassRail.userData.shared = true;
+/** the warm glow of a step light or a wall light */
+const glow = new THREE.MeshStandardMaterial({ color: "#fff1d6", emissive: "#ffd9a0", emissiveIntensity: 1.6, roughness: 0.4 });
+glow.userData.shared = true;
 
-/** A straight flight: oak treads on two steel stringers, a glass balustrade on the open side. */
+/** A straight flight: oak treads on two steel stringers, a glass balustrade on the open side, a light under every nosing. */
 function straightStair(c: CatalogEntry): THREE.Group {
   const { w, d, h } = c;
   const steps = Math.max(3, Math.round(h / 0.18));
@@ -331,6 +335,8 @@ function straightStair(c: CatalogEntry): THREE.Group {
   for (let i = 0; i < steps; i++) {
     // each tread at its height, a little deeper than its going so they read as one flight
     g.add(slab(w - 0.04, 0.04, going + 0.03, tread()).at(0, (i + 1) * rise - 0.04, d / 2 - (i + 0.5) * going));
+    // a strip of light tucked under the front edge, washing the step below
+    g.add(slab(w - 0.16, 0.012, 0.02, glow, false).at(0, (i + 1) * rise - 0.055, d / 2 - i * going - 0.03));
   }
   // stringers: sloped steel plates along both sides
   for (const side of [-1, 1]) {
@@ -347,6 +353,15 @@ function straightStair(c: CatalogEntry): THREE.Group {
   g.add(rail);
   return g;
 }
+
+/** A wall light: a slim plate on the wall with a glowing shade at 1.8 m (the piece's full height is its mounting height). */
+const wallLight: Builder = (c) => {
+  const g = assemble(slab(0.12, 0.3, 0.02, metal("#c9c4ba")).at(0, c.h - 0.42, -c.d / 2 + 0.01), slab(c.w * 0.8, 0.14, c.d - 0.03, glow, false).at(0, c.h - 0.28, 0.01));
+  const light = new THREE.PointLight("#ffdcae", 2.2, 4.5, 2);
+  light.position.set(0, c.h - 0.25, 0.12);
+  g.add(light);
+  return g;
+};
 
 /** A spiral stair: wedge treads turning round a steel column, with a handrail post at the top. */
 function spiralStair(c: CatalogEntry): THREE.Group {
@@ -640,6 +655,7 @@ const cinemaRecliners: Builder = (c) => {
 
 const BUILDERS: Record<string, Builder> = {
   stair_straight: straightStair,
+  wall_light: wallLight,
   stair_spiral: spiralStair,
   railing_glass: railingGlass,
   railing_steel: railingSteel,
@@ -702,10 +718,19 @@ const BUILDERS: Record<string, Builder> = {
   plant,
 };
 
-/** The 3D model for a catalog kind, or a plain block for kinds without a dedicated model. */
-export function buildFurniture(kind: string): THREE.Group | null {
+/**
+ * The 3D model for a catalog kind, or a plain block for kinds without a dedicated model. Plants
+ * are the real ones once they have loaded (see plants.ts); `seed` picks which tree, and how a
+ * hedge or planter is planted, so the same piece always looks the same.
+ */
+export function buildFurniture(kind: string, seed = 0): THREE.Group | null {
   const c = catalogByKind(kind);
   if (!c) return null;
+  const real = realPlant(kind, c, seed);
+  if (real) {
+    real.name = kind;
+    return real;
+  }
   const build = BUILDERS[kind];
   const g = build ? build(c) : assemble(slab(c.w, c.h, c.d, surface(c.color, "matte")));
   g.name = kind;

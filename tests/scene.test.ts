@@ -59,7 +59,7 @@ describe("3D content derives from the canonical model", () => {
   it("a wall edit changes the corresponding 3D wall", () => {
     const m = design();
     const wall = m.walls.find((w) => w.ay === 0 && w.by === 0)!;
-    const longer = { ...m, walls: m.walls.map((w) => (w.id === wall.id ? { ...w, height: 3.2 } : w)) };
+    const longer = { ...m, walls: m.walls.map((w) => (w.id === wall.id ? { ...w, height: w.height + 0.5 } : w)) };
     const h = (pm: PlanModel) => {
       const o = buildContent(pm).group.children.find((c) => c.userData.entityId === wall.id)!;
       return new THREE.Box3().setFromObject(o).max.y;

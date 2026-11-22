@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const VIEWS = [
   ["2D Plan", "The layout builder: walls, rooms, doors, windows and furniture, drawn in metres and snapped to 5 cm."],
   ["3D Model", "The same design standing up. Orbit around it, or look straight down from the top. Click a door to swing it open."],
-  ["Walk", "Step in just inside the front door at 1.60 m eye height, full screen if you like. Walls stop you; doorways let you through."],
+  ["Walk", "Step in just inside the front door with a figure 1.75 m tall: follow it from behind, or scroll in to look through its eyes at 1.63 m. Full screen if you like. Walls stop you; doorways let you through."],
 ];
 
 const KEYS = [

@@ -6,9 +6,12 @@
  * Camera modes:
  *   orbit — circle the building (drag to orbit, scroll to zoom)
  *   top   — straight down, north up, like the plan
- *   walk  — eye height; click to look with the mouse (pointer lock; Esc frees it) or drag to
- *           look; WASD / arrows to move, Shift to hurry; walls and furniture block you,
- *           doorways do not. Movement eases in and out rather than jumping.
+ *   walk  — a 1.75 m figure steps in at the front door, seen from just behind (third person).
+ *           WASD / arrows move it the way the camera faces, Shift runs, Space jumps; drag
+ *           (either button) turns the camera round it, scroll zooms in and out, all the way
+ *           into its eyes (first person, 1.63 m). Walls and furniture block it, doorways do
+ *           not; the camera slides in rather than pass through a wall. Movement eases in and
+ *           out rather than jumping.
  */
 
 import * as THREE from "three";
@@ -18,22 +21,30 @@ import { OBJExporter } from "three/examples/jsm/exporters/OBJExporter.js";
 import type { PlanModel } from "../model/types";
 import type { CameraMode } from "../model/store";
 import { analyzeModel } from "../model/analysis";
-import { boxesOverlap, segLen, wallBox, type Box } from "../model/geometry";
-import { itemBox, openingSpan } from "../model/issues";
+import { segLen } from "../model/geometry";
+import { openingCenter } from "../model/issues";
 import { catalogByKind, itemSize } from "../model/catalog";
 import { buildContent, disposeGroup } from "./content";
 import { GROUND, elevationOf, levelAbove, levelBelow, levelOf, levelsOf, onLevel } from "../model/levels";
 import { isStair, stairProgress } from "../model/stairs";
+import { Avatar, EYE_HEIGHT, STATURE } from "./avatar";
+import { solidsOf, step, type Solid } from "./walkCollision";
+import { loadPlants } from "./plants";
+import { walkView, type WalkView } from "./walkView";
 
-const EYE = 1.6;
-const STEP = 1.9; // metres per second, walking
-const RUN = 1.9; // × STEP with Shift held
-const EASE = 10; // how quickly the walker reaches speed and stops (per second)
-const BODY = 0.22; // half-width of the walker
-const LOOK_SPEED = 0.0042; // dragging
-const MOUSE_LOOK = 0.0022; // pointer lock: radians per pixel of mouse movement
-/** When the pointer lock last ended: the Esc that ends it should not also leave the walk. */
-export let pointerFreedAt = 0;
+const STEP = 1.4; // metres per second: an ordinary walking pace
+const RUN = 2.3; // × STEP with Shift held: a jog, about 3.2 m/s (the figure breaks into a run above 2.3 m/s)
+const EASE = 9; // how quickly the walker reaches speed and stops (per second)
+const LOOK_SPEED = 0.005; // radians per pixel of drag
+const TURN = 11; // how quickly the figure turns to face where it is going (per second)
+const JUMP = 3.1; // metres per second upwards: a jump of about half a metre
+const GRAVITY = 9.81;
+/** Vertical field of view: wider while walking, so a room reads at its real size round you. */
+const MODEL_FOV = 50;
+const WALK_FOV = 70;
+const FOLLOW = 3.2; // how far behind the walker the camera starts (metres)
+const FOLLOW_MAX = 9;
+const FIRST_PERSON = 0.5; // scrolled in closer than this, the camera is the walker's eyes
 
 export interface ViewerCallbacks {
   /** a piece of furniture (or nothing) was clicked */
@@ -52,40 +63,6 @@ interface Door {
   target: number;
 }
 
-/** Solid wall stretches (doorways excluded) and tall furniture, as plan boxes. */
-function obstaclesOf(model: PlanModel): Box[] {
-  const out: Box[] = [];
-  for (const w of model.walls) {
-    const length = segLen(w.ax, w.ay, w.bx, w.by);
-    if (length < 1e-6) continue;
-    const doors = model.openings
-      .filter((o) => o.wallId === w.id && o.kind === "door")
-      .map((o) => openingSpan(w, o).map((t) => t * length) as [number, number])
-      .sort((a, b) => a[0] - b[0]);
-    let cursor = 0;
-    const runs: [number, number][] = [];
-    for (const [s, e] of doors) {
-      if (s > cursor) runs.push([cursor, s]);
-      cursor = Math.max(cursor, e);
-    }
-    if (cursor < length) runs.push([cursor, length]);
-    const ux = (w.bx - w.ax) / length;
-    const uy = (w.by - w.ay) / length;
-    for (const [s, e] of runs) {
-      const a = { x: w.ax + ux * s, y: w.ay + uy * s };
-      const b = { x: w.ax + ux * e, y: w.ay + uy * e };
-      out.push(wallBox({ ax: a.x, ay: a.y, bx: b.x, by: b.y, thickness: w.thickness }));
-    }
-  }
-  for (const it of model.items) {
-    const c = catalogByKind(it.kind);
-    // stairs are walked on, not walked round
-    if (!c || c.isRug || c.stair || (itemSize(it)?.h ?? c.h) < 0.3) continue;
-    const box = itemBox(it);
-    if (box) out.push(box);
-  }
-  return out;
-}
 
 /** Just inside the front door, looking into the room it opens onto. */
 function entryPose(m: PlanModel): { x: number; z: number; yaw: number } | null {
@@ -121,7 +98,7 @@ export class Viewer {
   private model: PlanModel | null = null;
   private pendingModel: PlanModel | null = null;
   /** what blocks the walker, floor by floor */
-  private obstacles = new Map<string, Box[]>();
+  private obstacles = new Map<string, Solid[]>();
   /** the floor the walker is on, and how high their feet are */
   private walkLevel = GROUND;
   private feet = 0;
@@ -129,6 +106,18 @@ export class Viewer {
   private mode: CameraMode = "orbit";
   private keys = new Set<string>();
   private velocity = { x: 0, z: 0 };
+  /** the walker: their figure, where their feet are, which way they face, and how fast they rise or fall */
+  private walker = new Avatar();
+  private player = new THREE.Vector3();
+  private facing = 0;
+  private rising = 0;
+  private jumpWanted = false;
+  /** how far behind the walker the camera wants to be (0 = first person), and is after walls pull it in */
+  private follow = FOLLOW;
+  private followNow = FOLLOW;
+  /** what the following camera must not pass through: walls and floors */
+  private solids: THREE.Object3D[] = [];
+  private camRay = new THREE.Raycaster();
   private shadowsDirty = true;
   private yaw = 0;
   private pitch = 0;
@@ -157,6 +146,10 @@ export class Viewer {
     this.daylight = new Daylight(this.renderer, this.scene);
     this.cleanups.push(() => this.daylight.dispose());
     this.scene.add(this.markers);
+    this.walker.root.visible = false;
+    this.scene.add(this.walker.root);
+    this.cleanups.push(() => this.walker.dispose());
+    this.cleanups.push(walkView.onRequest((v) => this.setWalkView(v)));
     this.setTheme("light");
 
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
@@ -168,6 +161,10 @@ export class Viewer {
     this.fitCanvas();
     this.listen();
     this.loop();
+    // the real trees and plants arrive a moment later: build the scene again with them
+    void loadPlants().then((ok) => {
+      if (ok && this.model && !this.pendingModel) this.pendingModel = this.model;
+    });
   }
 
   // ---- public ------------------------------------------------------------------
@@ -195,8 +192,17 @@ export class Viewer {
     this.mode = mode;
     this.keys.clear();
     this.velocity = { x: 0, z: 0 };
-    if (mode !== "walk" && document.pointerLockElement === this.renderer.domElement) document.exitPointerLock();
+    if (mode === "walk") this.walker.load();
+    this.camera.fov = mode === "walk" ? WALK_FOV : MODEL_FOV;
+    this.camera.updateProjectionMatrix();
+    this.walker.root.visible = false;
     this.placeCamera();
+  }
+
+  /** Walk seen from behind the figure, or through its eyes. */
+  setWalkView(view: WalkView) {
+    this.follow = view === "first" ? 0 : Math.max(this.follow, FOLLOW);
+    this.followNow = this.follow;
   }
 
   /** Outline these entities (selection and highlighted findings). */
@@ -214,6 +220,28 @@ export class Viewer {
       if (c === null) continue;
       this.markers.add(new THREE.Box3Helper(new THREE.Box3().setFromObject(child).expandByScalar(0.02), c));
     }
+  }
+
+  /** Whether a door has swung open far enough to walk through. */
+  private doorOpen(id: string): boolean {
+    const d = this.doors.find((x) => x.id === id);
+    return !!d && d.amount > 0.5;
+  }
+
+  /** Open or close the door nearest the walker, if one is within reach (1.6 m). */
+  private toggleNearestDoor() {
+    const m = this.model;
+    if (!m) return;
+    let best: { id: string; d: number } | null = null;
+    for (const o of m.openings) {
+      if (o.kind !== "door") continue;
+      const wall = m.walls.find((w) => w.id === o.wallId);
+      if (!wall || levelOf(wall) !== this.walkLevel) continue;
+      const c = openingCenter(wall, o);
+      const d = Math.hypot(c.x - this.player.x, c.y - this.player.z);
+      if (d < 1.6 && (!best || d < best.d)) best = { id: o.id, d };
+    }
+    if (best) this.setDoors("toggle", best.id);
   }
 
   setDoors(state: "open" | "closed" | "toggle", id?: string) {
@@ -261,7 +289,9 @@ export class Viewer {
     this.model = model;
     this.scene.add(group);
     this.aimSun();
-    this.obstacles = new Map(levelsOf(model).map((l) => [l.id, obstaclesOf(onLevel(model, l.id))]));
+    this.obstacles = new Map(levelsOf(model).map((l) => [l.id, solidsOf(onLevel(model, l.id))]));
+    const solid = new Set([...model.walls.map((w) => w.id), ...model.rooms.map((r) => r.id)]);
+    this.solids = group.children.filter((c) => solid.has(c.userData.entityId));
     if (!this.obstacles.has(this.walkLevel)) this.walkLevel = levelsOf(model)[0].id;
     this.doors = [];
     group.traverse((o) => {
@@ -291,13 +321,16 @@ export class Viewer {
     if (this.mode === "walk") {
       const pose = this.model ? entryPose(this.model) : null;
       this.camera.up.set(0, 1, 0);
-      // the walk starts at the front door, on the ground floor
+      // the walk starts just inside the front door, on the ground floor
       this.walkLevel = this.model ? levelsOf(this.model)[0].id : GROUND;
       this.feet = this.model ? elevationOf(this.model, this.walkLevel) : 0;
-      this.camera.position.set(pose?.x ?? c.x, this.feet + EYE, pose?.z ?? c.z);
+      this.player.set(pose?.x ?? c.x, this.feet, pose?.z ?? c.z);
+      this.rising = 0;
       this.yaw = pose?.yaw ?? Math.PI;
-      this.pitch = -0.05;
-      this.aim();
+      this.facing = this.yaw;
+      this.pitch = -0.22;
+      this.followNow = this.follow;
+      this.placeWalker(0, 0, 0);
       return;
     }
     // far enough that the whole building fits the narrower of the two fields of view
@@ -320,9 +353,39 @@ export class Viewer {
     this.orbit.update();
   }
 
-  private aim() {
-    const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
-    this.camera.lookAt(this.camera.position.clone().add(dir));
+  /** Where the camera looks while walking. */
+  private get look() {
+    return new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
+  }
+
+  /**
+   * Put the figure where the walker is and the camera on it: through its eyes in first person,
+   * otherwise behind and a little above its head, pulled in front of any wall or floor that
+   * would come between them.
+   */
+  private placeWalker(dt: number, travelled: number, speed: number) {
+    const first = this.follow < FIRST_PERSON;
+    walkView.set(first ? "first" : "third");
+    const look = this.look;
+    this.walker.root.visible = !first;
+    this.walker.root.position.copy(this.player);
+    this.walker.root.rotation.y = this.facing;
+    this.walker.update(dt, travelled, speed, this.rising !== 0);
+    if (first) {
+      const eye = this.player.clone().setY(this.player.y + EYE_HEIGHT);
+      this.camera.position.copy(eye);
+      this.camera.lookAt(eye.add(look));
+      return;
+    }
+    const head = this.player.clone().setY(this.player.y + STATURE - 0.12);
+    this.camRay.set(head, look.clone().negate());
+    this.camRay.far = this.follow;
+    const hit = this.camRay.intersectObjects(this.solids, true)[0];
+    const room = hit ? Math.max(0.35, hit.distance - 0.25) : this.follow;
+    // in at once when something is in the way; back out gently once it is not
+    this.followNow = room < this.followNow ? room : this.followNow + (room - this.followNow) * Math.min(1, dt * 4);
+    this.camera.position.copy(head).addScaledVector(look, -this.followNow);
+    this.camera.lookAt(head);
   }
 
   // ---- input -------------------------------------------------------------------
@@ -336,6 +399,16 @@ export class Viewer {
     const keyDown = (e: KeyboardEvent) => {
       if (this.mode !== "walk" || typing(e)) return;
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (k === " ") {
+        this.jumpWanted = true;
+        e.preventDefault();
+        return;
+      }
+      if (k === "e" && !e.repeat) {
+        this.toggleNearestDoor();
+        e.preventDefault();
+        return;
+      }
       if (["w", "a", "s", "d", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Shift"].includes(k)) {
         this.keys.add(k);
         if (k !== "Shift") e.preventDefault();
@@ -346,66 +419,64 @@ export class Viewer {
       if (e.key === "Shift") this.keys.delete("Shift");
     };
     const blur = () => this.keys.clear();
-    const locked = () => document.pointerLockElement === el;
-    const lockChange = () => {
-      if (!locked()) pointerFreedAt = performance.now();
-    };
-    const mouseLook = (e: MouseEvent) => {
-      if (this.mode !== "walk" || !locked()) return;
-      this.yaw -= e.movementX * MOUSE_LOOK;
-      this.pitch = Math.max(-1.25, Math.min(1.25, this.pitch - e.movementY * MOUSE_LOOK));
-      this.aim();
-    };
     const down = (e: PointerEvent) => {
       this.dragging = { x: e.clientX, y: e.clientY, moved: 0 };
+      if (this.mode === "walk") el.setPointerCapture?.(e.pointerId);
     };
     const move = (e: PointerEvent) => {
-      if (!this.dragging || locked()) return;
+      if (!this.dragging) return;
       const dx = e.clientX - this.dragging.x;
       const dy = e.clientY - this.dragging.y;
       this.dragging = { x: e.clientX, y: e.clientY, moved: this.dragging.moved + Math.abs(dx) + Math.abs(dy) };
+      // walking: a drag with either button turns the camera round the walker (or their head)
       if (this.mode === "walk" && e.buttons) {
+        const first = this.follow < FIRST_PERSON;
         this.yaw -= dx * LOOK_SPEED;
-        this.pitch = Math.max(-1.2, Math.min(1.2, this.pitch - dy * LOOK_SPEED));
-        this.aim();
+        this.pitch = Math.max(first ? -1.25 : -1.2, Math.min(first ? 1.25 : 0.55, this.pitch - dy * LOOK_SPEED));
       }
     };
     const up = (e: PointerEvent) => {
       const drag = this.dragging;
       this.dragging = null;
-      if (!drag || drag.moved >= 5) return;
-      // walking: the first click takes the mouse for looking; later clicks act at the crosshair
-      if (this.mode === "walk" && !locked() && !this.callbacks.placing()) {
-        void Promise.resolve(el.requestPointerLock?.()).catch(() => {});
-        return;
-      }
-      this.click(e, this.mode === "walk" && locked());
+      if (!drag || drag.moved >= 5 || e.button === 2) return;
+      this.click(e);
+    };
+    // walking: scroll moves the camera in and out; all the way in is first person
+    const wheel = (e: WheelEvent) => {
+      if (this.mode !== "walk") return;
+      e.preventDefault();
+      const out = e.deltaY > 0;
+      if (this.follow < FIRST_PERSON) this.follow = out ? 1.2 : 0;
+      else this.follow = out ? Math.min(FOLLOW_MAX, this.follow * 1.15) : this.follow / 1.15 < 0.9 ? 0 : this.follow / 1.15;
+      if (this.follow < FIRST_PERSON) this.followNow = 0;
+    };
+    const menu = (e: Event) => {
+      if (this.mode === "walk") e.preventDefault();
     };
     window.addEventListener("keydown", keyDown);
     window.addEventListener("keyup", keyUp);
     window.addEventListener("blur", blur);
-    document.addEventListener("pointerlockchange", lockChange);
-    document.addEventListener("mousemove", mouseLook);
     el.addEventListener("pointerdown", down);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);
+    el.addEventListener("wheel", wheel, { passive: false });
+    el.addEventListener("contextmenu", menu);
     this.cleanups.push(() => {
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("blur", blur);
-      document.removeEventListener("pointerlockchange", lockChange);
-      document.removeEventListener("mousemove", mouseLook);
-      if (locked()) document.exitPointerLock();
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
+      el.removeEventListener("wheel", wheel);
+      el.removeEventListener("contextmenu", menu);
     });
   }
 
-  private click(e: PointerEvent, atCentre = false) {
+  private click(e: PointerEvent) {
     if (!this.content) return;
     const rect = this.renderer.domElement.getBoundingClientRect();
-    const ndc = atCentre ? new THREE.Vector2(0, 0) : new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     if (this.callbacks.placing()) {
       const floor = new THREE.Vector3();
@@ -441,6 +512,7 @@ export class Viewer {
     if (this.keys.has("s") || this.keys.has("ArrowDown")) forward--;
     if (this.keys.has("d") || this.keys.has("ArrowRight")) strafe++;
     if (this.keys.has("a") || this.keys.has("ArrowLeft")) strafe--;
+    // moves are relative to where the camera faces
     const f = { x: Math.sin(this.yaw), z: Math.cos(this.yaw) };
     const r = { x: -f.z, z: f.x };
     // diagonal moves are no faster than straight ones
@@ -451,29 +523,49 @@ export class Viewer {
     const blend = 1 - Math.exp(-EASE * dt);
     this.velocity.x += (want.x - this.velocity.x) * blend;
     this.velocity.z += (want.z - this.velocity.z) * blend;
-    if (!forward && !strafe && Math.hypot(this.velocity.x, this.velocity.z) < 0.01) {
-      this.velocity = { x: 0, z: 0 };
-      return;
+    if (!forward && !strafe && Math.hypot(this.velocity.x, this.velocity.z) < 0.01) this.velocity = { x: 0, z: 0 };
+
+    const p = this.player;
+    // walls, shut doors and furniture stop the walker; it slides along them
+    const solids = this.obstacles.get(this.walkLevel) ?? [];
+    const to = step(p.x, p.z, this.velocity.x * dt, this.velocity.z * dt, solids, (id) => this.doorOpen(id));
+    const dx = to.x - p.x;
+    const dz = to.y - p.z;
+    // what was pressed into a wall is lost, so the walker does not build up speed against it
+    if (dt > 0 && (this.velocity.x || this.velocity.z)) {
+      this.velocity.x = Math.abs(dx / dt) < Math.abs(this.velocity.x) ? dx / dt : this.velocity.x;
+      this.velocity.z = Math.abs(dz / dt) < Math.abs(this.velocity.z) ? dz / dt : this.velocity.z;
     }
-    let dx = this.velocity.x * dt;
-    let dz = this.velocity.z * dt;
-    const p = this.camera.position;
-    const blocks = this.obstacles.get(this.walkLevel) ?? [];
-    const free = (x: number, z: number) => !blocks.some((b) => boxesOverlap({ x, y: z, halfW: BODY, halfD: BODY, angle: 0 }, b));
-    // slide along walls: try the full step, then each axis on its own
-    if (!free(p.x + dx, p.z + dz)) {
-      if (free(p.x + dx, p.z)) (dz = 0), (this.velocity.z = 0);
-      else if (free(p.x, p.z + dz)) (dx = 0), (this.velocity.x = 0);
-      else return void (this.velocity = { x: 0, z: 0 });
-    }
-    p.x += dx;
-    p.z += dz;
+    p.x = to.x;
+    p.z = to.y;
+    const travelled = Math.hypot(dx, dz);
+
     // on a stair the floor rises (or falls) under the walker; past halfway they are on the other floor
     const under = this.groundUnder(p.x, p.z);
     this.walkLevel = under.level;
     this.feet = under.feet;
-    p.y += (this.feet + EYE - p.y) * Math.min(1, dt * 14);
-    this.aim();
+    const grounded = this.rising === 0 && p.y - under.feet < 0.05;
+    if (this.jumpWanted && grounded) this.rising = JUMP;
+    this.jumpWanted = false;
+    if (this.rising !== 0 || p.y > under.feet + 0.3) {
+      // in the air: up, then down under gravity, until the feet meet the floor
+      this.rising -= GRAVITY * dt;
+      p.y += this.rising * dt;
+      if (p.y <= under.feet) (p.y = under.feet), (this.rising = 0);
+    } else {
+      p.y += (under.feet - p.y) * Math.min(1, dt * 14);
+    }
+
+    // the figure turns to face the way it walks (in first person it faces where you look)
+    if (this.follow < FIRST_PERSON) this.facing = this.yaw;
+    else if (travelled > 1e-4) {
+      let turn = Math.atan2(dx, dz) - this.facing;
+      turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+      this.facing += turn * Math.min(1, dt * TURN);
+    }
+    this.placeWalker(dt, travelled, travelled / Math.max(dt, 1e-3));
+    // the figure's own shadow moves with it
+    if (this.walker.root.visible && (travelled > 0 || this.rising !== 0)) this.shadowsDirty = true;
   }
 
   /** The floor under a point while walking: a stair's slope where there is one, else the current floor. */

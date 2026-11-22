@@ -32,13 +32,14 @@ const SHORTCUTS = [
   ["F", "Fit the plan to the window"],
   ["Ctrl Z / Ctrl Y", "Undo / redo"],
   ["Esc", "Back to Select, clear highlights"],
-  ["W A S D (in Walk)", "Walk; drag to look; Esc to leave"],
+  ["W A S D (in Walk)", "Move; Shift runs, Space jumps; drag turns the camera; scroll in for first person; Esc to leave"],
+  ["E (in Walk)", "Open or close the nearest door (or click it); a shut door stops you"],
 ];
 
 const VIEWS = [
   ["1", "2D Plan", "The layout builder: draw walls, rooms, doors and windows, and arrange furniture, all in metres."],
   ["2", "3D Model", "The same design standing up. Orbit around it or look straight down; it follows every edit."],
-  ["3", "Walk", "Step in at the front door at eye height and walk through, room by room. Full screen for a closer look."],
+  ["3", "Walk", "Step in at the front door with a figure 1.75 m tall and walk through, room by room: from just behind it, or scroll in to see through its eyes. Full screen for a closer look."],
   ["4", "Chat", "Ask for a home, a change or a check. Every answer is a checked preview until you press Apply."],
 ];
 

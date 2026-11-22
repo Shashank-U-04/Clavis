@@ -11,7 +11,7 @@ import { actions, issuesFor, store, useAppStore } from "../model/store";
 import { analyzeModel } from "../model/analysis";
 import { Editor } from "../editor/Editor";
 import { Scene3D } from "../three/Scene3D";
-import { pointerFreedAt } from "../three/viewer";
+import { useWalkView, walkView } from "../three/walkView";
 import { Header, viewKey } from "./Header";
 import { Library, ToolStrip } from "./ToolStrip";
 import { ActivityFeed } from "./ActivityFeed";
@@ -45,23 +45,18 @@ function CameraBar() {
       <button className={current === "top" ? "active" : ""} onClick={() => actions.setCamera("top")} title="Straight down, north up">
         Top
       </button>
-      <button className="walk-in" onClick={() => featureActions.toggle("walk")} title="Step in at the front door, at eye height (3)">
+      <button className="walk-in" onClick={() => featureActions.toggle("walk")} title="Step in at the front door with a 1.75 m figure (3)">
         Walk in →
       </button>
     </div>
   );
 }
 
-/** While walking: how to move, full screen for a closer look, and the way out. */
+/** While walking: how to move, behind the figure or through its eyes, full screen, and the way out. */
 function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
   const walking = useAppStore((s) => s.editor.camera === "walk");
+  const view = useWalkView();
   const [full, setFull] = useState(false);
-  const [looking, setLooking] = useState(false);
-  useEffect(() => {
-    const on = () => setLooking(!!document.pointerLockElement);
-    document.addEventListener("pointerlockchange", on);
-    return () => document.removeEventListener("pointerlockchange", on);
-  }, []);
   useEffect(() => {
     const on = () => setFull(document.fullscreenElement === pane.current);
     document.addEventListener("fullscreenchange", on);
@@ -69,37 +64,30 @@ function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
   }, [pane]);
   useEffect(() => {
     if (!walking) return;
-    // Esc frees the mouse first (the browser does that); only an Esc after that leaves the walk
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.fullscreenElement && !document.pointerLockElement && performance.now() - pointerFreedAt > 400 && featureActions.exitWalk();
+    // Esc leaves the walk (in full screen the browser uses the first Esc to leave full screen)
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.fullscreenElement && featureActions.exitWalk();
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, [walking]);
   if (!walking) return null;
   const toggleFull = () => (document.fullscreenElement ? void document.exitFullscreen() : void pane.current?.requestFullscreen?.());
+  const first = view === "first";
   return (
-    <>
-    {looking && <div className="walk-crosshair" aria-hidden="true" />}
     <div className="walk-hud" role="group" aria-label="Walk">
       <div className="walk-text">
-        <span className="walk-title">Walking · eye height 1.60 m</span>
+        <span className="walk-title">{first ? "First person · eyes at 1.63 m" : "Third person · figure 1.75 m tall"}</span>
         <span className="walk-keys">
-          {looking ? (
-            <>
-              <kbd>W A S D</kbd> / <kbd>arrows</kbd> move · <kbd>Shift</kbd> hurry · mouse looks · <kbd>click</kbd> opens a door · <kbd>Esc</kbd> frees the mouse
-            </>
-          ) : (
-            <>
-              <kbd>click</kbd> the view to look with the mouse · <kbd>W A S D</kbd> / <kbd>arrows</kbd> move · <kbd>Shift</kbd> hurry
-            </>
-          )}
+          <kbd>W A S D</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>drag</kbd> turn the camera · <kbd>scroll</kbd> zoom{first ? " out to see the figure" : " in for first person"} · <kbd>E</kbd> or <kbd>click</kbd> opens a door
         </span>
       </div>
+      <button onClick={(e) => (e.currentTarget.blur(), walkView.request(first ? "third" : "first"))} title="Scrolling all the way in or out does the same">
+        {first ? "Third person" : "First person"}
+      </button>
       <button onClick={toggleFull}>{full ? "Exit full screen" : "Full screen"}</button>
       <button className="primary" onClick={() => (document.fullscreenElement && void document.exitFullscreen(), featureActions.exitWalk())} title="Back to the 3D model (Esc)">
         Exit walk
       </button>
     </div>
-    </>
   );
 }
 

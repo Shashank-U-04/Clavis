@@ -19,7 +19,8 @@ import type { PlanModel, Room } from "../model/types";
 import { elevationOf, levelAbove, levelOf, levelsOf } from "../model/levels";
 import { catalogByKind } from "../model/catalog";
 import type { SitePiece } from "../components/figures/sunsetFigure";
-import { buildContent, disposeGroup } from "./content";
+import { buildContent, disposeGroup, seedOf } from "./content";
+import { buildFurniture } from "./furniture";
 import { buildSite } from "./site";
 import { Daylight } from "./daylight";
 import { slab } from "./kit";
@@ -153,7 +154,7 @@ export class Showcase {
 
   constructor(
     private mount: HTMLElement,
-    model: PlanModel,
+    private model: PlanModel,
     sitePieces: readonly SitePiece[],
     private opts: ShowcaseOptions,
   ) {
@@ -183,9 +184,9 @@ export class Showcase {
     this.scene.add(this.house, this.site, this.roof);
     if (ground) this.scene.attach(ground);
 
-    // frame the house itself (the pool and terrace beside it come into view with it); the sun's
-    // shadows cover the whole plot
-    const all = new THREE.Box3().copy(bounds).union(new THREE.Box3().setFromObject(this.site));
+    // the sun's shadows reach everything in the design, trees out on the lawn included
+    const all = new THREE.Box3().setFromObject(this.house).union(new THREE.Box3().setFromObject(this.site));
+    // frame the house itself (the pool and terrace beside it come into view with it)
     const framed = new THREE.Box3().copy(bounds);
     this.site.traverse((o) => {
       if (o.userData.frames) framed.union(new THREE.Box3().setFromObject(o));
@@ -307,7 +308,8 @@ export class Showcase {
   private placeViews() {
     const dir = new THREE.Vector3(this.opts.front.x, 0, this.opts.front.y).normalize();
     const el = THREE.MathUtils.degToRad(this.opts.elevation);
-    const dist = this.fitDistance(0.5);
+    // a little lawn all round the house in the picture, so it stands in open grounds
+    const dist = this.fitDistance(0.58);
     this.rest.target.copy(this.centre);
     this.rest.position.copy(this.centre).addScaledVector(dir, Math.cos(el) * dist).setY(this.centre.y + Math.sin(el) * dist);
     this.plan.target.copy(this.centre).setY(0);
@@ -416,6 +418,32 @@ export class Showcase {
     this.camera.up.set(0, 0, -1).lerp(new THREE.Vector3(0, 1, 0), clamp(tilt * 3)).normalize();
     this.camera.lookAt(target);
     this.controls.target.copy(target);
+  }
+
+  /**
+   * The real trees, hedges, planters and pot plants have arrived: put each in place of its drawn
+   * stand-in, keeping where it is in the opening, so the picture never jumps.
+   */
+  swapPlants() {
+    const kinds = new Set(["tree", "hedge", "planter", "plant"]);
+    const items = new Map(this.model.items.filter((it) => kinds.has(it.kind)).map((it) => [it.id, it]));
+    for (const piece of this.pieces) {
+      const it = items.get(piece.obj.userData.entityId);
+      if (!it) continue;
+      const real = buildFurniture(it.kind, seedOf(it.id));
+      if (!real) continue;
+      const old = piece.obj;
+      real.position.copy(old.position).setY(piece.y);
+      real.rotation.copy(old.rotation);
+      real.scale.copy(piece.scale);
+      real.userData.entityId = it.id;
+      this.house.remove(old);
+      this.house.add(real);
+      disposeGroup(old);
+      piece.obj = real;
+    }
+    // put everything where the opening has it now
+    this.pose(this.intro ? performance.now() - this.intro.t0 : this.controls.enabled ? Infinity : 0);
   }
 
   /** Back to the front view. */

@@ -13,6 +13,7 @@
  */
 
 import type { PlanModel } from "./types";
+import { DEFAULT_CEILING } from "./levels";
 
 export type Finish = "oak" | "tile" | "carpet" | "concrete";
 
@@ -152,7 +153,7 @@ export function roomBlockOps(model: PlanModel, r: Rect, label: string, floor: Fi
   const x1 = round(r.x + r.w);
   const y1 = round(r.y + r.h);
   const ops: unknown[] = [{ op: "add_room", x: round(x0 + HALF), y: round(y0 + HALF), w: round(x1 - x0 - BLOCK_WALL), h: round(y1 - y0 - BLOCK_WALL), label, floor }];
-  const wall = (ax: number, ay: number, bx: number, by: number) => ops.push({ op: "add_wall", ax: round(ax), ay: round(ay), bx: round(bx), by: round(by), thickness: BLOCK_WALL, height: 2.7 });
+  const wall = (ax: number, ay: number, bx: number, by: number) => ops.push({ op: "add_wall", ax: round(ax), ay: round(ay), bx: round(bx), by: round(by), thickness: BLOCK_WALL, height: DEFAULT_CEILING });
   for (const y of [y0, y1]) for (const [s, e] of uncovered(model, "h", y, x0, x1)) wall(s, y, e, y);
   for (const x of [x0, x1]) for (const [s, e] of uncovered(model, "v", x, y0, y1)) wall(x, s, x, e);
   return ops;

@@ -10,7 +10,7 @@ import { Viewer, type SceneTheme } from "./viewer";
 const HINTS = {
   orbit: "Drag to orbit · scroll to zoom · click furniture to select, doors to open",
   top: "Seen from above, north up · drag to pan · click furniture to select",
-  walk: "WASD or arrows to walk · drag to look around · click a door to open it",
+  walk: "WASD to walk · drag to turn the camera · scroll in for first person · E or click opens a door",
 };
 
 export function Scene3D({ theme = "light" }: { theme?: SceneTheme }) {

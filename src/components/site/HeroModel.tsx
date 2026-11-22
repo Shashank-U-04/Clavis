@@ -70,11 +70,16 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     setTouch(coarse);
 
+    // the house shows at once; its real trees and plants follow and take the drawn ones' places
+    const plants = import("@/three/plants").then(({ loadPlants }) => loadPlants());
     import("@/three/showcase")
       .then(({ Showcase }) => {
         if (cancelled) return;
         const s = new Showcase(el, model, site, { front, elevation, touch: coarse });
         show.current = s;
+        void plants.then((ok) => {
+          if (ok && !cancelled && show.current === s) s.swapPlants();
+        });
         setState("ready");
         // open when the model is on screen; the log follows the opening
         io = new IntersectionObserver(
