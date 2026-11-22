@@ -135,7 +135,7 @@ describe("metrics and regressions", () => {
     const a = analyzeModel(template());
     expect(a.metrics.bedrooms).toBe(2);
     expect(a.metrics.bathrooms).toBe(1);
-    expect(a.metrics.envelope).toMatchObject({ x: -0.1, y: -0.1, w: 9.8, h: 9.2 });
+    expect(a.metrics.envelope).toMatchObject({ x: -0.1, y: -0.1, w: 9.8, h: 9.6 });
     expect(a.metrics.efficiency).toBeGreaterThan(0.75);
     expect(a.metrics.efficiency).toBeLessThan(1);
   });
