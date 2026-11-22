@@ -77,7 +77,7 @@ function WalkHud({ pane }: { pane: React.RefObject<HTMLElement | null> }) {
       <div className="walk-text">
         <span className="walk-title">{first ? "First person · eyes at 1.63 m" : "Third person · figure 1.75 m tall"}</span>
         <span className="walk-keys">
-          <kbd>W A S D</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>drag</kbd> turn the camera · <kbd>scroll</kbd> zoom{first ? " out to see the figure" : " in for first person"} · <kbd>click</kbd> a door to open it
+          <kbd>W A S D</kbd> move · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>drag</kbd> turn the camera · <kbd>scroll</kbd> zoom{first ? " out to see the figure" : " in for first person"} · <kbd>E</kbd> or <kbd>click</kbd> opens a door
         </span>
       </div>
       <button onClick={(e) => (e.currentTarget.blur(), walkView.request(first ? "third" : "first"))} title="Scrolling all the way in or out does the same">

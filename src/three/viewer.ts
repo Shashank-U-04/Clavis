@@ -21,20 +21,20 @@ import { OBJExporter } from "three/examples/jsm/exporters/OBJExporter.js";
 import type { PlanModel } from "../model/types";
 import type { CameraMode } from "../model/store";
 import { analyzeModel } from "../model/analysis";
-import { boxesOverlap, segLen, wallBox, type Box } from "../model/geometry";
-import { itemBox, openingSpan } from "../model/issues";
+import { segLen } from "../model/geometry";
+import { openingCenter } from "../model/issues";
 import { catalogByKind, itemSize } from "../model/catalog";
 import { buildContent, disposeGroup } from "./content";
 import { GROUND, elevationOf, levelAbove, levelBelow, levelOf, levelsOf, onLevel } from "../model/levels";
 import { isStair, stairProgress } from "../model/stairs";
 import { Avatar, EYE_HEIGHT, STATURE } from "./avatar";
+import { solidsOf, step, type Solid } from "./walkCollision";
 import { loadPlants } from "./plants";
 import { walkView, type WalkView } from "./walkView";
 
 const STEP = 1.4; // metres per second: an ordinary walking pace
 const RUN = 2.3; // × STEP with Shift held: a jog, about 3.2 m/s (the figure breaks into a run above 2.3 m/s)
 const EASE = 9; // how quickly the walker reaches speed and stops (per second)
-const BODY = 0.22; // half the walker's width at the shoulders
 const LOOK_SPEED = 0.005; // radians per pixel of drag
 const TURN = 11; // how quickly the figure turns to face where it is going (per second)
 const JUMP = 3.1; // metres per second upwards: a jump of about half a metre
@@ -63,40 +63,6 @@ interface Door {
   target: number;
 }
 
-/** Solid wall stretches (doorways excluded) and tall furniture, as plan boxes. */
-function obstaclesOf(model: PlanModel): Box[] {
-  const out: Box[] = [];
-  for (const w of model.walls) {
-    const length = segLen(w.ax, w.ay, w.bx, w.by);
-    if (length < 1e-6) continue;
-    const doors = model.openings
-      .filter((o) => o.wallId === w.id && o.kind === "door")
-      .map((o) => openingSpan(w, o).map((t) => t * length) as [number, number])
-      .sort((a, b) => a[0] - b[0]);
-    let cursor = 0;
-    const runs: [number, number][] = [];
-    for (const [s, e] of doors) {
-      if (s > cursor) runs.push([cursor, s]);
-      cursor = Math.max(cursor, e);
-    }
-    if (cursor < length) runs.push([cursor, length]);
-    const ux = (w.bx - w.ax) / length;
-    const uy = (w.by - w.ay) / length;
-    for (const [s, e] of runs) {
-      const a = { x: w.ax + ux * s, y: w.ay + uy * s };
-      const b = { x: w.ax + ux * e, y: w.ay + uy * e };
-      out.push(wallBox({ ax: a.x, ay: a.y, bx: b.x, by: b.y, thickness: w.thickness }));
-    }
-  }
-  for (const it of model.items) {
-    const c = catalogByKind(it.kind);
-    // stairs are walked on, not walked round
-    if (!c || c.isRug || c.stair || (itemSize(it)?.h ?? c.h) < 0.3) continue;
-    const box = itemBox(it);
-    if (box) out.push(box);
-  }
-  return out;
-}
 
 /** Just inside the front door, looking into the room it opens onto. */
 function entryPose(m: PlanModel): { x: number; z: number; yaw: number } | null {
@@ -132,7 +98,7 @@ export class Viewer {
   private model: PlanModel | null = null;
   private pendingModel: PlanModel | null = null;
   /** what blocks the walker, floor by floor */
-  private obstacles = new Map<string, Box[]>();
+  private obstacles = new Map<string, Solid[]>();
   /** the floor the walker is on, and how high their feet are */
   private walkLevel = GROUND;
   private feet = 0;
@@ -256,6 +222,28 @@ export class Viewer {
     }
   }
 
+  /** Whether a door has swung open far enough to walk through. */
+  private doorOpen(id: string): boolean {
+    const d = this.doors.find((x) => x.id === id);
+    return !!d && d.amount > 0.5;
+  }
+
+  /** Open or close the door nearest the walker, if one is within reach (1.6 m). */
+  private toggleNearestDoor() {
+    const m = this.model;
+    if (!m) return;
+    let best: { id: string; d: number } | null = null;
+    for (const o of m.openings) {
+      if (o.kind !== "door") continue;
+      const wall = m.walls.find((w) => w.id === o.wallId);
+      if (!wall || levelOf(wall) !== this.walkLevel) continue;
+      const c = openingCenter(wall, o);
+      const d = Math.hypot(c.x - this.player.x, c.y - this.player.z);
+      if (d < 1.6 && (!best || d < best.d)) best = { id: o.id, d };
+    }
+    if (best) this.setDoors("toggle", best.id);
+  }
+
   setDoors(state: "open" | "closed" | "toggle", id?: string) {
     for (const d of this.doors) if (!id || d.id === id) d.target = state === "open" ? 1 : state === "closed" ? 0 : d.target > 0.5 ? 0 : 1;
   }
@@ -301,7 +289,7 @@ export class Viewer {
     this.model = model;
     this.scene.add(group);
     this.aimSun();
-    this.obstacles = new Map(levelsOf(model).map((l) => [l.id, obstaclesOf(onLevel(model, l.id))]));
+    this.obstacles = new Map(levelsOf(model).map((l) => [l.id, solidsOf(onLevel(model, l.id))]));
     const solid = new Set([...model.walls.map((w) => w.id), ...model.rooms.map((r) => r.id)]);
     this.solids = group.children.filter((c) => solid.has(c.userData.entityId));
     if (!this.obstacles.has(this.walkLevel)) this.walkLevel = levelsOf(model)[0].id;
@@ -413,6 +401,11 @@ export class Viewer {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (k === " ") {
         this.jumpWanted = true;
+        e.preventDefault();
+        return;
+      }
+      if (k === "e" && !e.repeat) {
+        this.toggleNearestDoor();
         e.preventDefault();
         return;
       }
@@ -532,19 +525,19 @@ export class Viewer {
     this.velocity.z += (want.z - this.velocity.z) * blend;
     if (!forward && !strafe && Math.hypot(this.velocity.x, this.velocity.z) < 0.01) this.velocity = { x: 0, z: 0 };
 
-    let dx = this.velocity.x * dt;
-    let dz = this.velocity.z * dt;
     const p = this.player;
-    const blocks = this.obstacles.get(this.walkLevel) ?? [];
-    const free = (x: number, z: number) => !blocks.some((b) => boxesOverlap({ x, y: z, halfW: BODY, halfD: BODY, angle: 0 }, b));
-    // slide along walls: try the full step, then each axis on its own
-    if ((dx || dz) && !free(p.x + dx, p.z + dz)) {
-      if (free(p.x + dx, p.z)) (dz = 0), (this.velocity.z = 0);
-      else if (free(p.x, p.z + dz)) (dx = 0), (this.velocity.x = 0);
-      else (dx = 0), (dz = 0), (this.velocity = { x: 0, z: 0 });
+    // walls, shut doors and furniture stop the walker; it slides along them
+    const solids = this.obstacles.get(this.walkLevel) ?? [];
+    const to = step(p.x, p.z, this.velocity.x * dt, this.velocity.z * dt, solids, (id) => this.doorOpen(id));
+    const dx = to.x - p.x;
+    const dz = to.y - p.z;
+    // what was pressed into a wall is lost, so the walker does not build up speed against it
+    if (dt > 0 && (this.velocity.x || this.velocity.z)) {
+      this.velocity.x = Math.abs(dx / dt) < Math.abs(this.velocity.x) ? dx / dt : this.velocity.x;
+      this.velocity.z = Math.abs(dz / dt) < Math.abs(this.velocity.z) ? dz / dt : this.velocity.z;
     }
-    p.x += dx;
-    p.z += dz;
+    p.x = to.x;
+    p.z = to.y;
     const travelled = Math.hypot(dx, dz);
 
     // on a stair the floor rises (or falls) under the walker; past halfway they are on the other floor
