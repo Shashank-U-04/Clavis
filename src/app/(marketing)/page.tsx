@@ -94,7 +94,6 @@ export default function Home() {
   const analysis = analyzeModel(model);
   const env = analysis.metrics.envelope!;
   const counts = summarizeIssues(checkModel(model));
-  const rooms = analysis.rooms;
   const STEPS = steps(sampleResult());
 
   return (
@@ -229,58 +228,8 @@ export default function Home() {
         </ul>
       </Section>
 
-      {/* ---------------------------------------------------------------- validator */}
-      <Section
-        sheet="04"
-        title="The validator is the referee."
-        intro="Whether a change comes from your mouse, Clavis Local or a hosted AI model, the same engine checks it. This is Linden Heights' own room schedule, all three floors, measured by that engine."
-      >
-        <div className="grid lg:grid-cols-[1fr_20rem]">
-          <div className="overflow-x-auto border-b border-rule lg:border-b-0 lg:border-r">
-            <table className="w-full min-w-[34rem] text-left">
-              <caption className="sr-only">Room schedule of Linden Heights</caption>
-              <thead>
-                <tr className="label border-b border-rule text-ink-3">
-                  <th className="px-5 py-3 font-normal md:px-8">Room</th>
-                  <th className="px-3 py-3 text-right font-normal">Clear floor</th>
-                  <th className="px-3 py-3 text-right font-normal">Daylight</th>
-                  <th className="px-3 py-3 text-right font-normal">Windows</th>
-                  <th className="px-5 py-3 text-right font-normal md:px-8">Doors from entrance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rooms.map((r, i) => (
-                  <tr key={r.id} data-reveal style={at(i * 0.5)} className="border-b border-rule-soft last:border-0">
-                    <td className="px-5 py-3 font-medium md:px-8">{r.label}</td>
-                    <td className="px-3 py-3 text-right font-mono text-sm">{r.area.toFixed(1)} m²</td>
-                    <td className={`px-3 py-3 text-right font-mono text-sm ${r.habitable && r.daylightRatio < 0.1 ? "text-marker" : ""}`}>{r.windows.length ? `${Math.round(r.daylightRatio * 100)} %` : "—"}</td>
-                    <td className="px-3 py-3 text-right font-mono text-sm">{r.windows.length}</td>
-                    <td className="px-5 py-3 text-right font-mono text-sm md:px-8">{r.depth ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div data-reveal style={at(2)} className="flex flex-col justify-between gap-8 p-5 md:p-8">
-            <div>
-              <p className="label text-ink-3">Findings</p>
-              <p className="mt-3 text-5xl font-semibold tracking-[-0.04em]">
-                {counts.error} <span className="text-ink-3">/</span> {counts.warning}
-              </p>
-              <p className="label mt-2 text-ink-2">errors / warnings</p>
-            </div>
-            <p className="text-sm text-ink-2">
-              {analysis.metrics.carpetArea.toFixed(1)} m² of clear floor in a {analysis.metrics.envelope!.w.toFixed(1)} × {analysis.metrics.envelope!.h.toFixed(1)} m footprint. Rules of thumb for early design, not a building-code review.
-            </p>
-            <ButtonLink href="/features/validation" variant="outline">
-              All {CHECK_COUNT} checks
-            </ButtonLink>
-          </div>
-        </div>
-      </Section>
-
       {/* ---------------------------------------------------------------- assistants */}
-      <Section sheet="05" title="Two assistants, one referee." intro="Clavis Local answers first, in your browser, with no key and nothing sent anywhere. What it doesn't understand goes to a hosted model. Either way you see a checked preview before anything changes.">
+      <Section sheet="04" title="Two assistants, the same checks." intro="Clavis Local answers first, in your browser, with no key and nothing sent anywhere. What it doesn't understand goes to a hosted model. Either way you see a checked preview before anything changes.">
         <div className="grid md:grid-cols-2">
           {[
             { tag: "In your browser", name: "Clavis Local", points: ["Designs homes from a brief", "Furnishes, repairs and resizes rooms", "Answers questions with measured numbers", "Instant, private, free"] },
