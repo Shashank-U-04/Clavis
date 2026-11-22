@@ -23,6 +23,7 @@ import { buildContent, disposeGroup, seedOf } from "./content";
 import { buildFurniture } from "./furniture";
 import { buildSite } from "./site";
 import { Daylight } from "./daylight";
+import { readThemePref, resolveTheme } from "../lib/theme";
 import { slab } from "./kit";
 import { cordMaterial, lampShadeMaterial, surface, wallCapMaterial } from "./materials";
 
@@ -167,7 +168,8 @@ export class Showcase {
     mount.appendChild(this.renderer.domElement);
 
     this.daylight = new Daylight(this.renderer, this.scene);
-    this.daylight.setTheme("light");
+    // daylight, or a sunset when the site is dark
+    this.daylight.setTheme(resolveTheme(readThemePref()) === "dark" ? "sunset" : "light");
 
     const { group, bounds } = buildContent(model);
     this.house = group;
@@ -444,6 +446,12 @@ export class Showcase {
     }
     // put everything where the opening has it now
     this.pose(this.intro ? performance.now() - this.intro.t0 : this.controls.enabled ? Infinity : 0);
+  }
+
+  /** Light the model for the site's theme: daylight, or a sunset for the dark theme. */
+  setTheme(theme: "light" | "sunset") {
+    this.daylight.setTheme(theme);
+    this.dirty = true;
   }
 
   /** Back to the front view. */
