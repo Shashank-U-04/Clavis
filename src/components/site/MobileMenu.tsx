@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { HeaderAccount } from "./HeaderAccount";
 import { Menu, X } from "lucide-react";
 import { FEATURES, NAV } from "./nav";
 
@@ -53,12 +54,7 @@ export function MobileMenu() {
                 </Link>
               ))}
             </div>
-            <Link href="/dashboard" className="border-b border-rule px-5 py-5 text-lg">
-              Your plans
-            </Link>
-            <Link href="/login" className="border-b border-rule px-5 py-5 text-lg">
-              Sign in
-            </Link>
+            <HeaderAccount className="border-b border-rule px-5 py-5 text-lg" />
             <Link href="/new" className="label bg-ink px-5 py-6 text-paper">
               Start designing →
             </Link>
