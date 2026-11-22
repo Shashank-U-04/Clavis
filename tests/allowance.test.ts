@@ -17,12 +17,21 @@ function deps(user: string | null, start = 0, cap = 3) {
 }
 
 describe("a signed-in person's daily allowance", () => {
-  it("guests pass straight through, uncounted", async () => {
+  it("without accounts (local development), requests pass straight through, uncounted", async () => {
     const t = deps(null);
     const res = await withAllowance(post(), 3, t.d, async () => ok());
     expect(res.status).toBe(200);
     expect((await res.json()).meta.accountLeft).toBeUndefined();
     expect(t.used()).toBe(0);
+  });
+
+  it("with accounts on, a request from someone not signed in is turned away and never reaches the model", async () => {
+    const t = deps(null);
+    let asked = false;
+    const res = await withAllowance(post(), 3, { ...t.d, requireAccount: true }, async () => ((asked = true), ok()));
+    expect(res.status).toBe(401);
+    expect((await res.json()).error.code).toBe("sign_in_required");
+    expect(asked).toBe(false);
   });
 
   it("counts each answer and says how many are left, then refuses once it is used up", async () => {

@@ -143,7 +143,9 @@ export type AssistantErrorCode =
   | "malformed_output"
   | "truncated_output"
   /** client-side: this browser has used today's hosted allowance (src/ai/hostedQuota.ts) */
-  | "daily_cap";
+  | "daily_cap"
+  /** accounts are on and the request came without a signed-in session */
+  | "sign_in_required";
 
 export interface AssistantMeta {
   model: string;

@@ -1,7 +1,8 @@
 /**
  * A signed-in person's daily allowance of hosted-model requests, counted in the database so
- * it holds across browsers and cannot be reset from the browser. Guests pass straight through
- * (their courtesy limit is kept in the browser; the per-client rate limit still applies).
+ * it holds across browsers and cannot be reset from the browser. When accounts are on
+ * (`requireAccount`), a request without a signed-in session is turned away; without accounts
+ * (local development, tests) everyone passes, with the per-client rate limit still applying.
  *
  * One request is taken before the model is asked. If the model never did any work (busy,
  * unreachable, the request was refused), it is given back; a model that answered badly still
@@ -17,6 +18,8 @@ export interface AllowanceDeps {
   consume(userId: string, cap: number): Promise<number | null>;
   refund(userId: string): Promise<void>;
   log?(entry: Record<string, unknown>): void;
+  /** turn away requests from people who are not signed in */
+  requireAccount?: boolean;
 }
 
 /** failures that still used the model's tokens */
@@ -34,7 +37,10 @@ export async function withAllowance(request: Request, cap: number, deps: Allowan
   } catch {
     user = null;
   }
-  if (!user) return handle(request);
+  if (!user) {
+    if (!deps.requireAccount) return handle(request);
+    return reply({ ok: false, error: { code: "sign_in_required", message: "Sign in to use the assistant.", retryable: false } }, 401);
+  }
 
   let left: number | null = null;
   try {
