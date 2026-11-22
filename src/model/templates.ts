@@ -308,11 +308,23 @@ const glass = (level: string, x: number, y: number, rotation: number, width: num
   ];
 };
 
+let runners = 0;
+/** A runner: a rug 1.2 m wide and `length` long, along x, on a given floor ("ground" for the ground floor). */
+const runner = (level: string, x: number, y: number, length: number): DesignOperation[] => {
+  const as = `runner${runners++}`;
+  return [
+    { op: "place_item", as, kind: "rug", x, y, rotation: 0, ...(level === "ground" ? {} : { level: `$${level}` }) },
+    { op: "resize_item", id: `$${as}`, w: length, d: 1.2 },
+  ];
+};
+
 /**
  * Linden Heights — a three-floor house of about 640 m², built only from the library. The
  * ground floor opens to the north and west: a glazed living room, dining and an island kitchen
- * along the garden front, an entrance hall with the stair, and a study, home cinema, powder
- * room, utility and guest bedroom behind. Upstairs, the main suite with its en-suite and
+ * along the garden front, a wide entrance hall (3.6 m) with the stair along its north wall,
+ * and a study, home cinema, powder room, utility and guest bedroom behind. On every floor the
+ * stair runs along a stretch of wall with no doors, so no door opens onto a stairwell, and
+ * each flight lands with room to turn before the next. Upstairs, the main suite with its en-suite and
  * dressing room, three bedrooms and a bathroom, and a stone terrace over the living room. At
  * the top, a sky lounge with a bar, a gym, and a roof terrace. An infinity pool on a stone
  * terrace runs along the west front.
@@ -329,15 +341,15 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
     name: "Linden Heights",
     wallHeight: 3,
     rooms: [
-      { as: "living", label: "Living room", x: 0, y: 0, w: 9, h: 7, floor: "oak" },
-      { as: "dining", label: "Dining", x: 9, y: 0, w: 5, h: 7, floor: "oak" },
-      { as: "kitchen", label: "Kitchen", x: 14, y: 0, w: 6, h: 7, floor: "tile" },
-      { as: "hall", label: "Entrance hall", x: 0, y: 7, w: 20, h: 2.4, floor: "tile" },
-      { as: "study", label: "Study", x: 0, y: 9.4, w: 5, h: 5, floor: "oak" },
-      { as: "cinema", label: "Home cinema", x: 5, y: 9.4, w: 5, h: 5, floor: "carpet" },
-      { as: "powder", label: "Powder room", x: 10, y: 9.4, w: 2.5, h: 5, floor: "tile" },
-      { as: "utility", label: "Utility", x: 12.5, y: 9.4, w: 2.5, h: 5, floor: "tile" },
-      { as: "guest", label: "Guest bedroom", x: 15, y: 9.4, w: 5, h: 5, floor: "carpet" },
+      { as: "living", label: "Living room", x: 0, y: 0, w: 9, h: 6.4, floor: "oak" },
+      { as: "dining", label: "Dining", x: 9, y: 0, w: 5, h: 6.4, floor: "oak" },
+      { as: "kitchen", label: "Kitchen", x: 14, y: 0, w: 6, h: 6.4, floor: "tile" },
+      { as: "hall", label: "Entrance hall", x: 0, y: 6.4, w: 20, h: 3.6, floor: "tile" },
+      { as: "study", label: "Study", x: 0, y: 10, w: 5, h: 4.4, floor: "oak" },
+      { as: "cinema", label: "Home cinema", x: 5, y: 10, w: 5, h: 4.4, floor: "carpet" },
+      { as: "powder", label: "Powder room", x: 10, y: 10, w: 2.5, h: 4.4, floor: "tile" },
+      { as: "utility", label: "Utility", x: 12.5, y: 10, w: 2.5, h: 4.4, floor: "tile" },
+      { as: "guest", label: "Guest bedroom", x: 15, y: 10, w: 5, h: 4.4, floor: "carpet" },
     ],
     doors: [
       { from: "hall", to: "exterior", side: "west", width: 1.8 },
@@ -345,7 +357,7 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
       { from: "living", to: "hall", width: 1.6, position: 0.3 },
       { from: "dining", to: "living", width: 2.4 },
       { from: "kitchen", to: "dining", width: 1.6 },
-      { from: "kitchen", to: "hall", position: 0.85 },
+      { from: "kitchen", to: "hall", position: 0.45 },
       { from: "study", to: "hall", position: 0.5 },
       { from: "cinema", to: "hall", position: 0.2 },
       { from: "powder", to: "hall", width: 0.8 },
@@ -367,15 +379,15 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
     ],
   },
   // living: two seating groups facing the glass, a fireplace on the hall wall, a grand piano
-  item("rug", 3, 3.5, 90),
-  item("sofa_3", 4.3, 3.5, 270),
-  item("coffee_table", 3, 3.5, 90),
-  item("armchair", 3, 1.6, 0),
-  item("armchair", 3, 5.4, 180),
+  item("rug", 3, 3.2, 90),
+  item("sofa_3", 4.3, 3.2, 270),
+  item("coffee_table", 3, 3.2, 90),
+  item("armchair", 3, 1.4, 0),
+  item("armchair", 3, 5.0, 180),
   against("fireplace", "living", "south", 0.75),
   item("grand_piano", 7.3, 2.0, 0),
   item("plant", 0.5, 0.5, 0),
-  item("plant", 8.5, 6.5, 0),
+  item("plant", 8.5, 5.9, 0),
   // dining for eight, a sideboard on the hall wall
   item("dining_table_oval", 11.5, 3.2, 90),
   item("dining_chair", 10.745, 2.6, 90),
@@ -391,8 +403,16 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
   item("kitchen_hob_unit", 19.58, 4.4, 270),
   item("fridge", 19.54, 5.35, 270),
   item("kitchen_island", 16.4, 2.6, 90),
-  // hall: the stair climbs east from beside the entrance
-  item("stair_straight", 9, 7.65, 270),
+  // hall: the stair climbs east along the dining room's wall (no doors there), lit at its
+  // foot and head; a console and plants along the far wall, a runner down the middle
+  item("stair_straight", 11.5, 7.05, 270),
+  against("wall_light", "hall", "north", 0.44),
+  against("wall_light", "hall", "north", 0.705),
+  against("sideboard", "hall", "south", 0.43),
+  item("plant", 0.45, 9.55, 0),
+  item("plant", 14.55, 9.55, 0),
+  ...runner("ground", 5.2, 8.3, 6),
+  ...runner("ground", 16.8, 8.3, 4.6),
   // study, cinema, powder room, utility, guest bedroom
   against("desk", "study", "west", 0.45),
   against("bookshelf", "study", "east", 0.5),
@@ -412,20 +432,20 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
     level: "$first",
     wallHeight: 3,
     rooms: [
-      { as: "main", label: "Main bedroom", x: 4, y: 0, w: 8, h: 7, floor: "oak" },
-      { as: "ensuite", label: "En-suite", x: 12, y: 0, w: 4, h: 7, floor: "tile" },
-      { as: "dress", label: "Dressing room", x: 16, y: 0, w: 4, h: 7, floor: "oak" },
-      { as: "landing", label: "Landing", x: 4, y: 7, w: 16, h: 2.4, floor: "oak" },
-      { as: "bed2", label: "Bedroom 2", x: 4, y: 9.4, w: 5, h: 5, floor: "carpet" },
-      { as: "bath2", label: "Bathroom", x: 9, y: 9.4, w: 3, h: 5, floor: "tile" },
-      { as: "bed3", label: "Bedroom 3", x: 12, y: 9.4, w: 4, h: 5, floor: "carpet" },
-      { as: "bed4", label: "Bedroom 4", x: 16, y: 9.4, w: 4, h: 5, floor: "carpet" },
+      { as: "main", label: "Main bedroom", x: 4, y: 0, w: 8, h: 6.4, floor: "oak" },
+      { as: "ensuite", label: "En-suite", x: 12, y: 0, w: 4, h: 6.4, floor: "tile" },
+      { as: "dress", label: "Dressing room", x: 16, y: 0, w: 4, h: 6.4, floor: "oak" },
+      { as: "landing", label: "Landing", x: 4, y: 6.4, w: 16, h: 3.6, floor: "oak" },
+      { as: "bed2", label: "Bedroom 2", x: 4, y: 10, w: 5, h: 4.4, floor: "carpet" },
+      { as: "bath2", label: "Bathroom", x: 9, y: 10, w: 3, h: 4.4, floor: "tile" },
+      { as: "bed3", label: "Bedroom 3", x: 12, y: 10, w: 4, h: 4.4, floor: "carpet" },
+      { as: "bed4", label: "Bedroom 4", x: 16, y: 10, w: 4, h: 4.4, floor: "carpet" },
     ],
     doors: [
       { from: "main", to: "landing", position: 0.2 },
       { from: "main", to: "exterior", side: "west", width: 1.8 },
-      { from: "ensuite", to: "main", width: 0.9, position: 0.8 },
-      { from: "dress", to: "landing", position: 0.5 },
+      { from: "ensuite", to: "main", width: 0.9, position: 0.9 },
+      { from: "dress", to: "landing", position: 0.85 },
       { from: "bed2", to: "landing", position: 0.5 },
       { from: "bath2", to: "landing", width: 0.8 },
       { from: "bed3", to: "landing", position: 0.5 },
@@ -444,19 +464,26 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
     ],
   },
   // main suite
-  against("bed_double", "main", "east", 0.45),
+  against("bed_double", "main", "east", 0.507),
   on("first", "nightstand", 11.7, 2.19, 270),
   on("first", "nightstand", 11.7, 4.29, 270),
   against("sofa", "main", "south", 0.8),
   on("first", "rug", 9.5, 3.15, 90),
   against("freestanding_tub", "ensuite", "north", 0.5, 0.4),
-  against("double_vanity", "ensuite", "south", 0.35),
+  against("double_vanity", "ensuite", "south", 0.5),
   against("shower", "ensuite", "east", 0.75),
   against("toilet", "ensuite", "west", 0.2),
   against("walk_in_wardrobe", "dress", "west", 0.5),
   against("walk_in_wardrobe", "dress", "east", 0.5),
-  // the landing: the stair to the top floor climbs east from its middle
-  on("first", "stair_straight", 15, 7.65, 270),
+  // the landing: the stair from below arrives at x 13.4 with 1.2 m to turn before the flight to
+  // the top floor, which climbs east along the en-suite wall (no doors there); a bookcase and
+  // a plant on the free stretch of wall, lights at the stairs, a runner
+  on("first", "stair_straight", 16.5, 7.05, 270),
+  against("bookshelf", "landing", "north", 0.24),
+  against("wall_light", "landing", "north", 0.34),
+  against("wall_light", "landing", "north", 0.65),
+  on("first", "plant", 4.45, 9.55, 0),
+  ...runner("first", 7.0, 8.3, 4.6),
   // bedrooms and the bathroom
   against("bed_double", "bed2", "south", 0.5),
   on("first", "nightstand", 5.425, 13.95, 180),
@@ -486,12 +513,12 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
     level: "$second",
     wallHeight: 3,
     rooms: [
-      { as: "lounge", label: "Sky lounge", x: 12, y: 0, w: 8, h: 7, floor: "oak" },
-      { as: "top", label: "Upper landing", x: 12, y: 7, w: 8, h: 2.4, floor: "oak" },
-      { as: "gym", label: "Gym", x: 12, y: 9.4, w: 8, h: 5, floor: "concrete" },
+      { as: "lounge", label: "Sky lounge", x: 12, y: 0, w: 8, h: 6.4, floor: "oak" },
+      { as: "top", label: "Upper landing", x: 12, y: 6.4, w: 8, h: 3.6, floor: "oak" },
+      { as: "gym", label: "Gym", x: 12, y: 10, w: 8, h: 4.4, floor: "concrete" },
     ],
     doors: [
-      { from: "lounge", to: "top", width: 1.6, position: 0.3 },
+      { from: "lounge", to: "top", width: 1.6, position: 0.05 },
       { from: "gym", to: "top", position: 0.5 },
       { from: "lounge", to: "exterior", side: "west", width: 2.4, position: 0.8 },
     ],
@@ -502,6 +529,9 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
       { room: "gym", side: "east", width: 3, height: 1.8 },
     ],
   },
+  // the upper landing: the stair arrives at its east end, clear of both doors; a light at its head
+  against("wall_light", "top", "south", 0.85),
+  on("second", "plant", 19.55, 9.55, 0),
   against("sofa_3", "lounge", "south", 0.85),
   on("second", "coffee_table", 17.8, 4.9, 0),
   on("second", "armchair", 17.0, 3.2, 0),
