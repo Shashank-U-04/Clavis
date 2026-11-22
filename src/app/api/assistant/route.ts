@@ -11,6 +11,7 @@ import { withAllowance, type AllowanceDeps } from "../../../../server/allowance"
 import { ACCOUNT_DAILY_CAP } from "@/ai/hostedQuota";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
+import { authConfigured } from "@/lib/auth/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,6 +45,8 @@ const allowance: AllowanceDeps = {
     await supabaseAdmin()?.rpc("refund_assistant_request", { p_user: userId });
   },
   log: (entry) => console.log(JSON.stringify({ svc: "clavis-assistant", ...entry })),
+  // with accounts on, only signed-in people may use the hosted model
+  requireAccount: authConfigured(),
 };
 
 const handle = (request: Request) => handleAssistantRequest(request, env());

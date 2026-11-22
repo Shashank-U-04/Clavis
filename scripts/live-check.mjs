@@ -62,6 +62,17 @@ await step("footer and login page", async () => {
   await ctx.close();
 });
 
+await step("the studio needs an account", async () => {
+  const { ctx, page } = await newDevice();
+  await page.goto(`${SITE}/studio/try?template=linden-heights`);
+  const u = new URL(page.url());
+  check("signed out, the studio sends you to sign in", u.pathname === "/login", u.pathname);
+  check("…and back to the studio afterwards", u.searchParams.get("next") === "/studio/try?template=linden-heights", u.searchParams.get("next") ?? "no next");
+  const r = await fetch(`${SITE}/api/assistant`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  check("signed out, the assistant answers 401", r.status === 401, String(r.status));
+  await ctx.close();
+});
+
 // ------------------------------------------------------------------ 2. the judges' account
 await step("judges", async () => {
   const { ctx, page, errors } = await newDevice();

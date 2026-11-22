@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Logo />
         </Link>
         <div>
-          <p className="label text-paper/50">With an account</p>
+          <p className="label text-paper/50">Your account</p>
           <h2 className="mt-4 max-w-md text-5xl font-semibold uppercase leading-[0.95] tracking-[-0.035em]">Your homes, wherever you are.</h2>
           <ul className="mt-10 max-w-md divide-y divide-paper/15 border-y border-paper/15">
             {POINTS.map((p) => (
@@ -25,7 +25,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             ))}
           </ul>
         </div>
-        <p className="label text-paper/40">No account needed to design · projects stay in your browser</p>
+        <p className="label text-paper/40">Free · no new password · private to you</p>
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full border border-paper/10" aria-hidden="true" />
         <div className="pointer-events-none absolute -right-8 -top-8 h-64 w-64 rounded-full border border-paper/10" aria-hidden="true" />
       </aside>

@@ -3,7 +3,7 @@ import { StudioLoader } from "./StudioLoader";
 
 export const metadata: Metadata = {
   title: "Studio",
-  description: "Design a home without an account. Your work is saved in this browser.",
+  description: "Design a home, check it and walk through it. Your work is saved to your account as you go.",
 };
 
 export default function TryStudioPage() {

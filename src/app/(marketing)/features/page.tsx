@@ -8,16 +8,16 @@ import { ButtonLink } from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Design by describing, a validator on every change, plan and 3D side by side, a walk-through, and projects that save themselves.",
+  description: "Design a home from a sentence, edit it by hand or by asking, see problems on the plan, walk through it in 3D, and keep it on any device.",
 };
 
 const ALSO = [
-  ["Draw by hand", "Walls that chain, rooms you drag out, doors and windows clicked onto walls, all snapping to 5 cm."],
-  ["Details", "Exact numbers for any wall, opening, room or piece, edited through the same checked pipeline."],
-  ["Undo and redo", "Every change, including a drag or an applied proposal, is one step back."],
-  ["Tracing", "Lay a photo or scan of a plan under the drawing, set its real width and trace over it."],
-  ["Route on the plan", "See the path from the front door to any room drawn on the plan."],
-  ["Phone and tablet", "The studio rearranges itself for small screens."],
+  ["Draw by hand", "Chain walls, drag out rooms, click doors and windows onto walls. Everything snaps to 5 cm."],
+  ["Exact sizes", "Select any wall, door, room or piece of furniture and type its exact measurements."],
+  ["Several floors", "Add floors, link them with stairs, and see the floor below faintly while you draw."],
+  ["Undo and redo", "Every change, a drag or an applied suggestion, is one step back."],
+  ["Trace a drawing", "Put a photo or scan of an existing plan under the sheet, set its width and trace over it."],
+  ["Route to every room", "See the path from the front door to any room drawn on the plan."],
 ];
 
 export default function FeaturesPage() {
@@ -25,8 +25,8 @@ export default function FeaturesPage() {
     <>
       <PageHeader
         trail={[{ href: "/features", label: "Features" }]}
-        title="A drafting table that thinks about the home with you."
-        intro="Clavis does four things well: it designs from a sentence, checks everything it draws, shows the home in 3D, and keeps your work."
+        title="Everything Clavis does."
+        intro="Four things, from the first idea to a plan you can share: design from a description, see problems as you work, look at it in 3D, and keep it."
       />
       <section className="border-b border-rule">
         <ul className="mx-auto grid max-w-[1440px] md:grid-cols-2">
@@ -46,17 +46,17 @@ export default function FeaturesPage() {
           ))}
         </ul>
       </section>
-      <Section sheet="A" title="And the details that make it a studio.">
+      <Section sheet="01" title="Also in the studio.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3">
           {ALSO.map(([t, d], i) => (
-            <li key={t} className={`border-b border-rule p-5 md:p-8 ${i % 3 !== 2 ? "lg:border-r" : ""} ${i % 2 === 0 ? "sm:border-r" : ""}`}>
+            <li key={t} className={`border-b border-rule p-5 md:p-8 ${i % 2 === 0 ? "sm:border-r" : ""} ${i % 3 !== 2 ? "lg:border-r" : "lg:border-r-0"}`}>
               <h3 className="font-semibold">{t}</h3>
               <p className="mt-2 text-sm text-ink-2">{d}</p>
             </li>
           ))}
         </ul>
         <div className="flex justify-end p-5 md:p-8">
-          <ButtonLink href="/new">Try it now</ButtonLink>
+          <ButtonLink href="/new">Start designing</ButtonLink>
         </div>
       </Section>
     </>

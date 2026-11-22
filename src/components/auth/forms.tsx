@@ -86,20 +86,13 @@ export function LoginForm() {
     <div className="space-y-6">
       <GoogleButton onClick={f.google} busy={f.busy} />
       <AuthNotice result={f.result} />
-      <p className="text-sm text-ink-2">Your Google account is your Clavis account: no new password, and your plans follow you to every device. Anything you made here as a guest comes with you.</p>
+      <p className="text-sm text-ink-2">Your Google account is your Clavis account: no new password, and your plans follow you to every device.</p>
       {judgesLoginShown() && (
         <>
           <Divider>or</Divider>
           <JudgesForm />
         </>
       )}
-      <p className="text-sm text-ink-2">
-        No account needed to design:{" "}
-        <Link href="/dashboard" className="text-ink underline underline-offset-4 hover:text-marker">
-          continue as a guest
-        </Link>
-        , and your plans stay in this browser.
-      </p>
     </div>
   );
 }
