@@ -18,6 +18,7 @@ import { swingToward } from "./doorPlace";
 import { removeSelection, turnSelection } from "./selection";
 import { catalogByKind } from "../model/catalog";
 import { blockById, nextLabel, snapRect } from "../model/blocks";
+import { nextSizes } from "../studio/nextSizes";
 import { useSession } from "../ai/session";
 import { setUi, useUi } from "../studio/uiStore";
 import { ItemDimensions, OverallDimensions, RoomDimensions } from "./dimensions";
@@ -119,7 +120,7 @@ export function Editor() {
           const at = pointer.current;
           if (!typedRef.current || !(length > 0) || !at) return;
           const end = wallEnd(from, at.p, onLevel(store.getState().model, store.getState().editor.level).walls, { free: at.free, length, scale: scaleRef.current });
-          const r = actions.addWall(from.x, from.y, end.x, end.y, undefined, undefined, true);
+          const r = actions.addWall(from.x, from.y, end.x, end.y, nextSizes.getState().wall.thickness, nextSizes.getState().wall.height, true);
           logActivity("human", "add_wall", r.summary, r.ok);
           if (r.ok) actions.setPendingWallStart(end);
           return setTyped("");
@@ -217,7 +218,7 @@ export function Editor() {
         setTyped("");
         if (!start) chainStart.current = end;
         else if (Math.hypot(end.x - start.x, end.y - start.y) >= 0.2) {
-          const r = actions.addWall(start.x, start.y, end.x, end.y, undefined, undefined, true);
+          const r = actions.addWall(start.x, start.y, end.x, end.y, nextSizes.getState().wall.thickness, nextSizes.getState().wall.height, true);
           logActivity("human", "add_wall", r.summary, r.ok);
           // closing the loop back onto where the chain began ends it
           const first = chainStart.current;
@@ -239,7 +240,7 @@ export function Editor() {
       }
       case "place": {
         if (!editor.placingKind) return;
-        const r = actions.placeItem(editor.placingKind, p.x, p.y, 0);
+        const r = actions.placeItem(editor.placingKind, p.x, p.y, 0, nextSizes.getState().item[editor.placingKind]);
         return logActivity("human", "place_item", r.summary, r.ok);
       }
       case "door":
@@ -248,7 +249,8 @@ export function Editor() {
         const hit = wallUnder(at);
         const host = hit && live.walls.find((w) => w.id === hit.id);
         const swing = host && editor.drawMode === "door" ? swingToward(host, hit.t, at) : undefined;
-        const r = hit ? actions.addOpening(editor.drawMode, hit.id, hit.t, undefined, undefined, undefined, swing) : { ok: false, summary: "Click on a wall to place it." };
+        const size = editor.drawMode === "door" ? { ...nextSizes.getState().door, sill: 0 } : nextSizes.getState().window;
+        const r = hit ? actions.addOpening(editor.drawMode, hit.id, hit.t, size.width, size.sill, size.height, swing) : { ok: false, summary: "Click on a wall to place it." };
         return logActivity("human", `add_${editor.drawMode}`, r.summary, r.ok);
       }
       default:
@@ -316,7 +318,9 @@ export function Editor() {
   function blockGhost(p: Pt) {
     const b = editor.drawMode === "block" ? blockById(editor.placingKind) : null;
     if (!b) return null;
-    const r = snapRect(live, { x: snap(p.x - b.w / 2), y: snap(p.y - b.h / 2), w: b.w, h: b.h });
+    // the size set in the library, if it was changed there
+    const { w, h } = nextSizes.getState().room[b.id] ?? b;
+    const r = snapRect(live, { x: snap(p.x - w / 2), y: snap(p.y - h / 2), w, h });
     return { ...r, label: nextLabel(live, b.label), floor: b.floor };
   }
 
@@ -343,7 +347,8 @@ export function Editor() {
     const w = hit && live.walls.find((x) => x.id === hit.id);
     if (!hit || !w) return null;
     const door = editor.drawMode === "door";
-    const ghost: Opening = { id: "ghost", kind: editor.drawMode, wallId: w.id, t: hit.t, width: door ? 0.9 : 1.2, sill: door ? 0 : 0.9, height: door ? 2.1 : 1.2, ...(door && swingToward(w, hit.t, pointer.current.p)) };
+    const next = nextSizes.getState();
+    const ghost: Opening = { id: "ghost", kind: editor.drawMode, wallId: w.id, t: hit.t, width: door ? next.door.width : next.window.width, sill: door ? 0 : next.window.sill, height: door ? next.door.height : next.window.height, ...(door && swingToward(w, hit.t, pointer.current.p)) };
     return { ...live, walls: [w], openings: [ghost] };
   })();
   const selRoom = model.rooms.find((r) => r.id === editor.selectedRoomId);

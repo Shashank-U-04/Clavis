@@ -122,7 +122,7 @@ const byKind = new Map(CATALOG.map((c) => [c.kind, c]));
 export const catalogByKind = (kind: string): CatalogEntry | undefined => byKind.get(kind);
 
 /** The limits a person can resize a piece to, in metres. */
-export const ITEM_SIZE_LIMITS = { min: 0.1, maxPlan: 6, maxHeight: 3.5 } as const;
+export const ITEM_SIZE_LIMITS = { min: 0.1, maxPlan: 12, maxHeight: 12 } as const;
 
 /**
  * A placed piece's real size: its own width, depth and height where the person changed them,

@@ -34,7 +34,7 @@ describe("resizing a piece of furniture", () => {
   });
 
   it("refuses sizes outside the limits", () => {
-    for (const bad of [{ w: 0 }, { d: -1 }, { w: 40 }, { h: 9 }]) {
+    for (const bad of [{ w: 0 }, { d: -1 }, { w: 40 }, { h: 15 }]) {
       const out = applyBatch(withDesk(), [{ op: "resize_item", id: "desk", ...bad }], ids());
       expect(out.ok).toBe(false);
     }

@@ -6,6 +6,7 @@ import { catalogByKind } from "../model/catalog";
 import { downloadText, safeName } from "../export/planSvg";
 import { onCommand } from "./events";
 import { Viewer, type SceneTheme } from "./viewer";
+import { nextSizes } from "../studio/nextSizes";
 
 const HINTS = {
   orbit: "Drag to orbit · scroll to zoom · click furniture to select, doors to open",
@@ -33,7 +34,7 @@ export function Scene3D({ theme = "light" }: { theme?: SceneTheme }) {
         onFloor: (x, y) => {
           const kind = store.getState().editor.placingKind;
           if (!kind) return;
-          const r = actions.placeItem(kind, x, y, 0);
+          const r = actions.placeItem(kind, x, y, 0, nextSizes.getState().item[kind]);
           logActivity("human", "place_item", r.summary, r.ok);
         },
       });
