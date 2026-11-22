@@ -7,7 +7,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { Download, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { ReportDownload } from "./ReportDownload";
 import { authConfigured } from "@/lib/auth/config";
 import { ALL_VIEWS, countViews, readTheme, readViews, toggleView, type ThemePref, type ViewKey, type Views } from "@/studio/views";
 import { applyTheme } from "@/lib/theme";
@@ -103,15 +104,6 @@ export function SettingsPanel() {
   };
   const pickTheme = (t: ThemePref) => (setTheme(t), saveUi({ theme: t }), applyTheme(t));
 
-  const download = () => {
-    const data = Object.fromEntries(ownKeys().map((k) => [k, read(k)]));
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), data }, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `clavis-browser-data-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
   const clear = () => {
     for (const k of ownKeys()) {
       try {
@@ -172,12 +164,13 @@ export function SettingsPanel() {
         </fieldset>
       </Row>
 
-      <Row title="Your data" text="Projects and preferences are kept in this browser only. Download a copy, or remove all of it.">
+      <Row title="Design report" text="A PDF of one of your designs: its floor plans to scale, the house in 3D from five angles, and every room, door, window and piece of furniture with its name and size.">
+        <ReportDownload />
+      </Row>
+
+      <Row title="This browser's copy" text="Your projects are kept in your account; this browser keeps a working copy, with your preferences. Remove the copy here to start this browser afresh.">
         <p className="label text-ink-3">{keys.length} item{keys.length === 1 ? "" : "s"} stored</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={download} disabled={keys.length === 0} className="label flex items-center gap-2 border border-ink px-4 py-2.5 hover:bg-ink hover:text-paper disabled:opacity-40">
-            <Download size={14} aria-hidden="true" /> Download everything
-          </button>
           {confirm ? (
             <>
               <button type="button" onClick={clear} className="label flex items-center gap-2 bg-marker px-4 py-2.5 text-paper">
@@ -193,7 +186,7 @@ export function SettingsPanel() {
             </button>
           )}
         </div>
-        {confirm && <p className="mt-3 text-sm text-marker">This deletes every project in this browser. It cannot be undone; download a copy first if you want one.</p>}
+        {confirm && <p className="mt-3 text-sm text-marker">This removes this browser’s copy of your projects and your preferences. Your projects stay in your account and come back here the next time Clavis syncs.</p>}
         {done && (
           <p role="status" className="mt-3 text-sm text-ink-2">
             {done}
