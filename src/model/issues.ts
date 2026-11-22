@@ -309,6 +309,21 @@ function checkFurniture({ model, wallById, out }: Ctx) {
     };
     return [{ o, box, depth: box.halfD - wall.thickness / 2 }];
   });
+  // where each door's leaves swing: the width of the opening, as deep as a leaf is wide, on the
+  // side the door opens to (a pair of leaves when the opening is wider than 1.25 m)
+  const swings = openings.flatMap((o) => {
+    const wall = wallById.get(o.wallId);
+    if (!wall || o.kind !== "door") return [];
+    const clear = o.width - 0.1;
+    const leaf = clear > 1.15 ? clear / 2 : clear;
+    const len = segLen(wall.ax, wall.ay, wall.bx, wall.by) || 1;
+    const side = o.side === "left" ? -1 : 1;
+    const n = { x: (-(wall.by - wall.ay) / len) * side, y: ((wall.bx - wall.ax) / len) * side };
+    const c = openingCenter(wall, o);
+    const off = wall.thickness / 2 + leaf / 2;
+    const box: Box = { x: c.x + n.x * off, y: c.y + n.y * off, halfW: o.width / 2, halfD: leaf / 2, angle: Math.atan2(wall.by - wall.ay, wall.bx - wall.ax) };
+    return [{ o, box }];
+  });
 
   items.forEach((it, i) => {
     const cat = catalogByKind(it.kind);
@@ -324,9 +339,11 @@ function checkFurniture({ model, wallById, out }: Ctx) {
     for (const { w, box: wb } of ground ? [] : wallBoxes) {
       if (boxesOverlap(box, wb, 0.02)) out.push({ severity: "error", code: "item_through_wall", message: `${cat.label} goes through wall ${w.id}.`, refs: [it.id, w.id] });
     }
+    const blocking = new Set<string>();
     for (const { o, box: zone, depth } of ground ? [] : clearances) {
       if (!boxesOverlap(box, zone)) continue;
       if (o.kind === "door") {
+        blocking.add(o.id);
         out.push({ severity: "error", code: "item_blocks_door", message: `${cat.label} is in the way of door ${o.id}.`, refs: [it.id, o.id], measurements: { clearanceDepth: r3(depth) } });
       } else if (tall > o.sill) {
         out.push({
@@ -337,6 +354,11 @@ function checkFurniture({ model, wallById, out }: Ctx) {
           measurements: { itemHeight: tall, sill: o.sill },
         });
       }
+    }
+    // a door must be able to swing all the way open (a rug lies under it)
+    for (const { o, box: sweep } of ground || cat.isRug ? [] : swings) {
+      if (blocking.has(o.id) || !boxesOverlap(box, sweep)) continue;
+      out.push({ severity: "error", code: "item_in_door_swing", message: `${cat.label} is where door ${o.id} swings open.`, refs: [it.id, o.id] });
     }
     for (const other of items.slice(i + 1)) {
       const oc = catalogByKind(other.kind);

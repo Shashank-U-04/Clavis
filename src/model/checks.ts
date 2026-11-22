@@ -23,6 +23,7 @@ export const CHECK_CODES = [
   "item_unknown",
   "item_through_wall",
   "item_blocks_door",
+  "item_in_door_swing",
   "item_blocks_window",
   "items_overlap",
   "item_outside_rooms",

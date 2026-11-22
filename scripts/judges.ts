@@ -64,10 +64,10 @@ async function findUser(): Promise<string | null> {
 // ------------------------------------------------------------------------------ sample plans
 
 const SAMPLES: { id: string; slug: string; starred?: boolean; version?: string }[] = [
-  { id: "judges-sunset-loft", slug: "sunset-loft", starred: true, version: "As first laid out" },
-  { id: "judges-family-house", slug: "family-house", version: "First draft" },
+  { id: "judges-linden-heights", slug: "linden-heights", starred: true, version: "As first laid out" },
+  { id: "judges-cedar-villa", slug: "cedar-villa", version: "First draft" },
+  { id: "judges-sunset-loft", slug: "sunset-loft" },
   { id: "judges-compact-two-bedroom", slug: "compact-two-bedroom" },
-  { id: "judges-studio-apartment", slug: "studio-apartment" },
 ];
 
 const area = (m: PlanModel) => Math.round(m.rooms.reduce((t, r) => t + r.w * r.h, 0) * 10) / 10;
