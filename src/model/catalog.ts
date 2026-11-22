@@ -24,6 +24,12 @@ export interface CatalogEntry {
   isRug?: boolean;
   /** a stair: it climbs from the floor it stands on to the floor above, from its front edge to its back (see model/stairs.ts) */
   stair?: "straight" | "spiral";
+  /**
+   * A piece whose top spreads wider than what stands on the ground (a tree): `w` × `d` is the
+   * crown, and this is the width of the trunk. Walls, doorways and other pieces are checked
+   * against the trunk; the crown may spread over them, as a real tree's does.
+   */
+  trunk?: number;
   dimensionSource: DimensionSource;
   /** the 3D asset: procedural geometry in three/furniture.ts */
   asset: { source: string; license: string };
@@ -69,7 +75,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry({ kind: "toilet", label: "Toilet", w: 0.38, d: 0.65, h: 0.78, color: "#eef1f3", category: "bath", tags: ["fixture"] }),
   entry({ kind: "sink", label: "Washbasin", w: 0.55, d: 0.42, h: 0.85, color: "#e7ebee", category: "bath", tags: ["fixture"] }),
   entry({ kind: "towel_rail", label: "Towel rail", w: 0.6, d: 0.12, h: 1.1, color: "#c8ccd0", category: "bath" }),
-  entry({ kind: "plant", label: "Plant", w: 0.4, d: 0.4, h: 1.1, color: "#5d8a54", category: "decor" }),
+  entry({ kind: "plant", label: "Plant", w: 0.5, d: 0.5, h: 0.9, color: "#5d8a54", category: "decor" }),
   // stairs climb one floor; their height follows the floor they climb to
   entry({ kind: "stair_straight", label: "Straight stair", w: 1.0, d: 3.8, h: 3.0, color: "#c9b79c", category: "structure", tags: ["stair"], stair: "straight" }),
   entry({ kind: "stair_spiral", label: "Spiral stair", w: 1.8, d: 1.8, h: 3.0, color: "#8d9196", category: "structure", tags: ["stair"], stair: "spiral" }),
@@ -92,7 +98,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry({ kind: "fire_pit", label: "Fire pit", w: 1.0, d: 1.0, h: 0.4, color: "#5a5c60", category: "outdoor", tags: ["fixture"] }),
   entry({ kind: "planter", label: "Planter", w: 1.2, d: 0.5, h: 0.7, color: "#5f7f4c", category: "outdoor", tags: ["planting"] }),
   entry({ kind: "hedge", label: "Hedge", w: 2.0, d: 0.6, h: 1.2, color: "#5f7f4c", category: "outdoor", tags: ["planting"] }),
-  entry({ kind: "tree", label: "Tree", w: 2.6, d: 2.6, h: 4.5, color: "#5b8a4a", category: "outdoor", tags: ["planting"] }),
+  entry({ kind: "tree", label: "Tree", w: 6, d: 6, h: 9, color: "#5b8a4a", category: "outdoor", tags: ["planting"], trunk: 0.6 }),
   // the finer rooms of a large house
   entry({ kind: "kitchen_island", label: "Kitchen island", w: 2.6, d: 1.1, h: 0.92, color: "#e9e6df", category: "kitchen", tags: ["counter", "luxury"] }),
   entry({ kind: "bar_counter", label: "Bar", w: 2.0, d: 0.6, h: 1.1, color: "#3a2f28", category: "kitchen", tags: ["counter", "luxury"] }),
