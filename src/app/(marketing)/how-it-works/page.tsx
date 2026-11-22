@@ -9,17 +9,17 @@ export const metadata: Metadata = {
 };
 
 const STEPS = [
-  ["Describe", "Type what the home needs: how many bedrooms and bathrooms, a study, an open kitchen, roughly how big. Or start from a template, or a blank sheet."],
+  ["Describe", "Sign in with Google, then type what the home needs: how many bedrooms and bathrooms, a study, an open kitchen, roughly how big. Or start from a template, or a blank sheet."],
   ["Review", "Clavis lays out the rooms to scale, joins them with a hall, places doors and windows and furnishes each room. Anything that needs attention, such as a door with furniture in front of it, is marked on the plan."],
   ["Change", "Move walls and furniture yourself, type exact sizes, or ask for a change in your own words. A suggestion is drawn on the plan first, new parts in green and removed parts dashed in red, with the problems it would fix or cause."],
   ["Apply", "Your design changes only when you press Apply. Anything that removes work asks first, and every change can be undone."],
   ["Walk through", "Open the 3D view to see the home standing up, then walk through it from the front door with a figure at real height."],
-  ["Keep", "Projects save as you work. Sign in with Google to keep them in your account, or export a printable plan or a 3D model."],
+  ["Keep", "Projects save to your account as you work, and open on any device you sign in on. Export a printable plan or a 3D model whenever you like."],
 ];
 
 const WHERE = [
-  ["In your browser", "The drawing, the 3D view, the checks and the built-in assistant all run on your device. Without an account, your designs stay there."],
-  ["In your account", "Sign in with Google and your projects are kept in your account, private to you, and open on any device you sign in on."],
+  ["In your account", "You sign in with Google. Your projects are kept in your account, private to you, and open on any device you sign in on."],
+  ["In your browser", "The drawing, the 3D view, the checks and the built-in assistant run on your device, with a working copy of your projects, so the studio stays quick."],
   ["On our server", "A request goes to a hosted AI model, with a short summary of the design, only when the built-in assistant cannot handle it, or when you choose the hosted model in Settings. Choose Clavis Local there and nothing leaves your browser."],
 ];
 

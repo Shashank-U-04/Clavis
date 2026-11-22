@@ -79,7 +79,7 @@ const FEATURES = [
   { icon: ScanSearch, title: "Problems pointed out", text: "A door blocked by a wardrobe, a room with no way in, a bedroom without a window: each is marked on the plan as you work.", href: "/features/validation" },
   { icon: Box, title: "Plan and 3D together", text: "The 3D model follows every edit. Turn it, look down from above, open the doors.", href: "/features/3d" },
   { icon: Footprints, title: "Walk around inside", text: "See the size of each room the way you would standing in it, from behind a figure or through its eyes.", href: "/features/3d" },
-  { icon: FileDown, title: "Save and export", text: "Projects save as you work. Sign in with Google to open them anywhere. Export a printable plan or a 3D model.", href: "/features/projects" },
+  { icon: FileDown, title: "Save and export", text: "Projects save to your account as you work and open on any device. Export a printable plan or a 3D model.", href: "/features/projects" },
 ];
 
 const FOR = {
@@ -88,9 +88,9 @@ const FOR = {
 };
 
 const FAQ = [
-  ["Is it free?", "Yes. You can design, check, walk through and export without paying or creating an account."],
+  ["Is it free?", "Yes. Sign in with your Google account and you can design, check, walk through and export without paying."],
   ["Do I need to install anything?", "No. Clavis runs in a modern browser. A computer is best for drawing; phones and tablets work for viewing and small edits."],
-  ["Where are my designs kept?", "In your browser until you sign in. Sign in with Google and they are kept in your account and open on any device; designs you made before signing in move across with you."],
+  ["Where are my designs kept?", "In your account, where only you can open them. Sign in on any device and they are there, saved as you work."],
   ["Does the assistant change my design on its own?", "No. Its suggestions are shown on the plan as a preview, with any problems they would cause. Your design changes only when you press Apply."],
   ["Can I build from these plans?", "Use them to decide what you want and to talk it through with an architect or builder. They are early design drawings, not construction documents."],
   ["Are the sizes realistic?", "Everything is drawn in metres. Furniture is at its real size, doors are 0.8 to 0.9 m wide and rooms are 2.85 m high unless you change them."],
@@ -161,7 +161,7 @@ export default function Home() {
                 Type what you need and Clavis draws a furnished floor plan to scale. Change it by hand or by asking, see it in 3D, and walk through it before anything is built.
               </p>
               <p className="fade-up label text-ink-3" style={d(600)}>
-                Free · runs in your browser · no sign-up to start
+                Free · sign in with Google · runs in your browser
               </p>
             </div>
             <div className="fade-up flex flex-col" style={d(700)}>

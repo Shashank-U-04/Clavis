@@ -12,7 +12,7 @@ const PRINCIPLES = [
   ["A plan you can trust", "Sketching rooms is easy. Knowing the doors open, the bed fits and every room can be reached is harder, so Clavis checks those things as you go."],
   ["You make the changes", "The assistant suggests; you see the suggestion on the plan and decide. Nothing changes until you apply it."],
   ["Real measurements", "Areas, daylight and routes are measured from the drawing itself, the same way every time. They are never guessed."],
-  ["Private by default", "Clavis works without an account, and your designs stay in your browser until you choose to sign in."],
+  ["Private to you", "Your projects are kept in your account and no one else can open them. Choose Clavis Local in Settings and the assistant never sends a request anywhere."],
 ];
 
 export default function AboutPage() {
