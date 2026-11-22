@@ -11,7 +11,7 @@ import { CATALOG } from "@/model/catalog";
 import { analyzeModel } from "@/model/analysis";
 import { checkModel, summarizeIssues } from "@/model/issues";
 import { lindenHeightsModel } from "@/model/templates";
-import { levelsOf } from "@/model/levels";
+import { levelsOf, onLevel } from "@/model/levels";
 import { CHECK_COUNT } from "@/model/checks";
 import { localProposal } from "@/ai/local/engine";
 import { applyBatch } from "@/model/operations";
@@ -33,19 +33,30 @@ function sampleResult() {
 
 /** The build log beside the hero model, counted from the design it shows. */
 function buildSteps(model: ReturnType<typeof lindenHeightsModel>, overall: string, errors: number, warnings: number): BuildStep[] {
-  const doors = model.openings.filter((o) => o.kind === "door").length;
-  const windows = model.openings.length - doors;
   const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
-  return [
-    { code: "001", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")} · ${n(levelsOf(model).length, "floor")}` },
-    { code: "002", title: "2D plan", detail: `${overall} · north up` },
-    { code: "003", title: "Raise walls", detail: `${n(model.walls.length, "wall")} to ${Math.max(...model.walls.map((w) => w.height)).toFixed(2)} m` },
-    { code: "004", title: "Openings", detail: `${n(doors, "door")} · ${n(windows, "window")}` },
-    { code: "005", title: "Furnish", detail: n(model.items.length, "piece") },
-    { code: "006", title: "Grounds", detail: "infinity pool · terraces · garden" },
-    { code: "007", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}` },
-    { code: "008", title: "3D model", detail: "drag to turn · zoom in and out" },
+  const code = (i: number) => String(i + 1).padStart(3, "0");
+  const indoor = (kind: string) => CATALOG.find((c) => c.kind === kind)?.category !== "outdoor";
+  // one line per floor, as the model builds them from the ground up
+  const floors: BuildStep[] = levelsOf(model).map((level) => {
+    const on = onLevel(model, level.id);
+    const openings = on.openings.length;
+    return {
+      code: "",
+      title: level.name,
+      detail: `${n(on.rooms.length, "room")} · ${n(on.walls.length, "wall")} · ${n(openings, "opening")} · ${n(on.items.filter((it) => indoor(it.kind)).length, "piece")}`,
+      cue: `level:${levelsOf(model).indexOf(level)}`,
+    };
+  });
+  const steps: BuildStep[] = [
+    { code: "", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")} · ${n(levelsOf(model).length, "floor")}`, cue: "start" },
+    { code: "", title: "2D plan", detail: `${overall} · north up`, cue: "plan" },
+    ...floors,
+    { code: "", title: "Roof", detail: "flat roofs · open terraces", cue: "roof" },
+    { code: "", title: "Grounds", detail: `${n(model.items.filter((it) => !indoor(it.kind)).length, "piece")} · pool · terraces · garden`, cue: "grounds" },
+    { code: "", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}`, cue: "checks" },
+    { code: "", title: "3D model", detail: "drag to turn · scroll to zoom", cue: "model" },
   ];
+  return steps.map((s, i) => ({ ...s, code: code(i) }));
 }
 
 const CAPABILITIES = [
