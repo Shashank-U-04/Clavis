@@ -106,6 +106,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry({ kind: "double_vanity", label: "Double vanity", w: 1.6, d: 0.55, h: 0.9, color: "#e9e6df", category: "bath", tags: ["fixture", "luxury"] }),
   entry({ kind: "freestanding_tub", label: "Freestanding bath", w: 1.7, d: 0.8, h: 0.6, color: "#f4f4f2", category: "bath", tags: ["fixture", "luxury"] }),
   entry({ kind: "walk_in_wardrobe", label: "Walk-in wardrobe", w: 2.4, d: 0.6, h: 2.4, color: "#b49a7c", category: "bedroom", tags: ["storage", "luxury"] }),
+  entry({ kind: "wall_light", label: "Wall light", w: 0.25, d: 0.12, h: 2.0, color: "#e9e4da", category: "decor", tags: ["lighting"] }),
   entry({ kind: "fireplace", label: "Fireplace", w: 1.8, d: 0.45, h: 1.2, color: "#4a4744", category: "living", tags: ["fixture", "luxury"] }),
   entry({ kind: "grand_piano", label: "Grand piano", w: 1.5, d: 1.9, h: 1.0, color: "#141414", category: "living", tags: ["luxury"] }),
   entry({ kind: "cinema_screen", label: "Projector screen", w: 3.0, d: 0.15, h: 2.0, color: "#f4f4f2", category: "living", tags: ["media", "luxury"] }),
