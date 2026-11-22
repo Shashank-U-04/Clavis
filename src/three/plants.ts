@@ -78,7 +78,7 @@ async function load(): Promise<Library> {
   const barks = new Map<string, Promise<THREE.MeshStandardMaterial>>();
   const leaves = new Map<string, Promise<THREE.Texture>>();
   const grown = new Map<string, Grown>();
-  await Promise.all(
+  await Promise.allSettled(
     manifest.map(async (p) => {
       const barkKey = `${p.bark.type}:${p.bark.tint}:${p.bark.repeat.join(",")}`;
       if (!barks.has(barkKey))
@@ -101,7 +101,8 @@ async function load(): Promise<Library> {
   // the scans: each shrub on its own, standing at its own origin; the potted plant as a whole
   const gltf = new GLTFLoader();
   const scans = new Map<string, THREE.Object3D>();
-  await Promise.all(
+  // one scan that fails to load leaves the drawn stand-in for that kind only
+  await Promise.allSettled(
     ["shrub_03", "shrub_04", "potted_plant_02"].map(async (name) => {
       const scene = (await gltf.loadAsync(`${BASE}scans/${name}/${name}.gltf`)).scene;
       scene.traverse((o) => {
@@ -118,6 +119,7 @@ async function load(): Promise<Library> {
       }
     }),
   );
+  if (!grown.size && !scans.size) throw new Error("no plant loaded");
   return { grown, scans };
 }
 

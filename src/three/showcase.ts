@@ -19,7 +19,8 @@ import type { PlanModel, Room } from "../model/types";
 import { elevationOf, levelAbove, levelOf, levelsOf } from "../model/levels";
 import { catalogByKind } from "../model/catalog";
 import type { SitePiece } from "../components/figures/sunsetFigure";
-import { buildContent, disposeGroup } from "./content";
+import { buildContent, disposeGroup, seedOf } from "./content";
+import { buildFurniture } from "./furniture";
 import { buildSite } from "./site";
 import { Daylight } from "./daylight";
 import { slab } from "./kit";
@@ -153,7 +154,7 @@ export class Showcase {
 
   constructor(
     private mount: HTMLElement,
-    model: PlanModel,
+    private model: PlanModel,
     sitePieces: readonly SitePiece[],
     private opts: ShowcaseOptions,
   ) {
@@ -417,6 +418,32 @@ export class Showcase {
     this.camera.up.set(0, 0, -1).lerp(new THREE.Vector3(0, 1, 0), clamp(tilt * 3)).normalize();
     this.camera.lookAt(target);
     this.controls.target.copy(target);
+  }
+
+  /**
+   * The real trees, hedges, planters and pot plants have arrived: put each in place of its drawn
+   * stand-in, keeping where it is in the opening, so the picture never jumps.
+   */
+  swapPlants() {
+    const kinds = new Set(["tree", "hedge", "planter", "plant"]);
+    const items = new Map(this.model.items.filter((it) => kinds.has(it.kind)).map((it) => [it.id, it]));
+    for (const piece of this.pieces) {
+      const it = items.get(piece.obj.userData.entityId);
+      if (!it) continue;
+      const real = buildFurniture(it.kind, seedOf(it.id));
+      if (!real) continue;
+      const old = piece.obj;
+      real.position.copy(old.position).setY(piece.y);
+      real.rotation.copy(old.rotation);
+      real.scale.copy(piece.scale);
+      real.userData.entityId = it.id;
+      this.house.remove(old);
+      this.house.add(real);
+      disposeGroup(old);
+      piece.obj = real;
+    }
+    // put everything where the opening has it now
+    this.pose(this.intro ? performance.now() - this.intro.t0 : this.controls.enabled ? Infinity : 0);
   }
 
   /** Back to the front view. */

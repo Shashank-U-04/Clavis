@@ -11,7 +11,7 @@ import { catalogByKind, isResized, itemSize } from "../model/catalog";
 import { elevationOf, levelAbove, levelOf } from "../model/levels";
 
 /** A steady number from an id, so a tree or hedge keeps its look from one rebuild to the next. */
-const seedOf = (id: string) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 100000;
+export const seedOf = (id: string) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % 100000;
 
 /** Furniture stands on the floor slabs, not on the ground under them. */
 const FLOOR_TOP = 0.04;
