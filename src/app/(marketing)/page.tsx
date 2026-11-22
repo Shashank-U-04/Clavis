@@ -3,7 +3,6 @@ import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles 
 import { HeroModel, type BuildStep } from "@/components/site/HeroModel";
 import type { CSSProperties } from "react";
 import { Frame, Section, Words } from "@/components/site/Sheet";
-import { CountUp } from "@/components/site/Motion";
 import { LogoMark } from "@/components/site/Logo";
 import { BriefBox } from "@/components/site/BriefBox";
 import { ButtonLink } from "@/components/ui/Button";
@@ -12,7 +11,6 @@ import { analyzeModel } from "@/model/analysis";
 import { checkModel, summarizeIssues } from "@/model/issues";
 import { lindenHeightsModel } from "@/model/templates";
 import { levelsOf, onLevel } from "@/model/levels";
-import { CHECK_COUNT } from "@/model/checks";
 import { localProposal } from "@/ai/local/engine";
 import { applyBatch } from "@/model/operations";
 import { emptyModel } from "@/model/types";
@@ -31,62 +29,71 @@ function sampleResult() {
   return { rooms: out.model.rooms.length, items: out.model.items.length };
 }
 
+const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
+const indoor = (kind: string) => CATALOG.find((c) => c.kind === kind)?.category !== "outdoor";
+
 /** The build log beside the hero model, counted from the design it shows. */
 function buildSteps(model: ReturnType<typeof lindenHeightsModel>, overall: string, errors: number, warnings: number): BuildStep[] {
-  const n = (v: number, one: string, many = `${one}s`) => `${v} ${v === 1 ? one : many}`;
-  const code = (i: number) => String(i + 1).padStart(3, "0");
-  const indoor = (kind: string) => CATALOG.find((c) => c.kind === kind)?.category !== "outdoor";
   // one line per floor, as the model builds them from the ground up
-  const floors: BuildStep[] = levelsOf(model).map((level) => {
+  const floors: BuildStep[] = levelsOf(model).map((level, i) => {
     const on = onLevel(model, level.id);
-    const openings = on.openings.length;
     return {
       code: "",
       title: level.name,
-      detail: `${n(on.rooms.length, "room")} · ${n(on.walls.length, "wall")} · ${n(openings, "opening")} · ${n(on.items.filter((it) => indoor(it.kind)).length, "piece")}`,
-      cue: `level:${levelsOf(model).indexOf(level)}`,
+      detail: `${n(on.rooms.length, "room")} · ${n(on.openings.length, "door or window", "doors and windows")} · ${n(on.items.filter((it) => indoor(it.kind)).length, "piece")}`,
+      cue: `level:${i}`,
     };
   });
   const steps: BuildStep[] = [
-    { code: "", title: "Read plan", detail: `${model.name} · ${n(model.rooms.length, "room")} · ${n(levelsOf(model).length, "floor")}`, cue: "start" },
-    { code: "", title: "2D plan", detail: `${overall} · north up`, cue: "plan" },
+    { code: "", title: "Plan", detail: `${model.name} · ${overall} · north up`, cue: "plan" },
     ...floors,
     { code: "", title: "Roof", detail: "flat roofs · open terraces", cue: "roof" },
-    { code: "", title: "Grounds", detail: `${n(model.items.filter((it) => !indoor(it.kind)).length, "piece")} · pool · terraces · garden`, cue: "grounds" },
-    { code: "", title: `${CHECK_COUNT} checks`, detail: `${n(errors, "error")} · ${n(warnings, "warning")}`, cue: "checks" },
-    { code: "", title: "3D model", detail: "drag to turn · scroll to zoom", cue: "model" },
+    { code: "", title: "Garden", detail: "infinity pool · terraces · trees", cue: "grounds" },
+    { code: "", title: "Checked", detail: `${n(errors, "error")} · ${n(warnings, "warning")}`, cue: "checks" },
+    { code: "", title: "Ready", detail: "drag to turn · scroll to zoom", cue: "model" },
   ];
-  return steps.map((s, i) => ({ ...s, code: code(i) }));
+  return steps.map((s, i) => ({ ...s, code: String(i + 1).padStart(2, "0") }));
 }
 
-const CAPABILITIES = [
-  { icon: Sparkles, title: "Design by describing", text: "Bedrooms, bathrooms, a study, an open kitchen, a target area: one sentence becomes a furnished plan.", href: "/features/ai-design" },
-  { icon: ScanSearch, title: "A validator on every change", text: "Walls, openings, furniture clearances, daylight, escape windows and the route to every room.", href: "/features/validation" },
-  { icon: Compass, title: "Edit in words or by hand", text: "Add a bedroom, make the kitchen bigger, move the sofa — or build it yourself from ready-made rooms that bring their walls.", href: "/features/ai-design" },
-  { icon: Box, title: "Plan and 3D side by side", text: "The 3D model follows every edit. Orbit around it or look straight down like a plan.", href: "/features/3d" },
-  { icon: Footprints, title: "Walk through it", text: "Step in at the front door with a figure at real size, from behind or through its eyes. Walls stop you; doorways let you through.", href: "/features/3d" },
-  { icon: FileDown, title: "Keep and share", text: "Projects save as you work. Export a printable plan, the design file or a 3D model.", href: "/features/projects" },
-];
-
-const steps = (sample: { rooms: number; items: number }) => [
+const STEPS = (sample: { rooms: number; items: number }) => [
   {
-    n: "01",
     title: "Describe",
-    text: "Say what the home needs. Clavis turns the brief into a room program and lays it out in metres, with a hall that reaches every room.",
-    specimen: ["› a three-bedroom house with", "  a study, about 120 m²", "", `  ${sample.rooms} rooms · ${sample.items} pieces placed`],
+    text: "Type what the home needs: bedrooms, bathrooms, a study, an open kitchen, the size. Clavis lays the rooms out to scale, joins them with a hall and furnishes them.",
+    specimen: ["› a three-bedroom house with", "  a study, about 120 m²", "", `  ${n(sample.rooms, "room")} · ${n(sample.items, "piece")} of furniture`],
   },
   {
-    n: "02",
-    title: "Check",
-    text: "Before you see a proposal, the validator dry-runs it. Nothing changes until you press Apply, and the result is measured afterwards.",
-    specimen: ["✓ walls meet and openings fit", "✓ doors and windows kept clear", "✓ every room reachable", "✓ daylight ≥ 10 % of the floor"],
+    title: "Adjust",
+    text: "Drag walls and furniture yourself, or type the change you want. Suggestions show on the plan first; nothing changes until you apply them, and everything can be undone.",
+    specimen: ["› make the kitchen bigger", "› add a bedroom with an en-suite", "", "  shown on the plan · Apply or Undo"],
   },
   {
-    n: "03",
-    title: "Walk",
-    text: "Press Walk and step in at the front door with a figure 1.75 m tall. Change something in the plan and the house changes around you.",
+    title: "Walk through",
+    text: "Step in at the front door with a figure at real height and walk room to room, up the stairs too. Change something in the plan and the house changes around you.",
     specimen: ["  figure       1.75 m", "  move         W A S D", "  camera       drag · scroll", "  doors        click to open"],
   },
+];
+
+const FEATURES = [
+  { icon: Sparkles, title: "Design from a sentence", text: "Describe the rooms and the size you want. You get a furnished floor plan in metres, not a sketch.", href: "/features/ai-design" },
+  { icon: Compass, title: "Edit by hand or by asking", text: "Drag walls, resize rooms and move furniture yourself, or ask: add a bedroom, open up the kitchen.", href: "/features/ai-design" },
+  { icon: ScanSearch, title: "Problems pointed out", text: "A door blocked by a wardrobe, a room with no way in, a bedroom without a window: each is marked on the plan as you work.", href: "/features/validation" },
+  { icon: Box, title: "Plan and 3D together", text: "The 3D model follows every edit. Turn it, look down from above, open the doors.", href: "/features/3d" },
+  { icon: Footprints, title: "Walk around inside", text: "See the size of each room the way you would standing in it, from behind a figure or through its eyes.", href: "/features/3d" },
+  { icon: FileDown, title: "Save and export", text: "Projects save as you work. Sign in with Google to open them anywhere. Export a printable plan or a 3D model.", href: "/features/projects" },
+];
+
+const FOR = {
+  good: ["Planning a new home or a renovation", "Trying several layouts before you meet an architect", "Showing a builder or your family what you have in mind", "Learning how rooms, doors and furniture fit together"],
+  not: ["Construction or permit drawings", "Structural or building-code approval", "Cost estimates"],
+};
+
+const FAQ = [
+  ["Is it free?", "Yes. You can design, check, walk through and export without paying or creating an account."],
+  ["Do I need to install anything?", "No. Clavis runs in a modern browser. A computer is best for drawing; phones and tablets work for viewing and small edits."],
+  ["Where are my designs kept?", "In your browser until you sign in. Sign in with Google and they are kept in your account and open on any device; designs you made before signing in move across with you."],
+  ["Does the assistant change my design on its own?", "No. Its suggestions are shown on the plan as a preview, with any problems they would cause. Your design changes only when you press Apply."],
+  ["Can I build from these plans?", "Use them to decide what you want and to talk it through with an architect or builder. They are early design drawings, not construction documents."],
+  ["Are the sizes realistic?", "Everything is drawn in metres. Furniture is at its real size, doors are 0.8 to 0.9 m wide and rooms are 2.85 m high unless you change them."],
 ];
 
 export default function Home() {
@@ -94,7 +101,14 @@ export default function Home() {
   const analysis = analyzeModel(model);
   const env = analysis.metrics.envelope!;
   const counts = summarizeIssues(checkModel(model));
-  const STEPS = steps(sampleResult());
+  const steps = STEPS(sampleResult());
+  const facts = [
+    ["Shown", model.name],
+    ["Floors", String(levelsOf(model).length)],
+    ["Rooms", String(model.rooms.length)],
+    ["Floor area", `${Math.round(analysis.metrics.carpetArea)} m²`],
+    ["Furniture", `${model.items.filter((it) => indoor(it.kind)).length} pieces`],
+  ];
 
   return (
     <>
@@ -107,24 +121,19 @@ export default function Home() {
               site={[]}
               front={{ x: -1, y: -0.55 }}
               elevation={11}
-              steps={buildSteps(model, `${env.w.toFixed(2)} × ${env.h.toFixed(2)} m`, counts.error, counts.warning)}
-              caption="Linden Heights · from 2D plan to 3D model"
+              steps={buildSteps(model, `${env.w.toFixed(1)} × ${env.h.toFixed(1)} m`, counts.error, counts.warning)}
+              caption={`${model.name} · designed in Clavis`}
               side={
                 <div>
-                  <p className="label text-ink-3">Sheet 01 · Title block</p>
-                  <div className="mt-6 flex items-center gap-4">
-                    <LogoMark size={64} className="shrink-0" />
-                    <span className="text-[clamp(3.2rem,6vw,5.2rem)] font-semibold leading-none tracking-[-0.05em]">Clavis</span>
+                  <p className="label mb-6 text-ink-3">Sheet 01</p>
+                  <div className="flex items-center gap-4">
+                    <LogoMark size={56} className="shrink-0" />
+                    <span className="text-[clamp(3rem,5.6vw,4.8rem)] font-semibold leading-none tracking-[-0.05em]">Clavis</span>
                   </div>
-                  <p className="mt-6 max-w-sm text-pretty text-lg leading-snug text-ink-2">An architectural design studio that turns one sentence into a home you can walk through.</p>
+                  <p className="mt-5 max-w-sm text-pretty text-lg leading-snug text-ink-2">Plan a home, check it, and walk through it in 3D, in your browser.</p>
                   <dl className="mt-8 border-t border-rule font-mono text-[0.7rem] uppercase tracking-[0.08em]">
-                    {[
-                      ["Type", "Design studio, in the browser"],
-                      ["Units", "Metres, true to scale"],
-                      ["Checks", `${CHECK_COUNT} on every change`],
-                      ["Status", "Free · no account needed"],
-                    ].map(([k, v]) => (
-                      <div key={k} className="grid grid-cols-[5.5rem_1fr] border-b border-rule py-2">
+                    {facts.map(([k, v]) => (
+                      <div key={k} className="grid grid-cols-[6.5rem_1fr] border-b border-rule py-2">
                         <dt className="text-ink-3">{k}</dt>
                         <dd className="text-ink">{v}</dd>
                       </div>
@@ -149,52 +158,32 @@ export default function Home() {
             </h1>
             <div className="flex flex-col justify-between gap-6 border-b border-rule p-5 md:p-8 lg:border-b-0 lg:border-r">
               <p className="fade-up text-pretty text-ink-2" style={d(450)}>
-                Clavis turns one sentence into a furnished floor plan in metres, checks every wall, door, window and piece of furniture against real geometry, and lets you walk through the result in 3D.
+                Type what you need and Clavis draws a furnished floor plan to scale. Change it by hand or by asking, see it in 3D, and walk through it before anything is built.
               </p>
               <p className="fade-up label text-ink-3" style={d(600)}>
-                Free to try · no account · runs in your browser
+                Free · runs in your browser · no sign-up to start
               </p>
             </div>
             <div className="fade-up flex flex-col" style={d(700)}>
               <ButtonLink href="/new" className="flex-1 py-5">
                 Start designing
               </ButtonLink>
-              <ButtonLink href="/how-it-works" variant="ghost" className="flex-1 border-t border-rule py-5">
-                How it works
+              <ButtonLink href="/studio/try?template=linden-heights" variant="ghost" className="flex-1 border-t border-rule py-5">
+                Open this house
               </ButtonLink>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- facts */}
-      <div className="border-b border-rule bg-ink text-paper">
-        <dl className="mx-auto grid max-w-[1440px] grid-cols-2 md:grid-cols-4">
-          {[
-            [CHECK_COUNT, "checks on every change"],
-            [CATALOG.length, "furniture pieces, true to size"],
-            [0, "accounts needed to start"],
-            [1, "sentence to a whole home"],
-          ].map(([value, label], i) => (
-            <div key={String(label)} className={`border-paper/15 p-5 md:p-8 ${i % 2 === 0 ? "border-r" : ""} md:border-r ${i < 2 ? "border-b md:border-b-0" : ""}`}>
-              <dt className="sr-only">{label}</dt>
-              <dd className="text-4xl font-semibold tracking-[-0.04em] md:text-6xl">
-                <CountUp value={Number(value)} />
-              </dd>
-              <dd className="label mt-3 text-paper/60">{label}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-
-      {/* ---------------------------------------------------------------- how */}
-      <Section sheet="02" title="From one sentence to a home you can walk through." intro="Three steps, and you stay in charge of each one. Proposals are previews until you apply them, and every change can be undone.">
+      {/* ---------------------------------------------------------------- how it works */}
+      <Section sheet="02" title="From an idea to a walk-through, in three steps." intro="You stay in charge at every step: suggestions are previews until you apply them.">
         <ol className="grid md:grid-cols-3">
-          {STEPS.map((s, i) => (
-            <li key={s.n} data-reveal style={at(i)} className={`flex flex-col gap-6 border-rule p-5 md:p-8 ${i < 2 ? "border-b md:border-b-0 md:border-r" : ""}`}>
+          {steps.map((s, i) => (
+            <li key={s.title} data-reveal style={at(i)} className={`flex flex-col gap-6 border-rule p-5 md:p-8 ${i < 2 ? "border-b md:border-b-0 md:border-r" : ""}`}>
               <div className="flex items-baseline justify-between">
-                <span className="label text-marker">Step {s.n}</span>
-                <span className="drift text-5xl font-semibold tracking-[-0.05em] text-paper-3">{s.n}</span>
+                <span className="label text-marker">Step 0{i + 1}</span>
+                <span className="drift text-5xl font-semibold tracking-[-0.05em] text-paper-3">0{i + 1}</span>
               </div>
               <h3 className="text-2xl font-semibold tracking-tight">{s.title}</h3>
               <p className="text-ink-2">{s.text}</p>
@@ -210,11 +199,11 @@ export default function Home() {
         </ol>
       </Section>
 
-      {/* ---------------------------------------------------------------- capabilities */}
-      <Section sheet="03" title="Everything the studio does." intro="One workspace for the whole loop: brief, plan, check, change, walk, save.">
+      {/* ---------------------------------------------------------------- features */}
+      <Section sheet="03" title="What you can do." intro="One workspace from the first idea to a plan you can share.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3">
-          {CAPABILITIES.map((c, i) => (
-            <li key={c.title} data-reveal style={at(i % 3)} className={`border-rule ${i % 3 !== 2 ? "lg:border-r" : ""} ${i % 2 === 0 ? "sm:border-r lg:border-r" : "sm:border-r-0"} ${i % 3 === 2 ? "lg:border-r-0" : ""} border-b`}>
+          {FEATURES.map((c, i) => (
+            <li key={c.title} data-reveal style={at(i % 3)} className={`border-b border-rule ${i % 2 === 0 ? "sm:border-r" : ""} ${i % 3 !== 2 ? "lg:border-r" : "lg:border-r-0"}`}>
               <Link href={c.href} className="group flex h-full flex-col gap-4 p-5 hover:bg-paper-2 md:p-8">
                 <div className="flex items-start justify-between">
                   <c.icon size={22} strokeWidth={1.4} className="text-ink" aria-hidden="true" />
@@ -228,20 +217,19 @@ export default function Home() {
         </ul>
       </Section>
 
-      {/* ---------------------------------------------------------------- assistants */}
-      <Section sheet="04" title="Two assistants, the same checks." intro="Clavis Local answers first, in your browser, with no key and nothing sent anywhere. What it doesn't understand goes to a hosted model. Either way you see a checked preview before anything changes.">
+      {/* ---------------------------------------------------------------- who it's for */}
+      <Section sheet="04" title="Made for planning, before you build." intro="Clavis helps you work out what you want. Your architect or builder turns that into drawings you can build from.">
         <div className="grid md:grid-cols-2">
           {[
-            { tag: "In your browser", name: "Clavis Local", points: ["Designs homes from a brief", "Furnishes, repairs and resizes rooms", "Answers questions with measured numbers", "Instant, private, free"] },
-            { tag: "On the server", name: "Hosted model", points: ["Free-form requests in your own words", "Proposes edits as validated operations", "Explains what changed and why", "Key stays on the server"] },
-          ].map((a, i) => (
-            <div key={a.name} data-reveal style={at(i * 2)} className={`border-rule p-5 md:p-8 ${i === 0 ? "border-b md:border-b-0 md:border-r" : ""}`}>
-              <p className="label text-ink-3">{a.tag}</p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-tight">{a.name}</h3>
-              <ul className="mt-6 divide-y divide-rule-soft border-y border-rule-soft">
-                {a.points.map((p) => (
+            { tag: "Good for", items: FOR.good, mark: "bg-marker" },
+            { tag: "Not for", items: FOR.not, mark: "bg-ink-3" },
+          ].map((g, i) => (
+            <div key={g.tag} data-reveal style={at(i * 2)} className={`border-rule p-5 md:p-8 ${i === 0 ? "border-b md:border-b-0 md:border-r" : ""}`}>
+              <h3 className="label text-ink-3">{g.tag}</h3>
+              <ul className="mt-5 divide-y divide-rule-soft border-y border-rule-soft">
+                {g.items.map((p) => (
                   <li key={p} className="flex items-center gap-3 py-3 text-ink-2">
-                    <span className="h-1.5 w-1.5 bg-marker" aria-hidden="true" />
+                    <span className={`h-1.5 w-1.5 shrink-0 ${g.mark}`} aria-hidden="true" />
                     {p}
                   </li>
                 ))}
@@ -249,6 +237,18 @@ export default function Home() {
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* ---------------------------------------------------------------- questions */}
+      <Section sheet="05" title="Questions.">
+        <dl className="grid md:grid-cols-2">
+          {FAQ.map(([q, a], i) => (
+            <div key={q} className={`border-b border-rule p-5 md:p-8 ${i % 2 === 0 ? "md:border-r" : ""}`}>
+              <dt className="font-semibold">{q}</dt>
+              <dd className="mt-2 text-ink-2">{a}</dd>
+            </div>
+          ))}
+        </dl>
       </Section>
 
       {/* ---------------------------------------------------------------- start */}
