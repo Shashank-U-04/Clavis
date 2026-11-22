@@ -139,7 +139,8 @@ function baseProgram(b: Brief): ProgramRoom[] {
   return rooms;
 }
 
-const HALL_DEPTH = 1.3;
+/** A hall wide enough to pass someone, carry furniture through, or turn a wheelchair (about 1.5 m). */
+const HALL_DEPTH = 1.6;
 /** preferred band depths (wall centrelines), metres */
 const PRIVATE_DEPTH = { pref: 4.0, min: 3.2, max: 5.0 };
 const PUBLIC_DEPTH = { pref: 5.2, min: 4.0, max: 6.8 };

@@ -42,14 +42,14 @@ describe("3D content derives from the canonical model", () => {
   it("matches the plan's extent in metres", () => {
     const m = design();
     const { bounds } = buildContent(m);
-    // Wall centrelines span 0..9.6 x 0..9 and exterior walls are 0.2 m thick, so the outer wall
-    // faces are at -0.1 / 9.7 / -0.1 / 9.1. Window sills and frames may project up to 0.2 m beyond.
+    // Wall centrelines span 0..9.6 x 0..9.4 and exterior walls are 0.2 m thick, so the outer wall
+    // faces are at -0.1 / 9.7 / -0.1 / 9.5. Window sills and frames may project up to 0.2 m beyond.
     const outside = (v: number, face: number, dir: 1 | -1) => (v - face) * dir;
     for (const [v, face, dir] of [
       [bounds.min.x, -0.1, -1],
       [bounds.max.x, 9.7, 1],
       [bounds.min.z, -0.1, -1],
-      [bounds.max.z, 9.1, 1],
+      [bounds.max.z, 9.5, 1],
     ] as const) {
       expect(outside(v, face, dir)).toBeGreaterThanOrEqual(-1e-6);
       expect(outside(v, face, dir)).toBeLessThanOrEqual(0.2);
