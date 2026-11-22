@@ -30,6 +30,8 @@ export interface CatalogEntry {
    * against the trunk; the crown may spread over them, as a real tree's does.
    */
   trunk?: number;
+  /** A frame you walk under (a pergola): only its corner posts, this wide, stand in the way. */
+  posts?: number;
   dimensionSource: DimensionSource;
   /** the 3D asset: procedural geometry in three/furniture.ts */
   asset: { source: string; license: string };
@@ -85,7 +87,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry({ kind: "glass_wall", label: "Glass wall", w: 2.4, d: 0.08, h: 2.6, color: "#cfe3ea", category: "structure", tags: ["facade", "glazing"] }),
   entry({ kind: "cladding", label: "Timber cladding", w: 2.0, d: 0.08, h: 2.6, color: "#8a5f3c", category: "structure", tags: ["facade"] }),
   entry({ kind: "column", label: "Column", w: 0.3, d: 0.3, h: 2.7, color: "#e9e6df", category: "structure", tags: ["structure"] }),
-  entry({ kind: "pergola", label: "Pergola", w: 3.6, d: 3.0, h: 2.6, color: "#3a3d41", category: "structure", tags: ["canopy", "shade"] }),
+  entry({ kind: "pergola", label: "Pergola", w: 3.6, d: 3.0, h: 2.6, color: "#3a3d41", category: "structure", tags: ["canopy", "shade"], posts: 0.15 }),
   // outdoor and pool: these belong outside, so they may stand beyond the rooms
   entry({ kind: "pool", label: "Pool", w: 4.0, d: 8.0, h: 0.15, color: "#3d9cc9", category: "outdoor", tags: ["pool", "water"], isRug: true }),
   entry({ kind: "pool_infinity", label: "Infinity pool", w: 3.6, d: 10.0, h: 0.15, color: "#2f8fc0", category: "outdoor", tags: ["pool", "water"], isRug: true }),
@@ -94,7 +96,7 @@ export const CATALOG: readonly CatalogEntry[] = [
   entry({ kind: "sun_lounger", label: "Sun lounger", w: 0.7, d: 1.95, h: 0.35, color: "#f2f0ea", category: "outdoor", tags: ["seating"] }),
   entry({ kind: "outdoor_sofa", label: "Outdoor sofa", w: 2.2, d: 0.9, h: 0.72, color: "#4a4d52", category: "outdoor", tags: ["seating"] }),
   entry({ kind: "outdoor_dining", label: "Outdoor dining table", w: 2.2, d: 1.0, h: 0.75, color: "#3a3d41", category: "outdoor", tags: ["table"] }),
-  entry({ kind: "parasol", label: "Parasol", w: 2.6, d: 2.6, h: 2.5, color: "#f1ede4", category: "outdoor", tags: ["shade"] }),
+  entry({ kind: "parasol", label: "Parasol", w: 2.6, d: 2.6, h: 2.5, color: "#f1ede4", category: "outdoor", tags: ["shade"], trunk: 0.4 }),
   entry({ kind: "fire_pit", label: "Fire pit", w: 1.0, d: 1.0, h: 0.4, color: "#5a5c60", category: "outdoor", tags: ["fixture"] }),
   entry({ kind: "planter", label: "Planter", w: 1.2, d: 0.5, h: 0.7, color: "#5f7f4c", category: "outdoor", tags: ["planting"] }),
   entry({ kind: "hedge", label: "Hedge", w: 2.0, d: 0.6, h: 1.2, color: "#5f7f4c", category: "outdoor", tags: ["planting"] }),

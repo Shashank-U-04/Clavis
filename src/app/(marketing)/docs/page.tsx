@@ -33,6 +33,7 @@ const SHORTCUTS = [
   ["Ctrl Z / Ctrl Y", "Undo / redo"],
   ["Esc", "Back to Select, clear highlights"],
   ["W A S D (in Walk)", "Move; Shift runs, Space jumps; drag turns the camera; scroll in for first person; Esc to leave"],
+  ["E (in Walk)", "Open or close the nearest door (or click it); a shut door stops you"],
 ];
 
 const VIEWS = [
