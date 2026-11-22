@@ -12,7 +12,13 @@
 import type { Item, Level, PlanModel, Room, Wall } from "./types";
 
 export const GROUND = "ground";
-export const DEFAULT_STOREY = 3.0;
+/**
+ * Room height, floor to ceiling, when a design does not say. Indian building rules ask at least
+ * 2.75 m for rooms people live in; 2.85 m clears that and reads as a comfortable room.
+ */
+export const DEFAULT_CEILING = 2.85;
+/** Floor to floor when a design does not say: the ceiling plus a 0.2 m slab and its finish. */
+export const DEFAULT_STOREY = 3.1;
 
 const groundLevel = (): Level => ({ id: GROUND, name: "Ground floor", elevation: 0, height: DEFAULT_STOREY });
 

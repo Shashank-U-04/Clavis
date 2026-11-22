@@ -23,7 +23,7 @@ import { segLen, snap } from "./geometry";
 import { clampOpeningT } from "./issues";
 import { CATALOG, catalogByKind, ITEM_SIZE_LIMITS } from "./catalog";
 import { buildLayout, FLOOR_FINISHES, LayoutSpecSchema, SIDES } from "./layout";
-import { DEFAULT_STOREY, GROUND, levelOf, levelsOf, nextLevelName, tagLevel } from "./levels";
+import { DEFAULT_CEILING, DEFAULT_STOREY, GROUND, levelOf, levelsOf, nextLevelName, tagLevel } from "./levels";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -55,7 +55,7 @@ export const OPERATION_SCHEMAS = {
       as: alias.optional(),
       ax: coord, ay: coord, bx: coord, by: coord,
       thickness: metres(0.05, 0.5).optional().describe("default 0.15 m"),
-      height: metres(2.1, 5).optional().describe("default 2.7 m"),
+      height: metres(2.1, 5).optional().describe("default 2.85 m"),
       precise: z.boolean().optional().describe("keep the points to the millimetre instead of the 5 cm grid (walls at an angle)"),
       level: onLevel,
     })
@@ -366,7 +366,7 @@ export function applyOperation(model: PlanModel, op: DesignOperation, ctx: Apply
         // precise: to the millimetre, so a wall drawn at an angle or to a typed length keeps it
         ...(op.precise ? { ax: mm(op.ax), ay: mm(op.ay), bx: mm(op.bx), by: mm(op.by) } : { ax: snap(op.ax), ay: snap(op.ay), bx: snap(op.bx), by: snap(op.by) }),
         thickness: op.thickness ?? 0.15,
-        height: op.height ?? 2.7,
+        height: op.height ?? DEFAULT_CEILING,
         ...tagLevel(lv),
       };
       const len = segLen(w.ax, w.ay, w.bx, w.by);

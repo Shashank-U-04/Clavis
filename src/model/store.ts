@@ -17,7 +17,7 @@ import { emptyModel } from "./types";
 import { checkModel, diffIssues } from "./issues";
 import { applyBatch, type DesignOperation, type StepResult } from "./operations";
 import { roomBlockOps } from "./blocks";
-import { GROUND, levelOf, levelsOf, onLevel } from "./levels";
+import { DEFAULT_CEILING, GROUND, levelOf, levelsOf, onLevel } from "./levels";
 
 // ---------------------------------------------------------------------------
 // State
@@ -314,7 +314,7 @@ type Finish = "oak" | "tile" | "carpet" | "concrete";
 
 export const actions = {
   // walls
-  addWall: (ax: number, ay: number, bx: number, by: number, thickness = 0.15, height = 2.7, precise = false) =>
+  addWall: (ax: number, ay: number, bx: number, by: number, thickness = 0.15, height = DEFAULT_CEILING, precise = false) =>
     apply({ op: "add_wall", ax, ay, bx, by, thickness, height, ...(precise && { precise: true }) }),
   editWall: (id: string, patch: { ax?: number; ay?: number; bx?: number; by?: number; thickness?: number; height?: number }) => apply({ op: "update_wall", id, ...patch }),
   removeWall: (id: string) => apply({ op: "remove_wall", id }),

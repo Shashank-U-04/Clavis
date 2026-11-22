@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { applyBatch, type DesignOperation } from "../src/model/operations";
 import { emptyModel, type PlanModel } from "../src/model/types";
-import { GROUND, levelsOf, levelOf, onLevel } from "../src/model/levels";
+import { DEFAULT_STOREY, GROUND, levelsOf, levelOf, onLevel } from "../src/model/levels";
 import { analyzeModel } from "../src/model/analysis";
 import { checkModel } from "../src/model/issues";
 import { stairEnds, stairLinks, stairProgress } from "../src/model/stairs";
@@ -62,10 +62,10 @@ describe("floors", () => {
     m = run(m, [{ op: "add_level", as: "top" }]).model;
     const [, first, second] = levelsOf(m);
     m = run(m, [{ op: "update_level", id: first.id, height: 4 }]).model;
-    expect(levelsOf(m)[2].elevation).toBeCloseTo(3 + 4, 6);
+    expect(levelsOf(m)[2].elevation).toBeCloseTo(DEFAULT_STOREY + 4, 6);
     m = run(m, [{ op: "remove_level", id: first.id }]).model;
     expect(levelsOf(m).map((l) => l.id)).toEqual([GROUND, second.id]);
-    expect(levelsOf(m)[1].elevation).toBeCloseTo(3, 6);
+    expect(levelsOf(m)[1].elevation).toBeCloseTo(DEFAULT_STOREY, 6);
     expect(m.rooms.some((r) => levelOf(r) === first.id)).toBe(false);
     const bad = applyBatch(m, [{ op: "remove_level", id: GROUND }], ids());
     expect(bad.ok).toBe(false);
