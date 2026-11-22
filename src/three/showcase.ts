@@ -183,9 +183,9 @@ export class Showcase {
     this.scene.add(this.house, this.site, this.roof);
     if (ground) this.scene.attach(ground);
 
-    // frame the house itself (the pool and terrace beside it come into view with it); the sun's
-    // shadows cover the whole plot
-    const all = new THREE.Box3().copy(bounds).union(new THREE.Box3().setFromObject(this.site));
+    // the sun's shadows reach everything in the design, trees out on the lawn included
+    const all = new THREE.Box3().setFromObject(this.house).union(new THREE.Box3().setFromObject(this.site));
+    // frame the house itself (the pool and terrace beside it come into view with it)
     const framed = new THREE.Box3().copy(bounds);
     this.site.traverse((o) => {
       if (o.userData.frames) framed.union(new THREE.Box3().setFromObject(o));
@@ -307,7 +307,8 @@ export class Showcase {
   private placeViews() {
     const dir = new THREE.Vector3(this.opts.front.x, 0, this.opts.front.y).normalize();
     const el = THREE.MathUtils.degToRad(this.opts.elevation);
-    const dist = this.fitDistance(0.5);
+    // a little lawn all round the house in the picture, so it stands in open grounds
+    const dist = this.fitDistance(0.58);
     this.rest.target.copy(this.centre);
     this.rest.position.copy(this.centre).addScaledVector(dir, Math.cos(el) * dist).setY(this.centre.y + Math.sin(el) * dist);
     this.plan.target.copy(this.centre).setY(0);

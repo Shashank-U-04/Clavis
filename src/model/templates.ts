@@ -551,15 +551,18 @@ export const LINDEN_HEIGHTS: DesignOperation[] = [
   item("fire_pit", 3.5, -1.2, 0),
   item("outdoor_dining", 12.6, -1.6, 0),
   item("parasol", 15.8, -1.8, 0),
-  // planting
-  item("tree", 26, -1, 0),
-  item("tree", 23, -3, 0),
-  item("tree", 23.5, 16.5, 0),
-  item("tree", -9.5, 16, 0),
-  item("hedge", 24.3, 4, 90),
-  item("hedge", 24.3, 7, 90),
-  item("hedge", 24.3, 10, 90),
-  item("planter", 21, -0.8, 0),
+  item("planter", 19.2, -3.0, 0),
+  // planting: a wide lawn all round, with grown trees out at its edges (their crowns 6 m
+  // across, well clear of the house) and none in the view from the north-west front, so they
+  // frame the house from behind
+  item("tree", 34, -6, 0),
+  item("tree", 38, 7, 0),
+  item("tree", 33, 22, 0),
+  item("tree", 18, 27, 0),
+  item("tree", 2, 28, 0),
+  item("tree", -14, 24, 0),
+  // a clipped hedge along the far side of the east lawn
+  ...[3, 5, 7, 9, 11, 13].map((y) => item("hedge", 29, y, 90)),
 ];
 
 /** Linden Heights as a ready design. */
