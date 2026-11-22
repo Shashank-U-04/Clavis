@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Bookmark, Copy, Download, Eye, GitBranch, RotateCcw, Star, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Bookmark, Copy, Download, Eye, FileText, GitBranch, RotateCcw, Star, Trash2 } from "lucide-react";
 import { browserStorage } from "@/model/persistence";
 import { loadProject } from "@/model/library";
 import { analyzeModel } from "@/model/analysis";
@@ -32,6 +32,22 @@ export function PlanDetail({ id }: { id: string }) {
   const [preview, setPreview] = useState<{ id: string; label: string; src: string } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
+  /** this design as a PDF report: plans, 3D views, rooms, openings and furniture with sizes */
+  const report = async () => {
+    if (!ws?.model) return;
+    setReporting(true);
+    try {
+      const { downloadReport } = await import("@/export/report");
+      await downloadReport(ws.model, (step) => setMsg(`Report: ${step.toLowerCase()}…`));
+      setMsg("Report saved to your downloads.");
+    } catch (e) {
+      console.error("[clavis] report failed", e);
+      setMsg("The report could not be made in this browser.");
+    } finally {
+      setReporting(false);
+    }
+  };
 
   const facts = useMemo(() => {
     if (!ws?.model) return null;
@@ -147,6 +163,9 @@ export function PlanDetail({ id }: { id: string }) {
             </button>
             <button type="button" onClick={() => download(plan.id)} className="label flex items-center gap-2 border border-rule px-3 py-2 hover:border-ink">
               <Download size={13} aria-hidden="true" /> Download file
+            </button>
+            <button type="button" onClick={report} disabled={reporting || !ws?.model} className="label flex items-center gap-2 border border-rule px-3 py-2 hover:border-ink disabled:opacity-40">
+              <FileText size={13} aria-hidden="true" /> {reporting ? "Making the report…" : "Download report (PDF)"}
             </button>
             {confirm === "delete" ? (
               <span className="flex items-center gap-2">

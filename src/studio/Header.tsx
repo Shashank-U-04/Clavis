@@ -151,6 +151,18 @@ function FileMenu() {
     downloadText(planToSvg(m, { date: new Date().toISOString().slice(0, 10) }), `${safeName(m.name)}.svg`, "image/svg+xml");
     logActivity("human", "export_svg", "Plan drawing exported as SVG.");
   };
+  const report = async () => {
+    const m = store.getState().model;
+    logActivity("human", "export_report", "Making the design report (PDF)…");
+    try {
+      const { downloadReport } = await import("../export/report");
+      await downloadReport(m);
+      logActivity("human", "export_report", "Design report saved as a PDF.");
+    } catch (e) {
+      console.error("[clavis] report failed", e);
+      logActivity("human", "export_report", "The design report could not be made in this browser.", false);
+    }
+  };
   const describe = () => {
     projectActions.newBlank();
     setUi({ rightTab: "assistant" });
@@ -164,7 +176,7 @@ function FileMenu() {
         <a href="/new">New plan…</a>
         <button onClick={describe}>Describe a home…</button>
         <button onClick={() => projectActions.newBlank()}>Blank plan</button>
-        <button onClick={() => startTemplate("sunset-loft")}>Showcase: Sunset Loft</button>
+        <button onClick={() => startTemplate("linden-heights")}>Showcase: Linden Heights</button>
         <a href="/templates">From a template…</a>
         <hr />
         <p className="menu-label">This plan</p>
@@ -174,6 +186,7 @@ function FileMenu() {
         <button onClick={() => fileRef.current?.click()}>Open a design file…</button>
         <hr />
         <p className="menu-label">Export</p>
+        <button onClick={report}>Design report (.pdf)</button>
         <button onClick={() => downloadDocument(store.getState().model, store.getState().notes)}>Design file (.json)</button>
         <button onClick={exportSvg}>Plan drawing (.svg)</button>
         <button disabled={!scene} title={scene ? undefined : "Show the 3D view to export from it"} onClick={() => sendCommand("export-png")}>
