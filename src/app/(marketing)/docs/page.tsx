@@ -21,7 +21,7 @@ const TOC = [
 const SHORTCUTS = [
   ["1 / 2 / 3 / 4", "Show or hide the 2D plan, the 3D model, the walk and the chat"],
   ["0", "Plan, model and chat together; double-click a button to show one alone"],
-  ["L", "Open or close the library (rooms and furniture)"],
+  ["L", "Open or close the library beside the list"],
   ["V", "Select"],
   ["W", "Draw walls (click to chain, Esc to stop)"],
   ["M", "Draw a room (drag a rectangle)"],
@@ -90,7 +90,7 @@ export default function DocsPage() {
             <section className="space-y-4">
               <H id="drawing">Building by hand</H>
               <p>Press <b>Rooms</b> in the strip down the left of the studio (or <b>L</b>) and pick a ready-made room — bedroom, kitchen, bathroom, hall and more — then click on the plan. Each room arrives with its walls; dropped beside another it snaps flush and the two share a wall, and it is never left on top of another room. The <b>Room</b> tool does the same for a rectangle you drag out yourself.</p>
-              <p>Then use <b>Door</b> and <b>Window</b> and click on walls. Press <b>Furniture</b> for the catalogue — pick a piece, then click the plan or the 3D floor — or let the guide's <b>Furnish rooms</b> fill every empty room with pieces that fit. The <b>Guide</b> button shows the steps and ticks them off. Everything snaps to 5 cm; select anything to edit its exact numbers in the <b>Details</b> tab, and drag pieces to move them (a whole drag is one undo step).</p>
+              <p>Then use <b>Door</b> and <b>Window</b> and click on walls. The list down the left names everything a home is made of: walls, rooms, doors, windows, stairs, then the furniture room by room. Pick one to see what there is, set its size if you like, then click the plan or the 3D floor — or let the guide's <b>Furnish rooms</b> fill every empty room with pieces that fit. The <b>Guide</b> button shows the steps and ticks them off. Everything snaps to 5 cm; select anything to edit its exact numbers in the <b>Details</b> tab, and drag pieces to move them (a whole drag is one undo step).</p>
             </section>
             <section className="space-y-4">
               <H id="views">Plan, model, walk and chat</H>
