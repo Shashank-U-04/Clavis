@@ -34,6 +34,7 @@ export const CHECKS: Record<Code, { group: CheckGroup; text: string; severity: "
   rooms_overlap: { group: "Rooms", severity: "error", text: "Two rooms claim the same floor." },
   item_unknown: { group: "Furniture", severity: "error", text: "A piece that is not in the catalog." },
   item_through_wall: { group: "Furniture", severity: "error", text: `Furniture that goes through a wall (leaning on it, up to 2 cm, is fine).` },
+  item_in_door_swing: { group: "Furniture", severity: "error", text: "Furniture where a door's leaf swings open, so the door cannot open fully." },
   item_blocks_door: { group: "Furniture", severity: "error", text: `Furniture inside the ${cm(RULES.doorClearDepth)} kept clear in front of a door.` },
   item_blocks_window: { group: "Furniture", severity: "warning", text: `Something taller than the sill within ${cm(RULES.windowClearDepth)} of a window.` },
   items_overlap: { group: "Furniture", severity: "error", text: "Two pieces occupy the same space (rugs may lie underneath)." },

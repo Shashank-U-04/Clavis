@@ -17,7 +17,7 @@ export interface RepairReport {
   failed: { issue: Issue; reason: string }[];
 }
 
-const ITEM_CODES = new Set(["item_through_wall", "item_blocks_door", "item_blocks_window", "items_overlap", "item_outside_room", "item_outside_rooms"]);
+const ITEM_CODES = new Set(["item_through_wall", "item_blocks_door", "item_in_door_swing", "item_blocks_window", "items_overlap", "item_outside_room", "item_outside_rooms"]);
 const OPENING_CODES = new Set(["openings_overlap", "opening_overflow", "wall_ends_in_opening"]);
 const MANUAL: Record<string, string> = {
   room_undersized: "making a room bigger moves walls, which is a design decision — resize it in the plan or describe the home again with more area",
