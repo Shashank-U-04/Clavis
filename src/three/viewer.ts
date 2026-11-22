@@ -32,7 +32,7 @@ import { loadPlants } from "./plants";
 import { walkView, type WalkView } from "./walkView";
 
 const STEP = 1.4; // metres per second: an ordinary walking pace
-const RUN = 2.3; // × STEP with Shift held: a jog, about 3.2 m/s
+const RUN = 2.3; // × STEP with Shift held: a jog, about 3.2 m/s (the figure breaks into a run above 2.3 m/s)
 const EASE = 9; // how quickly the walker reaches speed and stops (per second)
 const BODY = 0.22; // half the walker's width at the shoulders
 const LOOK_SPEED = 0.005; // radians per pixel of drag
@@ -226,6 +226,7 @@ export class Viewer {
     this.mode = mode;
     this.keys.clear();
     this.velocity = { x: 0, z: 0 };
+    if (mode === "walk") this.walker.load();
     this.camera.fov = mode === "walk" ? WALK_FOV : MODEL_FOV;
     this.camera.updateProjectionMatrix();
     this.walker.root.visible = false;
