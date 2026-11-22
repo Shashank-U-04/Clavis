@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ArrowUpRight, HardDrive, Menu, Search, X } from "lucide-react";
 import { AccountStatus, useWhereSaved } from "@/components/account/AccountStatus";
 import { Logo } from "@/components/site/Logo";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { getProfile, lastPlan, listPlans, storageUsed } from "@/lib/workspace/browser";
 import { useWorkspace } from "@/lib/workspace/useWorkspace";
 import { NEW_PLAN, WORK, YOU, isActive, sheetFor, type AppDest } from "./destinations";
@@ -119,6 +120,7 @@ function TopBar({ path, onMenu }: { path: string; onMenu: () => void }) {
       <div className="hidden items-center border-l border-rule px-4 md:flex">
         <PlanSearch className="w-64" />
       </div>
+      <ThemeToggle className="flex w-12 items-center justify-center border-l border-rule text-ink-2 hover:text-ink" />
       <Link href={continueHref} className="label group flex items-center gap-3 border-l border-rule px-4 text-marker hover:bg-marker hover:text-paper sm:px-5" title={last ? `Continue “${last.name}”` : "Start a plan"}>
         <span className="hidden sm:inline">{last ? "Continue in studio" : "Open the studio"}</span>
         <span className="sm:hidden">Studio</span>

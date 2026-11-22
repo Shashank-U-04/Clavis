@@ -252,7 +252,7 @@ export default function Home() {
       </Section>
 
       {/* ---------------------------------------------------------------- start */}
-      <section className="bg-ink text-paper">
+      <section className="stay-dark bg-ink text-paper">
         <div className="mx-auto grid max-w-[1440px] gap-10 px-5 py-16 md:grid-cols-[1fr_minmax(0,36rem)] md:px-8 md:py-24">
           <div>
             <p className="label text-paper/50">Sheet 06</p>

@@ -28,7 +28,7 @@ export function PlanThumb({ id, stamp, className = "", pad = "p-3" }: { id: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, stamp]);
   return (
-    <div className={`relative grid place-items-center overflow-hidden bg-white ${className}`}>
+    <div className={`relative grid place-items-center overflow-hidden bg-paper ${className}`}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" className={`absolute inset-0 h-full w-full object-contain ${pad}`} />

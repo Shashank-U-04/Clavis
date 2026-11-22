@@ -9,7 +9,7 @@ const POINTS = ["Your plans on every device, synced as you work", "Named version
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-ink p-10 text-paper lg:flex">
+      <aside className="stay-dark relative hidden flex-col justify-between overflow-hidden bg-ink p-10 text-paper lg:flex">
         <Link href="/" className="w-fit hover:text-marker" aria-label="Clavis home">
           <Logo />
         </Link>

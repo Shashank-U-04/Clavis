@@ -30,7 +30,7 @@ export function TemplateCard({ t, compact = false }: { t: TemplateCardData; comp
   const f = t.facts;
   return (
     <li className="flex flex-col border-b border-r border-rule">
-      <Link href={templateHref(t.slug)} className="group relative block border-b border-rule-soft bg-white" aria-label={`Use the ${t.name} template`}>
+      <Link href={templateHref(t.slug)} className="group relative block border-b border-rule-soft bg-paper" aria-label={`Use the ${t.name} template`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={t.thumb} alt="" className={`w-full object-contain p-3 ${compact ? "aspect-[4/3]" : "aspect-[4/3]"}`} />
         {t.featured && <span className="label absolute left-3 top-3 bg-marker px-2 py-1 text-[0.62rem] text-paper">Showcase</span>}

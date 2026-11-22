@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AccountBridge } from "@/components/account/AccountBridge";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 const sans = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
@@ -21,11 +22,22 @@ export const metadata: Metadata = {
   openGraph: { type: "website", siteName: "Clavis", title: "Clavis — describe a home, check it, walk through it" },
 };
 
-export const viewport: Viewport = { themeColor: "#f1f0ea", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f1f0ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#121417" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    // the theme script sets the "dark" class before React runs, so <html> may differ from the server's
+    <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh bg-paper font-sans text-ink">
         {children}
         <AccountBridge />
