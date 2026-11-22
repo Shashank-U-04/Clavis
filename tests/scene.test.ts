@@ -4,7 +4,8 @@ import { buildContent, disposeGroup } from "../src/three/content";
 import { wallMaterial } from "../src/three/materials";
 import { applyBatch } from "../src/model/operations";
 import { emptyModel, type PlanModel } from "../src/model/types";
-import { COMPACT_TWO_BEDROOM } from "../src/model/templates";
+import { COMPACT_TWO_BEDROOM, lindenHeightsModel } from "../src/model/templates";
+import { elevationOf, levelAbove, levelOf } from "../src/model/levels";
 
 const design = (): PlanModel => {
   let n = 0;
@@ -64,6 +65,20 @@ describe("3D content derives from the canonical model", () => {
       return new THREE.Box3().setFromObject(o).max.y;
     };
     expect(h(longer)).toBeGreaterThan(h(m) + 0.4);
+  });
+
+  it("leaves no open band between floors: walls reach the floor above, upstairs walls go through their slab", () => {
+    const m = lindenHeightsModel();
+    const { group } = buildContent(m);
+    for (const w of m.walls) {
+      const o = group.children.find((c) => c.userData.entityId === w.id)!;
+      const box = new THREE.Box3().setFromObject(o);
+      const level = levelOf(w);
+      const elevation = elevationOf(m, level);
+      const above = levelAbove(m, level);
+      if (above) expect(box.max.y).toBeGreaterThanOrEqual(above.elevation - 1e-6);
+      if (elevation > 0) expect(box.min.y).toBeLessThan(elevation - 0.1);
+    }
   });
 });
 

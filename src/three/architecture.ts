@@ -13,7 +13,7 @@ import type { Opening, PlanModel, Room, Wall } from "../model/types";
 import { segLen } from "../model/geometry";
 import { openingSpan } from "../model/issues";
 import { Part, post, slab } from "./kit";
-import { elevationOf, levelBelow, levelOf } from "../model/levels";
+import { elevationOf, levelAbove, levelBelow, levelOf } from "../model/levels";
 import { isStair } from "../model/stairs";
 import { itemBox } from "../model/issues";
 import { worldUV } from "./textures";
@@ -111,7 +111,13 @@ function buildOpening(h: Hole, wall: Wall, group: THREE.Group) {
   }
 }
 
-function buildWall(wall: Wall, openings: Opening[]): THREE.Group {
+/**
+ * A wall with its doors and windows. `top` is how high it really stands: on a floor with
+ * another floor above, the wall carries on past its rooms' ceiling up to the next floor, so no
+ * open band shows between the storeys. `foot` reaches below the floor: an upstairs wall goes
+ * down through the slab it stands on.
+ */
+function buildWall(wall: Wall, openings: Opening[], top = wall.height, foot = 0): THREE.Group {
   const length = segLen(wall.ax, wall.ay, wall.bx, wall.by);
   const g = new THREE.Group();
   g.position.set(wall.ax, 0, wall.ay);
@@ -134,8 +140,11 @@ function buildWall(wall: Wall, openings: Opening[]): THREE.Group {
     g.add(wallPiece(a, b, 0, wall.height, wall.thickness));
   }
   if (runs.length === 0 && holes.length === 0) g.add(wallPiece(-half, length + half, 0, wall.height, wall.thickness));
+  // the band between the rooms' ceiling and the floor above, and the footing through the slab
+  if (top - wall.height > 1e-3) g.add(wallPiece(-half, length + half, wall.height, top, wall.thickness));
+  if (foot < -1e-3) g.add(wallPiece(-half, length + half, foot, 0, wall.thickness));
   // a thin cap on top so the cut wall reads clearly from above
-  g.add(slab(length + wall.thickness, 0.01, wall.thickness, wallCapMaterial, false).at(length / 2, wall.height, 0));
+  g.add(slab(length + wall.thickness, 0.01, wall.thickness, wallCapMaterial, false).at(length / 2, Math.max(top, wall.height), 0));
   for (const h of holes) buildOpening(h, wall, g);
   return g;
 }
@@ -207,8 +216,11 @@ export function buildArchitecture(model: PlanModel): BuiltArchitecture {
   for (const o of model.openings) byWall.set(o.wallId, [...(byWall.get(o.wallId) ?? []), o]);
 
   for (const w of model.walls) {
-    const g = buildWall(w, byWall.get(w.id) ?? []);
-    g.position.y = elevationOf(model, levelOf(w));
+    const level = levelOf(w);
+    const elevation = elevationOf(model, level);
+    const above = levelAbove(model, level);
+    const g = buildWall(w, byWall.get(w.id) ?? [], above ? Math.max(w.height, above.elevation - elevation) : w.height, elevation > 0 ? -SLAB : 0);
+    g.position.y = elevation;
     g.userData.entityId = w.id;
     group.add(g);
   }
