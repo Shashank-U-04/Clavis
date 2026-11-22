@@ -87,6 +87,7 @@ const PIECE_MS = 650;
 const ROOF_MS = 1100;
 const GROUNDS_MS = 2000;
 const SETTLE_MS = 1600; // the camera comes round to the front
+const TURN_DELAY = 900; // the camera tilts this long before it starts to circle
 
 /** Outdoor pieces that grow in rather than being set down. */
 const PLANTS = /tree|hedge|planter|shrub|bush/;
@@ -383,13 +384,17 @@ export class Showcase {
   private poseCamera(t: number) {
     const { lift, end } = this.timeline;
     const tilt = ease(span(t, lift, 2200));
-    const turn = glide(span(t, lift, end - lift));
+    // the circling starts once the camera has tilted well off the vertical: turning while it
+    // still looks straight down would spin the picture on the spot
+    const turn = glide(span(t, lift + TURN_DELAY, end - lift - TURN_DELAY));
     const settle = ease(span(t, end - SETTLE_MS * 1.4, SETTLE_MS * 1.4));
 
     const from = new THREE.Spherical().setFromVector3(this.plan.position.clone().sub(this.plan.target));
     const to = new THREE.Spherical().setFromVector3(this.rest.position.clone().sub(this.rest.target));
-    // the plan view has no direction of its own: start it facing north so the turn reads
-    from.theta = Math.PI;
+    // the plan view has no direction of its own: start it from the south, looking north, so as
+    // the camera tilts down north stays at the top of the picture (from the north side it
+    // would have to roll half a turn on the way down, which shows as a jolt)
+    from.theta = 0;
     let dTheta = to.theta - from.theta;
     if (dTheta > Math.PI) dTheta -= 2 * Math.PI;
     if (dTheta < -Math.PI) dTheta += 2 * Math.PI;
