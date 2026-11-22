@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { authConfigured } from "@/lib/auth/config";
 import { ALL_VIEWS, countViews, readTheme, readViews, toggleView, type ThemePref, type ViewKey, type Views } from "@/studio/views";
+import { applyTheme } from "@/lib/theme";
 
 const PREFIX = "clavis:";
 const PROVIDERS = [
@@ -100,7 +101,7 @@ export function SettingsPanel() {
     setViews(next);
     saveUi({ views: next });
   };
-  const pickTheme = (t: ThemePref) => (setTheme(t), saveUi({ theme: t }));
+  const pickTheme = (t: ThemePref) => (setTheme(t), saveUi({ theme: t }), applyTheme(t));
 
   const download = () => {
     const data = Object.fromEntries(ownKeys().map((k) => [k, read(k)]));
@@ -159,9 +160,9 @@ export function SettingsPanel() {
         <p className="mt-3 text-sm text-ink-3">At least one view stays on.</p>
       </Row>
 
-      <Row title="Studio theme" text="The studio is light like this site, or dark for long evenings at the drawing board.">
+      <Row title="Theme" text="Light like paper, dark for evenings, or follow your device. It applies to the whole site and the studio.">
         <fieldset className="grid grid-cols-3 gap-2">
-          <legend className="sr-only">Studio theme</legend>
+          <legend className="sr-only">Theme</legend>
           {THEMES.map((t) => (
             <label key={t.value} className={`${radio} items-center`}>
               <input type="radio" name="theme" value={t.value} checked={theme === t.value} onChange={() => pickTheme(t.value)} className="accent-ink" />

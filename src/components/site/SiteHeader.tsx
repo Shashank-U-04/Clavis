@@ -3,6 +3,7 @@ import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { Logo } from "./Logo";
 import { MobileMenu } from "./MobileMenu";
 import { HeaderAccount } from "./HeaderAccount";
+import { ThemeToggle } from "./ThemeToggle";
 import { FEATURES, NAV } from "./nav";
 
 /**
@@ -46,6 +47,7 @@ export function SiteHeader() {
             ),
           )}
           <span className="flex-1" />
+          <ThemeToggle className="flex w-12 items-center justify-center border-l border-rule text-ink-2 hover:text-ink" />
           <HeaderAccount className="label flex min-w-32 items-start border-l border-rule px-4 pt-3 text-ink-2 hover:text-ink" />
           <Link href="/new" className="label group flex min-w-44 flex-col justify-between border-l border-rule px-4 py-3 text-marker hover:bg-marker hover:text-paper">
             Start designing

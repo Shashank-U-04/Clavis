@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { HeaderAccount } from "./HeaderAccount";
+import { ThemeToggle } from "./ThemeToggle";
 import { Menu, X } from "lucide-react";
 import { FEATURES, NAV } from "./nav";
 
@@ -55,6 +56,10 @@ export function MobileMenu() {
               ))}
             </div>
             <HeaderAccount className="border-b border-rule px-5 py-5 text-lg" />
+            <div className="flex items-center justify-between border-b border-rule px-5 py-4">
+              <span className="text-lg">Theme</span>
+              <ThemeToggle className="flex h-10 w-10 items-center justify-center border border-rule" />
+            </div>
             <Link href="/new" className="label bg-ink px-5 py-6 text-paper">
               Start designing →
             </Link>

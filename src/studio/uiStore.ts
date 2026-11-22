@@ -6,6 +6,7 @@ import { useStore } from "zustand";
 import type { Pt } from "../model/geometry";
 import { actions, store } from "../model/store";
 import { ALL_VIEWS, readTheme, readViews, soloFeature, soloView, toggleFeature, toggleView, type Feature, type Screen, type ThemePref, type ViewKey, type Views } from "./views";
+import { applyTheme } from "../lib/theme";
 
 export type RightTab = "assistant" | "review" | "inspect" | "project";
 
@@ -62,7 +63,9 @@ export const ui = createStore<UiState>(() => ({
   ...(typeof window === "undefined" ? {} : defined(saved())),
 }));
 
-ui.subscribe((s) => {
+ui.subscribe((s, prev) => {
+  // the studio's theme is the whole site's theme
+  if (s.theme !== prev.theme) applyTheme(s.theme);
   try {
     localStorage.setItem(KEY, JSON.stringify({ views: s.views, theme: s.theme, feedOpen: s.feedOpen, library: s.library, libraryTab: s.libraryTab, guide: s.guide, dims: s.dims }));
   } catch {
