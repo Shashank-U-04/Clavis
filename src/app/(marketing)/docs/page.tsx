@@ -89,7 +89,7 @@ export default function DocsPage() {
             <section className="space-y-4">
               <H id="drawing">Building by hand</H>
               <p>Press <b>Rooms</b> in the strip down the left of the studio (or <b>L</b>) and pick a ready-made room — bedroom, kitchen, bathroom, hall and more — then click on the plan. Each room arrives with its walls; dropped beside another it snaps flush and the two share a wall, and it is never left on top of another room. The <b>Room</b> tool does the same for a rectangle you drag out yourself.</p>
-              <p>Then use <b>Door</b> and <b>Window</b> and click on walls. Press <b>Furniture</b> for the catalogue — pick a piece, then click the plan or the 3D floor — or let the guide's <b>Furnish rooms</b> fill every empty room, keeping only pieces the validator accepts. The <b>Guide</b> button shows the steps and ticks them off. Everything snaps to 5 cm; select anything to edit its exact numbers in the <b>Details</b> tab, and drag pieces to move them (a whole drag is one undo step).</p>
+              <p>Then use <b>Door</b> and <b>Window</b> and click on walls. Press <b>Furniture</b> for the catalogue — pick a piece, then click the plan or the 3D floor — or let the guide's <b>Furnish rooms</b> fill every empty room with pieces that fit. The <b>Guide</b> button shows the steps and ticks them off. Everything snaps to 5 cm; select anything to edit its exact numbers in the <b>Details</b> tab, and drag pieces to move them (a whole drag is one undo step).</p>
             </section>
             <section className="space-y-4">
               <H id="views">Plan, model, walk and chat</H>
@@ -107,7 +107,7 @@ export default function DocsPage() {
             <section className="space-y-4">
               <H id="assistant">The assistant</H>
               <p>
-                <b>Clavis Local</b> runs in your browser and understands a set of requests about whole homes, rooms, furniture, openings, floors, names, repairs and questions. In <b>Auto</b> mode, anything it does not understand goes to a hosted model if the server has one. Some things to try:
+                <b>Clavis Local</b> runs in your browser and understands a set of requests about whole homes, rooms, furniture, openings, floors, names, repairs and questions. In <b>Auto</b> mode, anything it does not understand goes to a hosted AI model; choose <b>Clavis Local</b> in Settings to keep every request in your browser. Some things to try:
               </p>
               <ul className="grid gap-2 sm:grid-cols-2">
                 {EXAMPLES.map((e) => (
@@ -137,7 +137,7 @@ export default function DocsPage() {
             </section>
             <section className="space-y-4">
               <H id="limits">Limits</H>
-              <p>Clavis is a concept-design tool. It draws single-storey homes with rectangular rooms, and structural changes regenerate the layout rather than moving individual walls. Its sizes, daylight and escape-window checks are early-design rules of thumb, not a building-code review, and furniture sizes are typical rather than of a specific product. Nothing it produces is a construction document.</p>
+              <p>Clavis is for early design. Rooms are rectangles; a home can have several floors joined by stairs. When the assistant adds or removes a room it lays the floor out again rather than moving single walls. Its size, daylight and escape-window checks are rules of thumb, not a building-code review, and furniture sizes are typical rather than those of a specific product. Nothing it produces is a construction document.</p>
             </section>
           </article>
         </div>
