@@ -10,8 +10,8 @@
   --sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --radius: 6px;
-  --strip: 64px;
-  --library: 280px;
+  --strip: 168px;
+  --library: 300px;
   --side: 380px;
 
   /* light: the website's paper */
@@ -271,9 +271,12 @@
   a.btn { display: inline-flex; align-items: center; font-size: 13px; padding: 6px 11px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--raised); color: var(--ink); text-decoration: none; }
   a.btn:hover { border-color: var(--ink-3); background: var(--hover); }
 
-  /* tool strip */
-  .strip { display: flex; flex-direction: column; gap: 2px; padding: 8px 6px; background: var(--panel); border-right: 1px solid var(--line); min-height: 0; overflow-y: auto; }
-  .tool { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 6px; font-size: 10.5px; color: var(--ink-2); background: transparent; border-color: transparent; }
+  /* the component list down the left: every group by name */
+  .strip { display: flex; flex-direction: column; gap: 1px; padding: 8px 8px; background: var(--panel); border-right: 1px solid var(--line); min-height: 0; overflow-y: auto; }
+  .tool { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 6px 9px; font-size: 13px; text-align: left; color: var(--ink-2); background: transparent; border-color: transparent; }
+  .tool svg { flex: 0 0 auto; }
+  .tool span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .strip-label { margin: 10px 9px 3px; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
   .tool:hover:not(:disabled) { background: var(--hover); border-color: transparent; }
   .tool.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-line); }
   .strip-rule { height: 1px; background: var(--line); margin: 6px 6px; flex: 0 0 auto; }
@@ -288,6 +291,19 @@
   .room-glyph { flex: 0 0 auto; border-radius: var(--radius); background: var(--plan-paper); }
   .room-glyph rect { fill: var(--plan-oak); stroke: var(--plan-wall); stroke-width: 2.5; }
   .library-hint { margin: 0; font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+  .library-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); display: flex; align-items: baseline; gap: 8px; }
+  .library-title small { font-weight: 400; font-size: 12px; color: var(--ink-3); }
+  /* the sizes the next piece is placed at */
+  .size-box { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 8px 10px 10px; }
+  .size-title { margin: 0 0 6px; display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 600; color: var(--ink); }
+  .size-title .link { padding: 0; border: 0; background: transparent; font-size: 11.5px; font-weight: 400; color: var(--accent); }
+  .size-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+  .size-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 4px; font-size: 11px; color: var(--ink-3); }
+  .size-field span { grid-column: 1 / -1; }
+  .size-field input { width: 100%; min-width: 0; padding: 4px 6px; font-family: var(--mono); font-size: 12.5px; }
+  .size-field em { font-style: normal; align-self: center; }
+  .presets { display: flex; flex-wrap: wrap; gap: 4px; }
+  .any-size { border: 1px dashed var(--line); }
   .search { width: 100%; }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; }
   .catalog { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding: 0 4px 10px; }
@@ -350,6 +366,8 @@
     padding: 4px 4px 4px 12px; background: var(--overlay); border: 1px solid var(--line); border-radius: var(--radius);
     box-shadow: var(--shadow); backdrop-filter: blur(6px); animation: sel-in 160ms ease-out;
   }
+  .sel-measure { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--ink-3); }
+  .sel-measure input { width: 62px; padding: 3px 5px; font-family: var(--mono); font-size: 12px; }
   .sel-bar.plan { top: 10px; right: 10px; }
   .sel-bar.scene { bottom: 14px; left: 50%; transform: translateX(-50%); }
   .sel-bar .sel-name { min-width: 0; margin-right: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; }
@@ -586,7 +604,7 @@
     .save { display: none; }
   }
   @media (max-width: 1020px) {
-    --strip: 56px;
+    --strip: 148px;
     /* the furniture drawer floats over the stage instead of taking a column */
     .lib-open .work { --library-w: 0px; }
     .library { position: absolute; left: var(--strip); top: 0; bottom: 0; width: var(--library); z-index: 20; box-shadow: var(--shadow); }
@@ -606,7 +624,8 @@
     .app { height: auto; min-height: 100%; }
     .work { display: block; }
     .strip { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 4px 6px; }
-    .tool { flex: 0 0 60px; }
+    .tool { flex: 0 0 auto; flex-direction: column; gap: 3px; padding: 6px 8px; font-size: 10.5px; }
+    .strip-label { display: none; }
     .strip-rule { width: 1px; height: auto; margin: 6px 4px; }
     .library { position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: auto; height: 60vh; z-index: 40; border-top: 1px solid var(--line); }
     .stage { height: 82vh; }

@@ -343,7 +343,16 @@ export const actions = {
   removeRoom: (id: string) => apply({ op: "remove_room", id }),
 
   // furniture
-  placeItem: (kind: string, x: number, y: number, rotation = 0) => apply({ op: "place_item", kind, x, y, rotation }),
+  /** Place a piece; with a size, it arrives at that size (one step to undo). */
+  placeItem: (kind: string, x: number, y: number, rotation = 0, size?: { w: number; d: number; h: number }): ActionResult => {
+    if (!size) return apply({ op: "place_item", kind, x, y, rotation });
+    const r = dispatch([
+      { op: "place_item", as: "placed", kind, x, y, rotation },
+      { op: "resize_item", id: "$placed", w: size.w, d: size.d, h: size.h },
+    ]);
+    const placed = r.steps[0];
+    return { ok: r.ok, summary: r.ok ? `${placed?.summary ?? ""} Sized ${size.w} × ${size.d} × ${size.h} m.` : r.summary, id: placed?.created, revision: r.revision, changedEntityIds: r.changedEntityIds };
+  },
   moveItem: (id: string, x?: number, y?: number, rotation?: number) => apply({ op: "move_item", id, x, y, rotation }),
   resizeItem: (id: string, size: { w?: number; d?: number; h?: number; reset?: boolean }) => apply({ op: "resize_item", id, ...size }),
   removeItem: (id: string) => apply({ op: "remove_item", id }),
