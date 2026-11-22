@@ -6,7 +6,7 @@ import { EXAMPLES } from "@/ai/local/engine";
 
 export const metadata: Metadata = {
   title: "Design by describing",
-  description: "One sentence becomes a furnished, validated floor plan. Then change it in words.",
+  description: "Describe a home and get a furnished floor plan to scale. Then change it in your own words.",
 };
 
 const UNDERSTANDS = [
@@ -14,15 +14,15 @@ const UNDERSTANDS = [
   ["Furniture", "Furnish one room or all of them, add a named piece to a room, move, turn or remove furniture."],
   ["Structure", "Add or remove a bedroom, bathroom, study or dining room, make a room bigger or smaller, open up or close off the kitchen."],
   ["Details", "Add doors and windows, change floors, rename rooms and the design."],
-  ["Repairs", "Fix every finding the validator reports, or just one — and hear plainly what needs a human decision."],
+  ["Fixes", "Fix every problem Clavis has found, or just one, and hear plainly what needs your decision."],
   ["Questions", "How big a room is, how much daylight it gets, how many doors from the entrance, what is wrong."],
 ];
 
 const LOOP = [
-  ["Propose", "The assistant returns operations: add, move, resize, remove."],
-  ["Dry-run", "The validator applies them to a copy and lists what they would fix and what they would break."],
-  ["Preview", "You see the change on the plan in green before deciding."],
-  ["Apply", "Only your click changes the design. Then the result is measured again."],
+  ["Suggest", "The assistant suggests a change: add, move, resize or remove."],
+  ["Check", "Clavis tries it on a copy of your design and lists what it would fix and what it would break."],
+  ["Preview", "You see the change on the plan, in green, before deciding."],
+  ["Apply", "Only your click changes the design, and it can be undone."],
 ];
 
 export default function AiDesignPage() {
@@ -33,15 +33,15 @@ export default function AiDesignPage() {
           { href: "/features", label: "Features" },
           { href: "/features/ai-design", label: "Design by describing" },
         ]}
-        title="Say what the home needs. Get a plan you can check."
-        intro="Clavis turns a brief into rooms with real sizes, walls on centrelines, doors that connect every room to the entrance and windows sized for daylight — then furnishes it piece by piece, keeping only what the validator accepts."
+        title="Say what the home needs. Get a plan to scale."
+        intro="Clavis turns a description into rooms at real sizes, with doors that connect every room to the entrance and windows sized for daylight, then furnishes each room with pieces that fit."
       >
         <div className="max-w-2xl">
           <BriefBox />
         </div>
       </PageHeader>
 
-      <Section sheet="01" title="What the assistant understands." intro="Clavis Local runs in your browser with no account and no key. It understands these requests, and says so plainly when it doesn't.">
+      <Section sheet="01" title="What you can ask for." intro="The built-in assistant runs in your browser and needs no account. It understands requests like these, and says so plainly when it does not.">
         <ul className="grid md:grid-cols-2 lg:grid-cols-3">
           {UNDERSTANDS.map(([t, d], i) => (
             <li key={t} className={`border-b border-rule p-5 md:p-8 ${i % 2 === 0 ? "md:border-r" : ""} ${i % 3 !== 2 ? "lg:border-r" : "lg:border-r-0"}`}>
@@ -64,8 +64,8 @@ export default function AiDesignPage() {
 
       <Section
         sheet="02"
-        title="Auto mode: local first, a hosted model when needed."
-        intro="Anything Clavis Local can't place — “make the living room feel cosier for movie nights” — goes to a hosted language model. Its answer comes back as proposed operations, never as finished changes."
+        title="Looser requests go to a hosted AI model."
+        intro="A request like “make the living room cosier for movie nights” goes to a hosted AI model. Its answer comes back as a suggestion like any other: checked, previewed, and applied only if you choose."
       >
         <ol className="grid md:grid-cols-4">
           {LOOP.map(([t, d], i) => (
@@ -80,14 +80,14 @@ export default function AiDesignPage() {
 
       <Section
         sheet="03"
-        title="Creative ideas, precise geometry."
-        intro="A language model is good at intent and loose with centimetres. When an applied change leaves findings behind, one click hands exactly those to the deterministic repair, which moves pieces until nothing collides."
+        title="Good ideas, exact measurements."
+        intro="An AI model is good at what you mean and loose with centimetres. When a change leaves furniture overlapping, one click moves the pieces until nothing collides."
       >
         <div className="grid gap-px bg-rule md:grid-cols-3">
           {[
             ["Hosted model", "“Cosier for movie nights” → a rug, a TV stand and a coffee table, and the sofa turned."],
-            ["Validator", "Three new findings: the TV stand overlaps the counter and the fridge, the dining table touches the sofa."],
-            ["Clavis Local repair", "Moves two pieces, 0.48 m and 0.80 m. 0 errors, 0 warnings."],
+            ["Checked", "Three new problems: the TV stand overlaps the counter and the fridge, the dining table touches the sofa."],
+            ["Fixed", "Two pieces moved, 0.48 m and 0.80 m. No errors or warnings left."],
           ].map(([t, d]) => (
             <div key={t} className="bg-paper p-5 md:p-8">
               <p className="label text-ink-3">{t}</p>

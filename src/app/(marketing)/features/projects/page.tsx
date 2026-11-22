@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: "Projects and export",
-  description: "Designs save as you work. Keep several projects, and export a printable plan, the design file or a 3D model.",
+  description: "Designs save as you work, in your browser or in your account. Export a printable plan, the design file or a 3D model.",
 };
 
 const EXPORTS = [
@@ -27,14 +27,14 @@ export default function ProjectsPage() {
         intro="Every change is saved within a moment of making it. Keep as many projects as you like, duplicate one to try an idea, and take any of them away as a file."
       />
 
-      <Section sheet="01" title="Projects." intro="Without an account, projects live in this browser: private, and gone if you clear its storage. Accounts, coming next, will keep them in the cloud and bring them to any device.">
+      <Section sheet="01" title="Projects." intro="Without an account, projects live in this browser: private, and gone if you clear its storage. Sign in with Google and they are kept in your account instead.">
         <div className="grid md:grid-cols-2">
           {[
-            ["In this browser", ["Autosave within a second", "Any number of projects", "Duplicate, rename, delete", "No account, nothing uploaded"]],
-            ["With an account", ["Projects on every device", "Named versions to return to", "Read-only share links", "Hosted assistant on your account"]],
+            ["In this browser", ["Autosave within a second", "Any number of projects", "Versions to return to", "No account, nothing uploaded"]],
+            ["Signed in with Google", ["The same projects on every device", "Projects from this browser move across when you sign in", "Kept private to you", "Sign out and this browser's copy is cleared"]],
           ].map(([t, items], i) => (
             <div key={t as string} className={`border-rule p-5 md:p-8 ${i === 0 ? "border-b md:border-b-0 md:border-r" : ""}`}>
-              <p className="label text-ink-3">{i === 0 ? "Available now" : "Coming with accounts"}</p>
+              <p className="label text-ink-3">{i === 0 ? "Without an account" : "With an account"}</p>
               <h3 className="mt-3 text-2xl font-semibold">{t as string}</h3>
               <ul className="mt-6 divide-y divide-rule-soft border-y border-rule-soft">
                 {(items as string[]).map((x) => (
@@ -49,7 +49,7 @@ export default function ProjectsPage() {
         </div>
       </Section>
 
-      <Section sheet="02" title="Take it with you." intro="Four exports, each made for a different next step.">
+      <Section sheet="02" title="Take it with you." intro="Four exports, each for a different next step.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4">
           {EXPORTS.map(([ext, t, d], i) => (
             <li key={ext} className={`border-b border-rule p-5 md:p-8 lg:border-b-0 ${i % 2 === 0 ? "sm:border-r" : ""} ${i < 3 ? "lg:border-r" : ""}`}>
@@ -60,7 +60,7 @@ export default function ProjectsPage() {
           ))}
         </ul>
         <div className="flex justify-end border-t border-rule p-5 md:p-8">
-          <ButtonLink href="/new">Start a plan</ButtonLink>
+          <ButtonLink href="/new">Start designing</ButtonLink>
         </div>
       </Section>
     </>

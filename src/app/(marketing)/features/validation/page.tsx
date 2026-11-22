@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/site/PageHeader";
 import { Section } from "@/components/site/Sheet";
 import { CHECKS, GROUPS } from "@/content/checks";
-import { CHECK_CODES, CHECK_COUNT } from "@/model/checks";
+import { CHECK_CODES } from "@/model/checks";
 
 export const metadata: Metadata = {
-  title: "The validator",
-  description: "Every change to a Clavis design is checked by a deterministic engine: walls, openings, furniture clearances, circulation and habitability.",
+  title: "Problems pointed out",
+  description: "Clavis checks a design as you work: walls, doors and windows, furniture clearances, routes between rooms, daylight and stairs.",
 };
 
 const SEVERITY = {
@@ -21,13 +21,13 @@ export default function ValidationPage() {
       <PageHeader
         trail={[
           { href: "/features", label: "Features" },
-          { href: "/features/validation", label: "The validator" },
+          { href: "/features/validation", label: "Problems pointed out" },
         ]}
-        title={`${CHECK_COUNT} checks, on every change, from every source.`}
-        intro="A drag in the plan, a number typed in Details, a proposal from Clavis Local or from a hosted AI model: all of it goes through one pipeline and one referee. The engine never guesses and never edits; it measures and reports."
+        title="See what is wrong while it is still easy to fix."
+        intro="Whether you drag a wall, type a size or apply a suggestion from the assistant, Clavis checks the result the same way and marks anything that needs attention on the plan. It measures and reports; it never changes your design by itself."
       />
 
-      <Section sheet="01" title="How a finding works." intro="Each finding names the walls, openings, rooms or pieces involved and carries the numbers behind it. Its id comes from the finding itself, so Clavis can say exactly which findings a change resolved, kept or introduced.">
+      <Section sheet="01" title="Three kinds of finding." intro="Each finding names the walls, doors, rooms or furniture involved, with the measurements behind it, and clicking it shows them on the plan.">
         <div className="grid gap-px bg-rule md:grid-cols-3">
           {[
             ["Error", "The geometry or a relationship is broken: a piece through a wall, overlapping rooms, a door past the end of its wall.", "error"],
@@ -42,7 +42,7 @@ export default function ValidationPage() {
         </div>
       </Section>
 
-      <Section sheet="02" title="Every check." intro="Thresholds are early-design rules of thumb, not building-code values for any country. They are shown exactly as the engine uses them.">
+      <Section sheet="02" title="What is checked." intro="The limits are rules of thumb for early design, not the building code of any country, and are shown here exactly as Clavis uses them.">
         <div className="grid md:grid-cols-2">
           {GROUPS.map((g, gi) => {
             const codes = CHECK_CODES.filter((c) => CHECKS[c].group === g);

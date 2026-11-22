@@ -8,7 +8,7 @@ import { ButtonLink } from "@/components/ui/Button";
 
 export const metadata: Metadata = {
   title: "Plan, 3D and walk",
-  description: "The plan and a live 3D model side by side, with a first-person walk through the home from its front door.",
+  description: "The plan and a live 3D model side by side, and a walk through the home from its front door with a figure at real height.",
 };
 
 const VIEWS = [
@@ -19,9 +19,11 @@ const VIEWS = [
 
 const KEYS = [
   ["W A S D / arrows", "walk (in Walk)"],
-  ["Esc", "leave the walk"],
-  ["drag", "look around"],
+  ["Shift / Space", "run / jump"],
+  ["drag", "turn the camera"],
+  ["scroll", "zoom; all the way in to see through the figure's eyes"],
   ["click a door", "open or close it"],
+  ["Esc", "leave the walk"],
   ["F (plan)", "fit the plan to the window"],
   ["R (plan)", "turn the selected piece 90°"],
   ["Ctrl Z / Ctrl Y", "undo / redo"],
@@ -36,7 +38,7 @@ export default function ThreeDPage() {
           { href: "/features/3d", label: "Plan, 3D and walk" },
         ]}
         title="Draw in plan. See it stand up. Walk in."
-        intro="The plan and the 3D model sit side by side and follow the same design: move a sofa in the plan and it moves in the room. Only what changed is rebuilt, so the view keeps up with you."
+        intro="The plan and the 3D model sit side by side and show the same design: move a sofa in the plan and it moves in the room."
       />
 
       <Section sheet="01" title="Three ways to see one home." intro="Each has its own button in the studio's bar. Show them side by side or one at a time, alongside the chat; they all follow the same design.">
@@ -79,8 +81,8 @@ export default function ThreeDPage() {
                 </div>
               ))}
             </dl>
-            <ButtonLink href="/studio/try?template=sunset-loft" className="mt-6 w-full">
-              Walk through a home
+            <ButtonLink href="/studio/try?template=linden-heights" className="mt-6 w-full">
+              Walk through a three-floor house
             </ButtonLink>
           </div>
         </div>
