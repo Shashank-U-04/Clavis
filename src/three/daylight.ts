@@ -8,15 +8,18 @@ import * as THREE from "three";
 import { skyDome, type SkyColours } from "./sky";
 import { groundMaterial } from "./materials";
 
-export type SceneTheme = "light" | "dark";
+export type SceneTheme = "light" | "dark" | "sunset";
 
 /**
- * Per studio theme: a clear day, or dusk with the lamps on. `elevation` and `azimuth` place the
- * sun (degrees); `ground` tints the lawn.
+ * The light per theme: a clear day; dusk with the lamps on (the studio's dark theme); and a
+ * sunset, the sun low in the west behind the camera of the landing page's model, warming the
+ * house's front and stretching its shadows across the lawn (the site's dark theme).
+ * `elevation` and `azimuth` place the sun (degrees); `ground` tints the lawn.
  */
 export const SCENE_THEMES: Record<SceneTheme, { elevation: number; azimuth: number; sun: string; sunIntensity: number; skyLight: number; exposure: number; envIntensity: number; ground: string; sky: SkyColours }> = {
   light: { elevation: 38, azimuth: 215, sun: "#fff1dc", sunIntensity: 3.1, skyLight: 0.55, exposure: 0.95, envIntensity: 0.55, ground: "#ffffff", sky: { zenith: "#4f86c6", horizon: "#cfe1ee", glow: "#fff6e6" } },
   dark: { elevation: 12, azimuth: 250, sun: "#ffb27a", sunIntensity: 1.6, skyLight: 0.5, exposure: 0.75, envIntensity: 0.45, ground: "#c3cbbd", sky: { zenith: "#1b2340", horizon: "#e49a6a", glow: "#ffcf9a" } },
+  sunset: { elevation: 9, azimuth: 255, sun: "#ff9d5c", sunIntensity: 2.6, skyLight: 0.42, exposure: 0.86, envIntensity: 0.6, ground: "#e2c9a8", sky: { zenith: "#2b2f5e", horizon: "#f2925e", glow: "#ffd9a8" } },
 };
 
 export class Daylight {
@@ -27,6 +30,8 @@ export class Daylight {
   private env: THREE.WebGLRenderTarget | null = null;
   /** a unit vector from the model towards the sun */
   private sunDir = new THREE.Vector3(0.5, 0.7, 0.4).normalize();
+  /** where the sun's shadows were last aimed, so a new theme's sun can follow */
+  private aimed: { centre: THREE.Vector3; radius: number } | null = null;
 
   constructor(
     private renderer: THREE.WebGLRenderer,
@@ -63,10 +68,13 @@ export class Daylight {
     reflected.dispose();
     this.scene.environment = this.env.texture;
     this.scene.environmentIntensity = t.envIntensity;
+    // the sun has moved: its shadows come from its new side
+    if (this.aimed) this.aim(this.aimed.centre, this.aimed.radius);
   }
 
   /** Put the sun's shadow camera over everything within `radius` of `centre`, from the sun's side. */
   aim(centre: THREE.Vector3, radius: number) {
+    this.aimed = { centre: centre.clone(), radius };
     this.sun.target.position.copy(centre);
     this.sun.position.copy(centre).addScaledVector(this.sunDir, radius * 3);
     Object.assign(this.sun.shadow.camera, { left: -radius, right: radius, top: radius, bottom: -radius, near: 0.5, far: radius * 6 });

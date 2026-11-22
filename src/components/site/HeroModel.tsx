@@ -13,6 +13,7 @@ import { Hand, RotateCcw } from "lucide-react";
 import type { PlanModel } from "@/model/types";
 import type { SitePiece } from "@/components/figures/sunsetFigure";
 import type { Showcase, ShowcaseTimeline } from "@/three/showcase";
+import { onThemeChange, readThemePref, resolveTheme } from "@/lib/theme";
 
 export interface BuildStep {
   code: string;
@@ -67,6 +68,9 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
     let cancelled = false;
     let poll = 0;
     let io: IntersectionObserver | null = null;
+    let stopTheme: (() => void) | null = null;
+    let stopDevice: (() => void) | null = null;
+    let device: MediaQueryList | null = null;
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     setTouch(coarse);
 
@@ -92,6 +96,12 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
         );
         io.observe(el);
         poll = window.setInterval(() => setMoved(s.moved), 300);
+        // the model follows the site's theme: a sunset when it turns dark, daylight when it turns light
+        const light = () => s.setTheme(resolveTheme(readThemePref()) === "dark" ? "sunset" : "light");
+        stopTheme = onThemeChange(light);
+        device = window.matchMedia("(prefers-color-scheme: dark)");
+        device.addEventListener("change", light);
+        stopDevice = () => device?.removeEventListener("change", light);
       })
       .catch(async (err) => {
         console.error("[clavis] the 3D model could not start", err);
@@ -108,6 +118,8 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
       for (const t of timers.current) clearTimeout(t);
       clearInterval(poll);
       io?.disconnect();
+      stopTheme?.();
+      stopDevice?.();
       show.current?.dispose();
       show.current = null;
     };
@@ -157,7 +169,7 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
           <span className="label text-ink-3">Fig. 01</span>
           <span className="label text-right text-ink-2">{caption}</span>
         </div>
-        <div className="relative overflow-hidden border border-rule" style={{ background: "linear-gradient(#5b8fca, #cfe1ee 62%, #7f9a66 62%, #62804c)" }}>
+        <div className="hero-sky relative overflow-hidden border border-rule">
           <div ref={mount} className="h-[clamp(380px,62vw,560px)] w-full cursor-grab active:cursor-grabbing lg:h-[clamp(460px,72vh,780px)]" aria-label="A 3D model of the house: drag to turn it, scroll to zoom" role="img" />
           {state === "loading" && <p className="label absolute inset-0 grid place-items-center text-paper">Loading the 3D model…</p>}
           {state === "ready" && (

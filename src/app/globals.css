@@ -49,6 +49,14 @@ html.dark {
   --color-night: #0a0c0e;
 }
 
+/* the landing model's frame while it loads: the sky it opens into, a sunset in the dark theme */
+.hero-sky {
+  background: linear-gradient(#5b8fca, #cfe1ee 62%, #7f9a66 62%, #62804c);
+}
+html.dark .hero-sky {
+  background: linear-gradient(#2b2f5e, #f2925e 62%, #7a7055 62%, #55503d);
+}
+
 /* panels drawn in ink on the light sheet stay dark at night: their ink is a darker board, their paper pale */
 html.dark .stay-dark {
   --color-ink: #1d2126;
