@@ -47,17 +47,45 @@ export function blockedRooms(model: PlanModel, r = WALKER_RADIUS): Blocked[] {
     // every door open: we are asking about furniture, not about doors being shut
     const solids = solidsOf(floor).filter((s) => !s.door);
     for (const room of floor.rooms) {
-      const result = walkRoom(floor, room, solids, r);
+      const result = walkRoomCached(floor, room, solids, r);
       if (result) out.push({ level: level.name, room: room.label, roomId: room.id, ...result });
     }
   }
   return out;
 }
 
-function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { doors: string[]; reach: number } | null {
-  // the doors in this room's walls, and a point just inside the room in front of each
+type Walked = { doors: string[]; reach: number } | null;
+type Start = { id: string; x: number; y: number };
+
+/**
+ * Rooms already walked, by everything their answer depends on. Dragging a piece re-checks the
+ * design on every move, but only the room it is in changes; the others come from here.
+ */
+const walked = new Map<string, Walked>();
+const MAX_WALKED = 400;
+const mm = (v: number) => Math.round(v * 1000);
+
+function walkRoomCached(floor: PlanModel, room: Room, solids: Solid[], r: number): Walked {
+  const starts = doorSteps(floor, room, r);
+  if (starts.length === 0) return null;
+  // only what stands within reach of the room's floor can change its answer
+  const near = solids.filter((s) => {
+    const b = s.box;
+    const e = b.halfW + b.halfD + r;
+    return b.x + e > room.x && b.x - e < room.x + room.w && b.y + e > room.y && b.y - e < room.y + room.h;
+  });
+  const key = [mm(r), mm(room.x), mm(room.y), mm(room.w), mm(room.h), starts.map((p) => `${p.id}@${mm(p.x)},${mm(p.y)}`).join(";"), near.map((s) => [s.box.x, s.box.y, s.box.halfW, s.box.halfD, s.box.angle].map(mm).join(",")).join(";")].join("|");
+  if (walked.has(key)) return walked.get(key)!;
+  const result = walkRoom(room, starts, near, r);
+  if (walked.size >= MAX_WALKED) walked.clear();
+  walked.set(key, result);
+  return result;
+}
+
+/** The doors in this room's walls, and a point just inside the room in front of each. */
+function doorSteps(floor: PlanModel, room: Room, r: number): Start[] {
   const inside = (x: number, y: number) => x > room.x && x < room.x + room.w && y > room.y && y < room.y + room.h;
-  const starts: { id: string; x: number; y: number }[] = [];
+  const starts: Start[] = [];
   for (const o of floor.openings) {
     if (o.kind !== "door") continue;
     const wall = floor.walls.find((w) => w.id === o.wallId);
@@ -70,7 +98,10 @@ function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { d
       if (inside(p.x, p.y)) starts.push({ id: o.id, ...p });
     }
   }
-  if (starts.length === 0) return null;
+  return starts;
+}
+
+function walkRoom(room: Room, starts: Start[], solids: Solid[], r: number): Walked {
 
   // the room's floor as a grid of cells a person's centre can stand on
   const cols = Math.max(1, Math.round(room.w / CELL));
