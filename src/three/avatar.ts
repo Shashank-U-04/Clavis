@@ -12,8 +12,8 @@
 import * as THREE from "three";
 import { surface } from "./materials";
 
-const PERSON = "/models/people/walker.fbx";
-const PERSON_COLOURS = "/models/people/walker.png";
+const PERSON = "/models/people/walker.fbx?v=1";
+const PERSON_COLOURS = "/models/people/walker.png?v=1";
 /** The character's walk cycle covers about this much ground at its own pace (m/s); faster or slower plays it faster or slower. */
 const WALK_PACE = 1.4;
 const RUN_PACE = 3.2;
