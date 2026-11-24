@@ -422,6 +422,7 @@ function PiecesShelf({ group }: { group: GroupId }) {
           </section>
         ))}
         {items.length === 0 && <p className="muted small">Nothing matches “{q}”.</p>}
+        <p className="library-soon">More libraries coming soon: new furniture, kitchens, bathrooms and garden pieces.</p>
       </div>
     </>
   );
