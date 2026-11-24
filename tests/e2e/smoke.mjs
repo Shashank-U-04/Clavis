@@ -180,6 +180,16 @@ try {
     assert.ok(m.walls >= 5 && m.walls <= 8, `walls: ${m.walls}`);
   });
 
+  await step("the MCP button opens the agent set-up with the server address; Esc closes it", async () => {
+    await page.locator(".hdr-right .mcp-btn").click();
+    const dialog = page.getByRole("dialog", { name: "Connect an AI agent" });
+    await dialog.waitFor();
+    await dialog.getByText(`${server.url}/api/mcp`).waitFor();
+    await dialog.getByText("apply_operations").waitFor();
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+  });
+
   await step("phone and tablet widths: no sideways scrolling, plan and panels visible", async () => {
     for (const [width, height] of [[390, 844], [900, 900]]) {
       await page.setViewportSize({ width, height });
