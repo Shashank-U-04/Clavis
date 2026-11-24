@@ -604,6 +604,8 @@
     .view span { display: none; }
     .view { padding: 5px 10px; }
     .save { display: none; }
+    .mcp-btn span { display: none; }
+    .mcp-btn { padding: 0 8px; }
   }
   @media (max-width: 1020px) {
     --strip: 148px;
