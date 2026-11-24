@@ -114,7 +114,7 @@ npm run dev        # http://localhost:5199
 | Command | What it checks |
 |---|---|
 | `npm run typecheck` | TypeScript, strict |
-| `npm test` | 170 unit tests: geometry, constraint engine, analysis, operations, layout builder, local engine, library, export, workflow, server adapter, landing figures |
+| `npm test` | 350+ unit tests: geometry, checks, analysis, operations, floors and stairs, layout builder, Clavis Local, walkability, library and sync, export and the PDF report, the assistant server and allowance, the sign-in gate, 3D builders, site metadata |
 | `npm run e2e` | Browser smoke test of the whole workflow (needs Chromium or Chrome) |
 | `npm run build` | Next.js production build in `.next/` |
 

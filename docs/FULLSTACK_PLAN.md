@@ -5,6 +5,13 @@ accounts after implementation, so the code reads them from environment variables
 “not configured” until they exist. Guest mode: yes. Sign-in: email + password, magic link and GitHub
 (Google later).
 
+> **Update 2026-11-24:** phases 1–6 and 8 are done and live. Since 2026-11-22 the studio and
+> the app **require sign-in** (guest mode was removed; with accounts off, as in local
+> development and CI, everything stays open). The landing page's hero is **Linden Heights**, a
+> three-floor house in real 3D. Phase 7 is under way (sitemap, robots, share image, 404 and
+> error pages; share links next). Phase 9's **MCP server** is built: `/api/mcp` with
+> per-account tokens made from the MCP button in the app, the studio and Settings.
+
 > **Update 2026-11-18:** live on Vercel (clavisstudio.vercel.app) with Supabase. Sign-in is
 > **Google only**, plus one email + password demo account for hackathon judges
 > (`npm run judges`). Email sign-up, magic links and password resets were dropped: the free
@@ -161,12 +168,12 @@ unchanged, with its 164 tests. Only the shell around it changes.
 8. **Deploy.** Supabase production project + Vercel. Secrets go in Vercel env vars. Preview
    deploys per PR. Optional custom domain.
 9. **Agent tools (later).** Let outside AI agents design in Clavis through the same validated
-   operation pipeline: an **MCP server** at `/api/mcp` (for Claude Desktop, Cursor and other
-   MCP clients; per-user tokens, signed-in projects only) and optionally a **WebMCP** layer for
+   operation pipeline: an **MCP server** at `/api/mcp` (for any MCP client; per-user tokens,
+   signed-in projects only) and optionally a **WebMCP** layer for
    in-browser agents. Destructive operations wait for the owner's approval in the studio.
 
-The landing page and feature pages showcase the **Sunset Loft** (a 110 m² open-plan home,
-`src/model/templates.ts`) as the hero design: plan, 3D and walk-through.
+The landing page shows **Linden Heights** (a 600 m² house on three floors,
+`src/model/templates.ts`) in real 3D; the **Sunset Loft** still drives the 3D feature page.
 
 ## Needed from the user (at the right phase, not now)
 
