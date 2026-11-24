@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Box, Compass, FileDown, Footprints, ScanSearch, Sparkles } from "lucide-react";
+import { ArrowUpRight, Box, Compass, FileDown, Footprints, Library, ScanSearch, Smartphone, Sparkles } from "lucide-react";
 import { HeroModel, type BuildStep } from "@/components/site/HeroModel";
 import type { CSSProperties } from "react";
 import { Frame, Section, Words } from "@/components/site/Sheet";
@@ -68,8 +68,8 @@ const STEPS = (sample: { rooms: number; items: number }) => [
   },
   {
     title: "Walk through",
-    text: "Step in at the front door with a figure at real height and walk room to room, up the stairs too. Change something in the plan and the house changes around you.",
-    specimen: ["  figure       1.75 m", "  move         W A S D", "  camera       drag · scroll", "  doors        click to open"],
+    text: "Step in at the front door and walk room to room, up the stairs too. Change something in the plan and the house changes around you.",
+    specimen: ["› walk in at the front door", "  room by room, up the stairs", "", "  open the doors as you go"],
   },
 ];
 
@@ -78,8 +78,13 @@ const FEATURES = [
   { icon: Compass, title: "Edit by hand or by asking", text: "Drag walls, resize rooms and move furniture yourself, or ask: add a bedroom, open up the kitchen.", href: "/features/ai-design" },
   { icon: ScanSearch, title: "Problems pointed out", text: "A door blocked by a wardrobe, a room with no way in, a bedroom without a window: each is marked on the plan as you work.", href: "/features/validation" },
   { icon: Box, title: "Plan and 3D together", text: "The 3D model follows every edit. Turn it, look down from above, open the doors.", href: "/features/3d" },
-  { icon: Footprints, title: "Walk around inside", text: "See the size of each room the way you would standing in it, from behind a figure or through its eyes.", href: "/features/3d" },
+  { icon: Footprints, title: "Walk around inside", text: "See the size of each room the way you would standing in it, from just behind or through your own eyes.", href: "/features/3d" },
   { icon: FileDown, title: "Save and export", text: "Projects save to your account as you work and open on any device. Export a printable plan or a 3D model.", href: "/features/projects" },
+];
+
+const SOON = [
+  { icon: Smartphone, title: "Walk through on phones and tablets", text: "Touch controls to stroll through your home on the go, with a move stick and a tap to open doors." },
+  { icon: Library, title: "More libraries", text: "New collections of furniture, kitchens, bathrooms and garden pieces, so every room can look like yours." },
 ];
 
 const FOR = {
@@ -89,7 +94,7 @@ const FOR = {
 
 const FAQ = [
   ["Is it free?", "Yes. Sign in with your Google account and you can design, check, walk through and export without paying."],
-  ["Do I need to install anything?", "No. Clavis runs in a modern browser. A computer is best for drawing; phones and tablets work for viewing and small edits."],
+  ["Do I need to install anything?", "No. Clavis runs in a modern browser on your computer. Phones and tablets work for viewing and small edits; walking through on them is coming soon."],
   ["Where are my designs kept?", "In your account, where only you can open them. Sign in on any device and they are there, saved as you work."],
   ["Does the assistant change my design on its own?", "No. Its suggestions are shown on the plan as a preview, with any problems they would cause. Your design changes only when you press Apply."],
   ["Can I build from these plans?", "Use them to decide what you want and to talk it through with an architect or builder. They are early design drawings, not construction documents."],
@@ -102,13 +107,6 @@ export default function Home() {
   const env = analysis.metrics.envelope!;
   const counts = summarizeIssues(checkModel(model));
   const steps = STEPS(sampleResult());
-  const facts = [
-    ["Shown", model.name],
-    ["Floors", String(levelsOf(model).length)],
-    ["Rooms", String(model.rooms.length)],
-    ["Floor area", `${Math.round(analysis.metrics.carpetArea)} m²`],
-    ["Furniture", `${model.items.filter((it) => indoor(it.kind)).length} pieces`],
-  ];
 
   return (
     <>
@@ -125,20 +123,19 @@ export default function Home() {
               caption={`${model.name} · designed in Clavis`}
               side={
                 <div>
-                  <p className="label mb-6 text-ink-3">Sheet 01</p>
                   <div className="flex items-center gap-4">
                     <LogoMark size={56} className="shrink-0" />
                     <span className="text-[clamp(3rem,5.6vw,4.8rem)] font-semibold leading-none tracking-[-0.05em]">Clavis</span>
                   </div>
-                  <p className="mt-5 max-w-sm text-pretty text-lg leading-snug text-ink-2">Plan a home, check it, and walk through it in 3D, in your browser.</p>
-                  <dl className="mt-8 border-t border-rule font-mono text-[0.7rem] uppercase tracking-[0.08em]">
-                    {facts.map(([k, v]) => (
-                      <div key={k} className="grid grid-cols-[6.5rem_1fr] border-b border-rule py-2">
-                        <dt className="text-ink-3">{k}</dt>
-                        <dd className="text-ink">{v}</dd>
-                      </div>
+                  <p className="mt-7 text-balance text-[clamp(1.5rem,2.4vw,2rem)] font-semibold leading-tight tracking-[-0.02em]">Your home, before it’s built.</p>
+                  <p className="mt-4 max-w-sm text-pretty text-lg leading-snug text-ink-2">Plan it, check it and walk through it in 3D, right in your browser.</p>
+                  <ul className="mt-8 flex flex-wrap gap-2" aria-label="What Clavis does">
+                    {["Plan", "Check", "Walk through"].map((t) => (
+                      <li key={t} className="label border border-rule px-3 py-2 text-ink-2">
+                        {t}
+                      </li>
                     ))}
-                  </dl>
+                  </ul>
                 </div>
               }
             />
@@ -177,7 +174,7 @@ export default function Home() {
       </section>
 
       {/* ---------------------------------------------------------------- how it works */}
-      <Section sheet="02" title="From an idea to a walk-through, in three steps." intro="You stay in charge at every step: suggestions are previews until you apply them.">
+      <Section title="From an idea to a walk-through, in three steps." intro="You stay in charge at every step: suggestions are previews until you apply them.">
         <ol className="grid md:grid-cols-3">
           {steps.map((s, i) => (
             <li key={s.title} data-reveal style={at(i)} className={`flex flex-col gap-6 border-rule p-5 md:p-8 ${i < 2 ? "border-b md:border-b-0 md:border-r" : ""}`}>
@@ -200,7 +197,7 @@ export default function Home() {
       </Section>
 
       {/* ---------------------------------------------------------------- features */}
-      <Section sheet="03" title="What you can do." intro="One workspace from the first idea to a plan you can share.">
+      <Section title="What you can do." intro="One workspace from the first idea to a plan you can share.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((c, i) => (
             <li key={c.title} data-reveal style={at(i % 3)} className={`border-b border-rule ${i % 2 === 0 ? "sm:border-r" : ""} ${i % 3 !== 2 ? "lg:border-r" : "lg:border-r-0"}`}>
@@ -218,7 +215,7 @@ export default function Home() {
       </Section>
 
       {/* ---------------------------------------------------------------- who it's for */}
-      <Section sheet="04" title="Made for planning, before you build." intro="Clavis helps you work out what you want. Your architect or builder turns that into drawings you can build from.">
+      <Section title="Made for planning, before you build." intro="Clavis helps you work out what you want. Your architect or builder turns that into drawings you can build from.">
         <div className="grid md:grid-cols-2">
           {[
             { tag: "Good for", items: FOR.good, mark: "bg-marker" },
@@ -239,8 +236,23 @@ export default function Home() {
         </div>
       </Section>
 
+      {/* ---------------------------------------------------------------- coming soon */}
+      <Section title="Coming soon." intro="Clavis keeps growing. Next up:">
+        <ul className="grid md:grid-cols-2">
+          {SOON.map((c, i) => (
+            <li key={c.title} data-reveal style={at(i)} className={`flex gap-4 border-b border-rule p-5 md:p-8 ${i === 0 ? "md:border-r" : ""}`}>
+              <c.icon size={22} strokeWidth={1.4} className="mt-0.5 shrink-0 text-marker" aria-hidden="true" />
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight">{c.title}</h3>
+                <p className="mt-2 text-sm text-ink-2">{c.text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
       {/* ---------------------------------------------------------------- questions */}
-      <Section sheet="05" title="Questions.">
+      <Section title="Questions.">
         <dl className="grid md:grid-cols-2">
           {FAQ.map(([q, a], i) => (
             <div key={q} className={`border-b border-rule p-5 md:p-8 ${i % 2 === 0 ? "md:border-r" : ""}`}>
@@ -255,8 +267,7 @@ export default function Home() {
       <section className="stay-dark bg-ink text-paper">
         <div className="mx-auto grid max-w-[1440px] gap-10 px-5 py-16 md:grid-cols-[1fr_minmax(0,36rem)] md:px-8 md:py-24">
           <div>
-            <p className="label text-paper/50">Sheet 06</p>
-            <h2 data-reveal className="words mt-4 text-balance text-4xl font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:text-6xl">
+            <h2 data-reveal className="words text-balance text-4xl font-semibold uppercase leading-[0.95] tracking-[-0.035em] md:text-6xl">
               <Words text="Start with a sentence." />
             </h2>
           </div>
