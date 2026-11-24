@@ -7,7 +7,9 @@
  */
 
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Plug, Trash2 } from "lucide-react";
+import { McpButton } from "@/components/mcp/McpButton";
+import { MCP_TOOLS } from "@/components/mcp/McpPanel";
 import { ReportDownload } from "./ReportDownload";
 import { authConfigured } from "@/lib/auth/config";
 import { ALL_VIEWS, countViews, readTheme, readViews, toggleView, type ThemePref, type ViewKey, type Views } from "@/studio/views";
@@ -166,6 +168,15 @@ export function SettingsPanel() {
 
       <Row title="Design report" text="A PDF of one of your designs: its floor plans to scale, the house in 3D from five angles, and every room, door, window and piece of furniture with its name and size.">
         <ReportDownload />
+      </Row>
+
+      <Row title="MCP: AI agents" text="Connect an AI agent you use to your plans through MCP. It can list, read, check, create and edit plans with the studio’s own checked operations; you choose read only or read and edit, and can revoke access at any time.">
+        <div id="mcp" className="grid gap-4">
+          <McpButton className="label flex items-center gap-2 justify-self-start bg-ink px-4 py-2.5 text-paper hover:bg-marker">
+            <Plug size={14} aria-hidden="true" /> Set up MCP
+          </McpButton>
+          <p className="text-sm text-ink-3">{MCP_TOOLS.length} tools: {MCP_TOOLS.map(([k]) => k).join(", ")}.</p>
+        </div>
       </Row>
 
       <Row title="This browser's copy" text="Your projects are kept in your account; this browser keeps a working copy, with your preferences. Remove the copy here to start this browser afresh.">
