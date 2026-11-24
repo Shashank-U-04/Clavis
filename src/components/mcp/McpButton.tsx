@@ -34,7 +34,7 @@ export function McpDialog({ onClose }: { onClose: () => void }) {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-3 sm:p-8" role="dialog" aria-modal="true" aria-labelledby="mcp-title">
       <button type="button" className="fixed inset-0 bg-ink/40" aria-label="Close" tabIndex={-1} onClick={onClose} />
-      <div ref={box} tabIndex={-1} className="relative w-full max-w-2xl border border-rule bg-paper font-sans text-ink shadow-2xl outline-none">
+      <div ref={box} tabIndex={-1} className="relative w-full min-w-0 max-w-2xl border border-rule bg-paper font-sans text-ink shadow-2xl outline-none">
         <header className="flex items-center gap-3 border-b border-rule px-5 py-4 sm:px-7">
           <span className="label text-[0.62rem] text-ink-3">MCP</span>
           <h2 id="mcp-title" className="flex-1 text-lg font-semibold tracking-tight">
