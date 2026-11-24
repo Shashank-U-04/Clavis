@@ -18,6 +18,7 @@ import { projectActions, useProjects } from "./projects";
 import { featureActions, setUi, ui, useResolvedTheme, useUi } from "./uiStore";
 import { countViews, featureOn, type Feature } from "./views";
 import { useSession } from "../ai/session";
+import { McpButton } from "@/components/mcp/McpButton";
 
 /** A popover that closes on outside click and Escape. */
 function usePopover() {
@@ -408,6 +409,10 @@ export function Header() {
         <button className={`pill ${provider === "server" ? "server" : "local"}`} onClick={() => setUi({ rightTab: "project" })} title="Which assistant is answering — change it in Project → Assistant">
           {provider === "local" ? "● Clavis Local" : provider === "server" ? `● ${hosted?.label ?? "Hosted model"}` : hosted?.configured ? `● Local + ${hosted.label}` : "● Clavis Local"}
         </button>
+        <McpButton className="mcp-btn" title="Connect an AI agent to your plans (MCP)">
+          <Icon d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4" size={15} />
+          <span>MCP</span>
+        </McpButton>
         <ThemeButton />
         <Shortcuts />
         <AccountChip />

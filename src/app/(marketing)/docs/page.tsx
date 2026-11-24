@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/site/PageHeader";
 import { EXAMPLES } from "@/ai/local/engine";
+import { MCP_TOOLS } from "@/components/mcp/tools";
 
 export const metadata: Metadata = {
   title: "Docs",
-  description: "Getting started with Clavis: designing from a brief, drawing by hand, the assistant, shortcuts and limits.",
+  description: "Getting started with Clavis: designing from a brief, drawing by hand, the assistant, connecting an AI agent over MCP, shortcuts and limits.",
 };
 
 const TOC = [
   ["start", "Getting started"],
   ["drawing", "Building by hand"],
   ["assistant", "The assistant"],
+  ["mcp", "AI agents (MCP)"],
   ["review", "Reading the review"],
   ["views", "Plan, model, walk and chat"],
   ["shortcuts", "Shortcuts"],
@@ -118,6 +120,23 @@ export default function DocsPage() {
                 ))}
               </ul>
               <p>Changes that remove or replace work — regenerating the layout to add a bedroom, for example — ask you to confirm before Apply is enabled.</p>
+            </section>
+            <section className="space-y-4">
+              <H id="mcp">AI agents (MCP)</H>
+              <p>
+                An AI agent you already use can work on your plans through <b>MCP</b>, the Model Context Protocol. Open <b>MCP</b> at the top right of the app or the studio (or <b>Settings → MCP</b>), make a token, and paste the config it shows into your agent’s MCP settings. The server is <code className="font-mono text-sm">/api/mcp</code> on this site, over streamable HTTP, with the token sent as <code className="font-mono text-sm">Authorization: Bearer clv_…</code>.
+              </p>
+              <dl className="divide-y divide-rule-soft border-y border-rule">
+                {MCP_TOOLS.map(([k, v]) => (
+                  <div key={k} className="grid grid-cols-[11rem_1fr] gap-4 py-2.5 text-sm">
+                    <dt className="font-mono">{k}</dt>
+                    <dd className="text-ink-2">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p>
+                The agent uses the same checked operations as the studio, all or nothing. A <b>read only</b> token can look but not change anything. Removing walls, rooms, furniture or a floor needs the agent to say so explicitly, and it should ask you first. Every change it saves keeps the plan’s previous state as a version (Plans → the plan → Versions), and shows in your history. You can revoke a token at any time.
+              </p>
             </section>
             <section className="space-y-4">
               <H id="review">Reading the review</H>

@@ -9,9 +9,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, HardDrive, Menu, Search, X } from "lucide-react";
+import { ArrowUpRight, HardDrive, Menu, Plug, Search, X } from "lucide-react";
 import { AccountStatus, useWhereSaved } from "@/components/account/AccountStatus";
 import { Logo } from "@/components/site/Logo";
+import { McpButton } from "@/components/mcp/McpButton";
 import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { getProfile, lastPlan, listPlans, storageUsed } from "@/lib/workspace/browser";
 import { useWorkspace } from "@/lib/workspace/useWorkspace";
@@ -120,6 +121,10 @@ function TopBar({ path, onMenu }: { path: string; onMenu: () => void }) {
       <div className="hidden items-center border-l border-rule px-4 md:flex">
         <PlanSearch className="w-64" />
       </div>
+      <McpButton className="label flex items-center gap-2 border-l border-rule px-3 text-ink-2 hover:bg-paper-2 hover:text-ink sm:px-4">
+        <Plug size={15} strokeWidth={1.6} aria-hidden="true" />
+        <span>MCP</span>
+      </McpButton>
       <ThemeToggle className="flex w-12 items-center justify-center border-l border-rule text-ink-2 hover:text-ink" />
       <Link href={continueHref} className="label group flex items-center gap-3 border-l border-rule px-4 text-marker hover:bg-marker hover:text-paper sm:px-5" title={last ? `Continue “${last.name}”` : "Start a plan"}>
         <span className="hidden sm:inline">{last ? "Continue in studio" : "Open the studio"}</span>

@@ -177,6 +177,8 @@
   button.icon:hover { color: var(--red); background: none; }
   .icon-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; background: transparent; border-color: transparent; color: var(--ink-2); }
   .icon-btn:hover:not(:disabled) { background: var(--hover); border-color: transparent; color: var(--ink); }
+  .mcp-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; background: transparent; border-color: var(--line); color: var(--ink-2); }
+  .mcp-btn:hover { background: var(--hover); color: var(--ink); }
   input, textarea, select {
     font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
     border-radius: var(--radius); padding: 6px 9px; min-width: 0;
@@ -602,6 +604,8 @@
     .view span { display: none; }
     .view { padding: 5px 10px; }
     .save { display: none; }
+    .mcp-btn span { display: none; }
+    .mcp-btn { padding: 0 8px; }
   }
   @media (max-width: 1020px) {
     --strip: 148px;
