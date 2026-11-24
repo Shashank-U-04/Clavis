@@ -13,9 +13,14 @@ import { solidsOf, WALKER_RADIUS, type Solid } from "../three/walkCollision";
 
 const CELL = 0.1;
 
+/** A room must let a person reach at least this share of its free floor from its door. */
+export const MIN_REACH = 0.6;
+
 export interface Blocked {
   level: string;
+  /** the room's label */
   room: string;
+  roomId: string;
   /** the doors of this room that cannot be reached from its first door */
   doors: string[];
   /** share of the room's free floor that can be reached (0..1) */
@@ -43,7 +48,7 @@ export function blockedRooms(model: PlanModel, r = WALKER_RADIUS): Blocked[] {
     const solids = solidsOf(floor).filter((s) => !s.door);
     for (const room of floor.rooms) {
       const result = walkRoom(floor, room, solids, r);
-      if (result) out.push({ level: level.name, room: room.label, ...result });
+      if (result) out.push({ level: level.name, room: room.label, roomId: room.id, ...result });
     }
   }
   return out;
@@ -117,5 +122,5 @@ function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { d
   }
   const doors = [...new Set(starts.filter((s) => !seen[cellOf(s.x, s.y)]).map((s) => s.id))];
   const reach = freeCount ? reached / freeCount : 0;
-  return doors.length || reach < 0.6 ? { doors, reach } : null;
+  return doors.length || reach < MIN_REACH ? { doors, reach } : null;
 }
