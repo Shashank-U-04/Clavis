@@ -1,50 +1,39 @@
 # Clavis — Progress
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-24.
 
 ## Current state
 
-- Next.js 16 (App Router) + React 19 + TypeScript + Tailwind 4. The studio is a client-only
-  island at `/studio/try`; the hosted model is behind `POST /api/assistant`.
-- `npm run typecheck`, `npm test` (170 unit tests), `npm run e2e` (9 browser steps) and
-  `npm run build` all pass. `npm run test:live` checks the real hosted model (needs a key).
-- Hosted model: Groq (`openai/gpt-oss-120b`, explanations on `openai/gpt-oss-20b`), verified
-  live. The key lives in `.env.local` (git-ignored). The free tier allows 8,000 tokens a
-  minute per model; a request is about 4,500 tokens, so allow ~30 s between hosted requests.
+- Live at https://clavisstudio.vercel.app: Next.js 16 (App Router), React 19, TypeScript,
+  Tailwind 4, three.js, on Vercel with Supabase (accounts, plans, versions, history, the
+  hosted assistant's allowance). Every merge to `main` deploys.
+- `npm run typecheck`, `npm test` (350+ unit tests), `npm run e2e` (browser smoke test) and
+  `npm run build` pass on CI for every pull request. `npm run check:live` checks the live site
+  (health, sign-in gate, judges' plans, two-browser sync).
+- Hosted model: Groq (`openai/gpt-oss-120b`, with `openai/gpt-oss-20b` as the fallback when
+  rate-limited). Clavis Local answers first in Auto mode.
 
 ## Features
 
-- **Design from a sentence** (Clavis Local): brief → two-band plan → furnished, validated
-  layout.
-- **Structural edits**: add or remove bedrooms, bathrooms, an en-suite, a study or a dining
-  room; resize rooms; open or separate the kitchen.
-- **Auto assistant mode**: Clavis Local first; anything it does not understand goes to the
-  hosted model. A change that introduces findings can be handed straight to the
-  deterministic repair (“Fix the N new findings”).
-- **Constraint engine and review**: geometry, openings, furniture collisions, circulation from
-  the entrance, daylight, escape windows, minimum sizes, area metrics.
-- **Workspace**: plan and 3D side by side, Walk mode, inspector, project library with autosave,
-  JSON / SVG / PNG / OBJ export, phone and tablet layouts.
-
-## Website
-
-- Landing page: a title block on the left and, on the right, the Sunset Loft building itself
-  in a plan-oblique drawing (true-scale plan turned 30°): the plan is set out, walls rise,
-  openings and furniture go in, and a scan band shades it. The build log's numbers are
-  computed from the design at build time.
-- Footer: a ruled index of links, a brief box that opens the studio, the mark drawn in depth
-  and a construction-line CLAVIS wordmark that draws on when it comes into view.
-- Feature pages (design by describing, the validator, plan/3D/walk, projects and export),
-  how it works, docs, about, privacy and terms.
-- Sign-in with Google (and a demo account for hackathon judges). Until Supabase is configured
-  it reports that accounts are off. (Email sign-up, magic links and password resets were
-  dropped on 2026-11-18.)
-- Dashboard: projects in this browser as plan cards, with search, duplicate and delete, and
-  links that open the studio on a project or start a new one (`?project=`, `?new=`, `?brief=`).
-- Settings: assistant mode, studio layout, download or remove everything kept in the browser.
+- **Four ways to see a home**: the 2D plan (layout builder), the 3D model, Walk (a 1.75 m
+  figure in third or first person, with doors to open and stairs to climb) and Chat.
+- **Design from a sentence** (Clavis Local) or from four templates; furnished, validated
+  layouts; structural edits (add or remove rooms, resize, open the kitchen).
+- **Floors and stairs**: several storeys, stairs that join them for routes, checks and Walk.
+- **Library**: 60+ pieces including stairs, railings, glazing, pools, terraces, trees and
+  luxury interiors; type measurements before or after placing.
+- **Checks**: geometry, openings and door swings, furniture clearances, routes between rooms
+  and floors, daylight, escape windows, minimum sizes, walkability.
+- **Accounts**: Google sign-in (plus a judges' demo account); plans sync across devices with
+  versions and history; a PDF design report.
+- **AI agents over MCP**: `/api/mcp` with per-account tokens (read only or read + edit) from
+  the MCP button in the app, the studio and Settings. Agents use the same checked operations;
+  every change keeps the previous version.
+- **Site**: landing with Linden Heights rising in 3D, feature pages, docs, legal, light and
+  dark themes, sitemap, robots, a share image, and Clavis 404 and error pages.
 
 ## Next
 
-From [FULLSTACK_PLAN.md](FULLSTACK_PLAN.md): Supabase auth and cloud projects (once the
-account exists), the hosted assistant with per-user limits, read-only sharing, deploying to
-Vercel, and agent tools.
+Read-only share links; walkability inside Clavis Local's furnishing; walking on phones and
+tablets; sliding glass doors and per-floor plan export in the studio; smaller plant and
+character files. See [FULLSTACK_PLAN.md](FULLSTACK_PLAN.md).
