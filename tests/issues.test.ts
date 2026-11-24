@@ -112,6 +112,19 @@ describe("furniture", () => {
     expect(codes(furnished({ id: "a", kind: "wardrobe", x: 2.5, y: 0.1, rotation: 0 }))).toContain("item_through_wall");
   });
 
+  it("reports a room a person cannot walk through, and not one with a 0.6 m way past", () => {
+    // two sofas across the room, 0.45 m apart: the far half cannot be reached from the door
+    const cut = checkModel(furnished({ id: "a", kind: "sofa", x: 1.2, y: 2, rotation: 0 }, { id: "b", kind: "sofa", x: 3.75, y: 2, rotation: 0 }));
+    const found = cut.find((i) => i.code === "room_not_walkable");
+    expect(found).toMatchObject({ severity: "warning", refs: ["r"] });
+    expect(found!.measurements!.reach).toBeLessThan(0.6);
+    expect(found!.message).toMatch(/only \d+% of its free floor/);
+    // the same sofas 0.7 m apart leave a way through
+    expect(codes(furnished({ id: "a", kind: "sofa", x: 1.1, y: 2, rotation: 0 }, { id: "b", kind: "sofa", x: 3.9, y: 2, rotation: 0 }))).not.toContain("room_not_walkable");
+    // rugs are walked over
+    expect(codes(furnished({ id: "a", kind: "rug", x: 2.5, y: 2, rotation: 0 }))).not.toContain("room_not_walkable");
+  });
+
   it("keeps doors clear, and windows clear of anything taller than the sill", () => {
     expect(codes(furnished({ id: "a", kind: "armchair", x: 2.5, y: 3.4, rotation: 180 }))).toContain("item_blocks_door");
     const m = furnished({ id: "a", kind: "bookshelf", x: 2.5, y: 0.25, rotation: 0 });
@@ -145,7 +158,8 @@ describe("ids", () => {
     expect(before.find((i) => i.code === "item_blocks_door")?.id).toBe("item_blocks_door:a+d");
     const moved = { ...m, items: [{ ...m.items[0], y: 1.5 }] };
     const d = diffIssues(before, checkModel(moved));
-    expect(d.resolved.map((i) => i.code)).toEqual(["item_blocks_door"]);
+    // an armchair in the doorway also leaves no way into the room; moving it clears both
+    expect(d.resolved.map((i) => i.code).sort()).toEqual(["item_blocks_door", "room_not_walkable"]);
     expect(d.introduced).toEqual([]);
   });
 
