@@ -7,6 +7,7 @@ import { syncWorkspace } from "../src/lib/account/sync";
 import { listProjects, loadProject, saveProject } from "../src/model/library";
 import { listEvents, listVersions } from "../src/lib/workspace/browser";
 import { templateModel } from "../src/model/templates";
+import { MCP_TOOLS } from "../src/components/mcp/tools";
 import { memoryCloud } from "./helpers/memoryCloud";
 import { memoryStorage } from "./helpers/memoryStorage";
 
@@ -106,6 +107,8 @@ describe("MCP protocol", () => {
     for (const t of all) expect(t.inputSchema.type).toBe("object");
     expect(toolList("read").every((t) => t.annotations.readOnlyHint)).toBe(true);
     expect(toolList("read").map((t) => t.name)).not.toContain("apply_operations");
+    // what the app and docs list is what the server offers
+    expect(MCP_TOOLS.map(([k]) => k).sort()).toEqual(all.map((t) => t.name).sort());
   });
 });
 
