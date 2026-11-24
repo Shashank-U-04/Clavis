@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { syncWorkspace, withoutUnderlay } from "../src/lib/account/sync";
+import { syncWorkspace, stable, withoutUnderlay } from "../src/lib/account/sync";
 import { listProjects, loadProject, saveProject } from "../src/model/library";
 import { deletePlan, getProfile, listEvents, listVersions, logEvent, recordEdit, saveProfile, saveVersion, starPlan } from "../src/lib/workspace/browser";
 import { emptyModel, type PlanModel } from "../src/model/types";
