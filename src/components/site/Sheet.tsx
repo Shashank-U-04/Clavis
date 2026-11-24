@@ -57,15 +57,12 @@ export function Frame({ children, className = "", rulers = true }: { children: R
   );
 }
 
-/** A section of a page with a sheet number and title, like a numbered drawing. */
-export function Section({ id, sheet, title, intro, children, className = "" }: { id?: string; sheet: string; title: ReactNode; intro?: ReactNode; children: ReactNode; className?: string }) {
+/** A section of a page: its title and a short introduction, then its content. */
+export function Section({ id, title, intro, children, className = "" }: { id?: string; title: ReactNode; intro?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section id={id} className={`border-b border-rule ${className}`}>
       <div className="mx-auto max-w-[1440px]">
-        <div className="rule-draw relative grid border-b border-rule md:grid-cols-[14rem_1fr]">
-          <div className="border-b border-rule p-5 md:border-b-0 md:border-r">
-            <p className="label text-ink-3">Sheet {sheet}</p>
-          </div>
+        <div className="rule-draw relative border-b border-rule">
           <div className="grid gap-4 p-5 md:grid-cols-[1fr_minmax(0,26rem)] md:p-8">
             <h2 className={`text-balance text-3xl font-semibold leading-[1.02] tracking-[-0.03em] md:text-5xl ${typeof title === "string" ? "words" : ""}`} data-reveal>
               {typeof title === "string" ? <Words text={title} /> : title}

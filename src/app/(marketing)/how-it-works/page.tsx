@@ -27,7 +27,7 @@ export default function HowItWorksPage() {
   return (
     <>
       <PageHeader trail={[{ href: "/how-it-works", label: "How it works" }]} title="From a description to a home you can walk through." intro="Six steps. You decide what changes at each one." />
-      <Section sheet="01" title="The steps.">
+      <Section title="The steps.">
         <ol>
           {STEPS.map(([t, d], i) => (
             <li key={t} className="grid border-b border-rule md:grid-cols-[14rem_1fr]">
@@ -40,7 +40,7 @@ export default function HowItWorksPage() {
           ))}
         </ol>
       </Section>
-      <Section sheet="02" title="Where your designs are kept.">
+      <Section title="Where your designs are kept.">
         <div className="grid md:grid-cols-3">
           {WHERE.map(([t, d], i) => (
             <div key={t} className={`border-b border-rule p-5 md:border-b-0 md:p-8 ${i < 2 ? "md:border-r" : ""}`}>
