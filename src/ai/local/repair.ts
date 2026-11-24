@@ -27,6 +27,7 @@ const MANUAL: Record<string, string> = {
   wall_loose_end: "a loose wall end needs to be joined or the wall removed",
   wall_too_short: "a very short wall should be removed or extended",
   room_floating: "the room needs walls drawn around it",
+  room_not_walkable: "no single piece could be moved to open a way through — move or remove some furniture yourself",
 };
 
 const resolves = (id: string) => (r: TryResult) => r.resolved.some((i) => i.id === id);
@@ -58,6 +59,23 @@ function fixOne(trial: Trial, issue: Issue): string | null {
       // move the piece with the most findings first (the culprit), then the smaller one
       .sort((a, b) => findingsOf(trial, b.id) - findingsOf(trial, a.id) || footprint(a.kind) - footprint(b.kind));
     for (const it of items) {
+      const how = relocate(trial, it.id, issue.id);
+      if (how) return how;
+    }
+    return null;
+  }
+  if (issue.code === "room_not_walkable") {
+    // the room is too full to cross: move its pieces, biggest first, until a way opens up
+    const room = m.rooms.find((r) => r.id === issue.refs[0]);
+    if (!room) return null;
+    const pieces = m.items
+      .filter((i) => i.x > room.x && i.x < room.x + room.w && i.y > room.y && i.y < room.y + room.h)
+      .filter((i) => {
+        const c = catalogByKind(i.kind);
+        return !!c && !c.isRug && !c.stair;
+      })
+      .sort((a, b) => footprint(b.kind) - footprint(a.kind));
+    for (const it of pieces) {
       const how = relocate(trial, it.id, issue.id);
       if (how) return how;
     }
