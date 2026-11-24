@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import { Plug, Trash2 } from "lucide-react";
 import { McpButton } from "@/components/mcp/McpButton";
-import { MCP_TOOLS } from "@/components/mcp/McpPanel";
+import { MCP_TOOLS } from "@/components/mcp/tools";
 import { ReportDownload } from "./ReportDownload";
 import { authConfigured } from "@/lib/auth/config";
 import { ALL_VIEWS, countViews, readTheme, readViews, toggleView, type ThemePref, type ViewKey, type Views } from "@/studio/views";
