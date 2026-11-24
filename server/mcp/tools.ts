@@ -15,7 +15,6 @@ import { applyBatch, isDestructive, OperationSchema } from "@/model/operations";
 import { checkModel, diffIssues, summarizeIssues } from "@/model/issues";
 import { designSummary } from "@/model/summary";
 import { GROUND, levelsOf } from "@/model/levels";
-import { blockedRooms } from "@/model/walkable";
 import { emptyModel, type Issue, type PlanModel } from "@/model/types";
 import type { ProjectMeta } from "@/model/library";
 import { operationReference } from "@/ai/prompts";
@@ -125,14 +124,10 @@ const checkPlan = tool({
   async run({ plan_id }, ctx) {
     const got = await loadOrFail(ctx, plan_id);
     if (!got) return fail(`No plan with id "${plan_id}".`);
-    const m = got.doc.model;
-    const v = validation(checkModel(m));
-    const blocked = blockedRooms(m);
+    const v = validation(checkModel(got.doc.model));
     const { error, warning, info } = v.counts;
-    return ok(`${error} error${error === 1 ? "" : "s"}, ${warning} warning${warning === 1 ? "" : "s"}, ${info} note${info === 1 ? "" : "s"}; ${blocked.length ? `${blocked.length} room(s) cannot be walked through` : "every room can be walked through"}.`, {
-      ...v,
-      not_walkable: blocked.map((b) => ({ floor: b.level, room: b.room, unreachable_doors: b.doors, reachable_share: Math.round(b.reach * 100) / 100 })),
-    });
+    const stuck = v.issues.filter((i) => i.code === "room_not_walkable").length;
+    return ok(`${error} error${error === 1 ? "" : "s"}, ${warning} warning${warning === 1 ? "" : "s"}, ${info} note${info === 1 ? "" : "s"}; ${stuck ? `${stuck} room(s) cannot be walked through` : "every room can be walked through"}.`, v);
   },
 });
 
