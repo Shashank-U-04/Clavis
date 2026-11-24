@@ -118,25 +118,25 @@ export function McpPanel() {
   const radio = "flex cursor-pointer items-start gap-2.5 border border-rule p-3 has-[:checked]:border-ink has-[:checked]:bg-paper-2";
 
   return (
-    <div className="grid gap-7 text-ink">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-7 text-ink">
       <p className="max-w-prose text-sm text-ink-2">
         Let an AI agent you use read and edit your Clavis plans through MCP (Model Context Protocol). It works with the same checked operations as the studio’s assistant, and every change it saves keeps the plan’s previous state as a version you can restore.
       </p>
 
-      <section className="grid gap-2">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-2">
         <h3 className="label text-[0.68rem] text-ink-3">Server address</h3>
         {origin && <Field value={url} label="Copy the server address" />}
         <p className="text-xs text-ink-3">Streamable HTTP. Send the token as a bearer token: Authorization: Bearer clv_…</p>
       </section>
 
-      <section className="grid gap-3">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-3">
         <h3 className="label text-[0.68rem] text-ink-3">Access tokens</h3>
         {!on ? (
           <p className="border border-dashed border-rule p-4 text-sm text-ink-2">Accounts are not switched on here, so there are no plans for an agent to work on.</p>
         ) : (
           <>
             {fresh && (
-              <div className="grid gap-3 border border-marker bg-marker-soft/40 p-4" role="status">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-3 border border-marker bg-marker-soft/40 p-4" role="status">
                 <p className="text-sm font-semibold">Your new token. Copy it now: it is shown only once.</p>
                 <Field value={fresh} label="Copy the token" />
                 <p className="text-sm text-ink-2">Or paste this into your agent’s MCP settings:</p>
@@ -185,7 +185,7 @@ export function McpPanel() {
             )}
 
             <form
-              className="grid gap-3 border border-rule p-4"
+              className="grid grid-cols-[minmax(0,1fr)] gap-3 border border-rule p-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 void make();
@@ -195,7 +195,7 @@ export function McpPanel() {
                 <span className="font-semibold">Name it after the agent</span>
                 <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="For example: laptop agent" className="border border-rule bg-paper px-3 py-2 outline-none focus:border-ink" />
               </label>
-              <fieldset className="grid gap-2 sm:grid-cols-2">
+              <fieldset className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
                 <legend className="sr-only">What the agent may do</legend>
                 <label className={radio}>
                   <input type="radio" name="mcp-access" checked={access === "edit"} onChange={() => setAccess("edit")} className="mt-1 accent-ink" />
@@ -226,9 +226,9 @@ export function McpPanel() {
         )}
       </section>
 
-      <section className="grid gap-2">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-2">
         <h3 className="label text-[0.68rem] text-ink-3">What an agent can do</h3>
-        <dl className="grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+        <dl className="grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[auto_minmax(0,1fr)]">
           {MCP_TOOLS.map(([k, v]) => (
             <div key={k} className="contents">
               <dt className="font-mono text-[0.78rem]">{k}</dt>

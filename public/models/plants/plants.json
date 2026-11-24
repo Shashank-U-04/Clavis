@@ -22,20 +22,21 @@
    "offsets": {
     "position": 0,
     "normal": 33360,
-    "uv": 66720,
-    "index": 88960
+    "uv": 41700,
+    "index": 63940
    }
   },
   "foliage": {
    "vertices": 21280,
    "indices": 31920,
    "offsets": {
-    "position": 126952,
-    "normal": 382312,
-    "uv": 637672,
-    "index": 807912
+    "position": 82936,
+    "normal": 338296,
+    "uv": 402136,
+    "index": 572376
    }
-  }
+  },
+  "format": 2
  },
  {
   "name": "ash",
@@ -60,20 +61,21 @@
    "offsets": {
     "position": 0,
     "normal": 79668,
-    "uv": 159336,
-    "index": 212448
+    "uv": 99588,
+    "index": 152700
    }
   },
   "foliage": {
    "vertices": 21760,
    "indices": 32640,
    "offsets": {
-    "position": 321888,
-    "normal": 583008,
-    "uv": 844128,
-    "index": 1018208
+    "position": 207420,
+    "normal": 468540,
+    "uv": 533820,
+    "index": 707900
    }
-  }
+  },
+  "format": 2
  },
  {
   "name": "aspen",
@@ -98,20 +100,21 @@
    "offsets": {
     "position": 0,
     "normal": 40512,
-    "uv": 81024,
-    "index": 108032
+    "uv": 50640,
+    "index": 77648
    }
   },
   "foliage": {
    "vertices": 4224,
    "indices": 6336,
    "offsets": {
-    "position": 169088,
-    "normal": 219776,
-    "uv": 270464,
-    "index": 304256
+    "position": 108176,
+    "normal": 158864,
+    "uv": 171536,
+    "index": 205328
    }
-  }
+  },
+  "format": 2
  },
  {
   "name": "bush",
@@ -136,20 +139,21 @@
    "offsets": {
     "position": 0,
     "normal": 75972,
-    "uv": 151944,
-    "index": 202592
+    "uv": 94968,
+    "index": 145616
    }
   },
   "foliage": {
    "vertices": 9984,
    "indices": 14976,
    "offsets": {
-    "position": 309152,
-    "normal": 428960,
-    "uv": 548768,
-    "index": 628640
+    "position": 198896,
+    "normal": 318704,
+    "uv": 348656,
+    "index": 428528
    }
-  }
+  },
+  "format": 2
  },
  {
   "name": "bush2",
@@ -174,19 +178,20 @@
    "offsets": {
     "position": 0,
     "normal": 28500,
-    "uv": 57000,
-    "index": 76000
+    "uv": 35628,
+    "index": 54628
    }
   },
   "foliage": {
    "vertices": 2816,
    "indices": 4224,
    "offsets": {
-    "position": 116224,
-    "normal": 150016,
-    "uv": 183808,
-    "index": 206336
+    "position": 74740,
+    "normal": 108532,
+    "uv": 116980,
+    "index": 139508
    }
-  }
+  },
+  "format": 2
  }
 ]

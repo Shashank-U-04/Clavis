@@ -8,12 +8,11 @@ import type { PlanSource } from "@/lib/workspace/types";
 import { findTemplate } from "@/lib/catalogue";
 
 /** The title block at the top of every app page. */
-export function SheetHeader({ sheet, title, intro, children }: { sheet: string; title: ReactNode; intro?: ReactNode; children?: ReactNode }) {
+export function SheetHeader({ title, intro, children }: { title: ReactNode; intro?: ReactNode; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 border-b border-rule px-5 py-8 md:px-8 md:py-10">
       <div className="min-w-0">
-        <p className="label text-ink-3">Sheet {sheet}</p>
-        <h1 className="mt-3 text-balance text-[clamp(2rem,4vw,2.9rem)] font-semibold leading-[1.02] tracking-[-0.03em]">{title}</h1>
+        <h1 className="text-balance text-[clamp(2rem,4vw,2.9rem)] font-semibold leading-[1.02] tracking-[-0.03em]">{title}</h1>
         {intro && <p className="mt-3 max-w-xl text-pretty text-ink-2">{intro}</p>}
       </div>
       {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}

@@ -41,7 +41,7 @@ export default function ThreeDPage() {
         intro="The plan and the 3D model sit side by side and show the same design: move a sofa in the plan and it moves in the room."
       />
 
-      <Section sheet="01" title="Three ways to see one home." intro="Each has its own button in the studio's bar. Show them side by side or one at a time, alongside the chat; they all follow the same design.">
+      <Section title="Three ways to see one home." intro="Each has its own button in the studio's bar. Show them side by side or one at a time, alongside the chat; they all follow the same design.">
         <ol className="grid md:grid-cols-3">
           {VIEWS.map(([t, d], i) => (
             <li key={t} className={`border-b border-rule p-5 md:border-b-0 md:p-8 ${i < 2 ? "md:border-r" : ""}`}>
@@ -53,7 +53,7 @@ export default function ThreeDPage() {
         </ol>
       </Section>
 
-      <Section sheet="02" title="A cutaway you can read." intro="Like an architect's section, this drawing of the Sunset Loft is cut at 1.20 m. Hover a room to read its numbers, measured by the same engine the studio uses.">
+      <Section title="A cutaway you can read." intro="Like an architect's section, this drawing of the Sunset Loft is cut at 1.20 m. Hover a room to read its numbers, measured by the same engine the studio uses.">
         <div className="p-5 md:p-10">
           <div className="mx-auto max-w-5xl">
             <IsoFigure data={buildSunsetFigure()} fig="02" title="Sunset Loft · section at 1.20 m" />
@@ -61,7 +61,7 @@ export default function ThreeDPage() {
         </div>
       </Section>
 
-      <Section sheet="03" title={`${CATALOG.length} pieces of furniture, modelled to size.`} intro="Every piece has a footprint in metres and its own 3D model, from beds and sofas to kitchen units and bathroom fittings. Sizes are typical nominal dimensions.">
+      <Section title={`${CATALOG.length} pieces of furniture, modelled to size.`} intro="Every piece has a footprint in metres and its own 3D model, from beds and sofas to kitchen units and bathroom fittings. Sizes are typical nominal dimensions.">
         <div className="grid md:grid-cols-[1fr_22rem]">
           <ul className="grid grid-cols-2 border-b border-rule sm:grid-cols-3 md:border-b-0 md:border-r">
             {CATEGORIES.map((c) => (

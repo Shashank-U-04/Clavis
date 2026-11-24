@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Profile", robots: { index: false } }
 export default function ProfilePage() {
   return (
     <>
-      <SheetHeader sheet="F · Profile" title="Your profile" intro="How Clavis greets you, and what you have made so far." />
+      <SheetHeader title="Your profile" intro="How Clavis greets you, and what you have made so far." />
       <ProfileForm />
     </>
   );

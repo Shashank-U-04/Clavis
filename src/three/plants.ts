@@ -16,6 +16,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { CatalogEntry } from "../model/catalog";
 
 const BASE = "/models/plants/";
+/** Bumped whenever the files change, so a browser's cached copies are never mixed with new ones. */
+const V = "?v=2";
 
 interface Part {
   vertices: number;
@@ -24,6 +26,8 @@ interface Part {
 }
 interface PlantFile {
   name: string;
+  /** 2: normals as bytes and 16-bit indices (scripts/compact-models.mts); absent: all 32-bit */
+  format?: number;
   height: number;
   spread: number;
   bark: { type: string; tint: number; repeat: [number, number] };
@@ -51,12 +55,13 @@ let loading: Promise<boolean> | null = null;
 
 const share = <T extends THREE.Material | THREE.BufferGeometry>(x: T): T => ((x.userData.shared = true), x);
 
-function geometryOf(bin: ArrayBuffer, p: Part): THREE.BufferGeometry {
+function geometryOf(bin: ArrayBuffer, p: Part, format = 1): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
+  const compact = format >= 2;
   g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(bin, p.offsets.position, p.vertices * 3), 3));
-  g.setAttribute("normal", new THREE.BufferAttribute(new Float32Array(bin, p.offsets.normal, p.vertices * 3), 3));
+  g.setAttribute("normal", compact ? new THREE.BufferAttribute(new Int8Array(bin, p.offsets.normal, p.vertices * 3), 3, true) : new THREE.BufferAttribute(new Float32Array(bin, p.offsets.normal, p.vertices * 3), 3));
   g.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(bin, p.offsets.uv, p.vertices * 2), 2));
-  g.setIndex(new THREE.BufferAttribute(new Uint32Array(bin, p.offsets.index, p.indices), 1));
+  g.setIndex(new THREE.BufferAttribute(compact ? new Uint16Array(bin, p.offsets.index, p.indices) : new Uint32Array(bin, p.offsets.index, p.indices), 1));
   g.computeBoundingSphere();
   return share(g);
 }
@@ -73,7 +78,7 @@ async function texture(loader: THREE.TextureLoader, url: string, colour: boolean
 }
 
 async function load(): Promise<Library> {
-  const manifest = (await (await fetch(`${BASE}plants.json`)).json()) as PlantFile[];
+  const manifest = (await (await fetch(`${BASE}plants.json${V}`)).json()) as PlantFile[];
   const loader = new THREE.TextureLoader();
   const barks = new Map<string, Promise<THREE.MeshStandardMaterial>>();
   const leaves = new Map<string, Promise<THREE.Texture>>();
@@ -84,15 +89,15 @@ async function load(): Promise<Library> {
       if (!barks.has(barkKey))
         barks.set(
           barkKey,
-          Promise.all([texture(loader, `${BASE}bark_${p.bark.type}_color.jpg`, true, p.bark.repeat), texture(loader, `${BASE}bark_${p.bark.type}_normal.jpg`, false, p.bark.repeat)]).then(([map, normalMap]) =>
+          Promise.all([texture(loader, `${BASE}bark_${p.bark.type}_color.jpg${V}`, true, p.bark.repeat), texture(loader, `${BASE}bark_${p.bark.type}_normal.jpg${V}`, false, p.bark.repeat)]).then(([map, normalMap]) =>
             share(new THREE.MeshStandardMaterial({ map, normalMap, color: p.bark.tint, roughness: 0.92 })),
           ),
         );
-      if (!leaves.has(p.leaves.type)) leaves.set(p.leaves.type, texture(loader, `${BASE}leaf_${p.leaves.type}.png`, true));
-      const [bin, bark, leaf] = await Promise.all([fetch(`${BASE}${p.name}.bin`).then((r) => r.arrayBuffer()), barks.get(barkKey)!, leaves.get(p.leaves.type)!]);
+      if (!leaves.has(p.leaves.type)) leaves.set(p.leaves.type, texture(loader, `${BASE}leaf_${p.leaves.type}.png${V}`, true));
+      const [bin, bark, leaf] = await Promise.all([fetch(`${BASE}${p.name}.bin${V}`).then((r) => r.arrayBuffer()), barks.get(barkKey)!, leaves.get(p.leaves.type)!]);
       const leafMaterial = share(new THREE.MeshStandardMaterial({ map: leaf, color: p.leaves.tint, alphaTest: p.leaves.alphaTest, side: THREE.DoubleSide, roughness: 0.78 }));
-      const branches = new THREE.Mesh(geometryOf(bin, p.branches), bark);
-      const foliage = new THREE.Mesh(geometryOf(bin, p.foliage), leafMaterial);
+      const branches = new THREE.Mesh(geometryOf(bin, p.branches, p.format), bark);
+      const foliage = new THREE.Mesh(geometryOf(bin, p.foliage, p.format), leafMaterial);
       for (const m of [branches, foliage]) m.castShadow = m.receiveShadow = true;
       grown.set(p.name, { height: p.height, spread: p.spread, branches, foliage });
     }),
@@ -104,7 +109,7 @@ async function load(): Promise<Library> {
   // one scan that fails to load leaves the drawn stand-in for that kind only
   await Promise.allSettled(
     ["shrub_03", "shrub_04", "potted_plant_02"].map(async (name) => {
-      const scene = (await gltf.loadAsync(`${BASE}scans/${name}/${name}.gltf`)).scene;
+      const scene = (await gltf.loadAsync(`${BASE}scans/${name}/${name}.gltf${V}`)).scene;
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;

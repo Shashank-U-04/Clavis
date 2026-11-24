@@ -8,6 +8,7 @@ import { buildFurniture } from "../src/three/furniture";
 const DIR = path.resolve("public/models/plants");
 const manifest = JSON.parse(fs.readFileSync(path.join(DIR, "plants.json"), "utf8")) as {
   name: string;
+  format?: number;
   height: number;
   spread: number;
   bark: { type: string };
@@ -28,16 +29,28 @@ describe("the grown trees and bushes", () => {
 
   it("have every file they name, and their geometry fits inside its file", () => {
     for (const p of manifest) {
-      const bin = fs.statSync(path.join(DIR, `${p.name}.bin`)).size;
+      // compact: normals as bytes, 16-bit indices (scripts/compact-models.mts)
+      expect(p.format).toBe(2);
+      const file = fs.readFileSync(path.join(DIR, `${p.name}.bin`));
+      const buf = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
       for (const part of [p.branches, p.foliage]) {
-        expect(part.offsets.index + part.indices * 4).toBeLessThanOrEqual(bin);
+        expect(part.offsets.index + part.indices * 2).toBeLessThanOrEqual(buf.byteLength);
         expect(part.offsets.uv + part.vertices * 8).toBeLessThanOrEqual(part.offsets.index);
         expect(part.indices % 3).toBe(0);
+        for (const k of ["position", "normal", "uv", "index"]) expect(part.offsets[k] % 4, k).toBe(0);
+        // every index points at a vertex, and the normals are unit length
+        const index = new Uint16Array(buf, part.offsets.index, part.indices);
+        expect(Math.max(...index)).toBeLessThan(part.vertices);
+        const n = new Int8Array(buf, part.offsets.normal, 3);
+        expect(Math.hypot(n[0], n[1], n[2]) / 127).toBeCloseTo(1, 1);
       }
       expect(fs.existsSync(path.join(DIR, `bark_${p.bark.type}_color.jpg`))).toBe(true);
       expect(fs.existsSync(path.join(DIR, `leaf_${p.leaves.type}.png`))).toBe(true);
     }
-    for (const scan of ["shrub_03", "shrub_04", "potted_plant_02"]) expect(fs.existsSync(path.join(DIR, "scans", scan, `${scan}.gltf`))).toBe(true);
+    for (const scan of ["shrub_03", "shrub_04", "potted_plant_02"]) {
+      const gltf = JSON.parse(fs.readFileSync(path.join(DIR, "scans", scan, `${scan}.gltf`), "utf8")) as { images: { uri: string }[]; buffers: { uri: string }[] };
+      for (const { uri } of [...gltf.images, ...gltf.buffers]) expect(fs.existsSync(path.join(DIR, "scans", scan, uri)), uri).toBe(true);
+    }
   });
 
   it("stand in as drawn shapes until the real ones have loaded", () => {

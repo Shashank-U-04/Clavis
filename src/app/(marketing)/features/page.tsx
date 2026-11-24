@@ -46,7 +46,7 @@ export default function FeaturesPage() {
           ))}
         </ul>
       </section>
-      <Section sheet="01" title="Also in the studio.">
+      <Section title="Also in the studio.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-3">
           {ALSO.map(([t, d], i) => (
             <li key={t} className={`border-b border-rule p-5 md:p-8 ${i % 2 === 0 ? "sm:border-r" : ""} ${i % 3 !== 2 ? "lg:border-r" : "lg:border-r-0"}`}>

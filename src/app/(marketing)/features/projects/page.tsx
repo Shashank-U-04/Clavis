@@ -27,7 +27,7 @@ export default function ProjectsPage() {
         intro="Every change is saved within a moment of making it. Keep as many projects as you like, duplicate one to try an idea, and take any of them away as a file."
       />
 
-      <Section sheet="01" title="Projects." intro="You sign in with Google, and your projects are kept in your account. The studio works on a copy in your browser, so it stays quick, and saves to your account as you go.">
+      <Section title="Projects." intro="You sign in with Google, and your projects are kept in your account. The studio works on a copy in your browser, so it stays quick, and saves to your account as you go.">
         <div className="grid md:grid-cols-2">
           {[
             ["As you work", ["Autosave within a second", "Any number of projects", "Versions to return to", "A history of every change"]],
@@ -49,7 +49,7 @@ export default function ProjectsPage() {
         </div>
       </Section>
 
-      <Section sheet="02" title="Take it with you." intro="Four exports, each for a different next step.">
+      <Section title="Take it with you." intro="Four exports, each for a different next step.">
         <ul className="grid sm:grid-cols-2 lg:grid-cols-4">
           {EXPORTS.map(([ext, t, d], i) => (
             <li key={ext} className={`border-b border-rule p-5 md:p-8 lg:border-b-0 ${i % 2 === 0 ? "sm:border-r" : ""} ${i < 3 ? "lg:border-r" : ""}`}>

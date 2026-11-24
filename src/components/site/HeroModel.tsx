@@ -2,17 +2,17 @@
 
 /**
  * The landing page's hero: a real 3D model of the house and its grounds that opens as the 2D
- * plan and is built floor by floor, the build log beside it following each stage, and can then
- * be turned (drag) and zoomed (scroll wheel or pinch). The 3D code is loaded only
+ * plan and is built floor by floor, and can then be turned (drag) and zoomed (scroll wheel or
+ * pinch). The build steps are only shown by the drawn fallback. The 3D code is loaded only
  * in the browser; while it loads the frame shows the sky it will open into. A browser that
  * cannot start WebGL gets the drafted drawing of the same house instead.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Hand, RotateCcw } from "lucide-react";
+import { Hand, Play, RotateCcw } from "lucide-react";
 import type { PlanModel } from "@/model/types";
 import type { SitePiece } from "@/components/figures/sunsetFigure";
-import type { Showcase, ShowcaseTimeline } from "@/three/showcase";
+import type { Showcase } from "@/three/showcase";
 import { onThemeChange, readThemePref, resolveTheme } from "@/lib/theme";
 
 export interface BuildStep {
@@ -26,39 +26,27 @@ export interface BuildStep {
   cue?: string;
 }
 
-/** When a line of the log lights up (ms into the opening). */
-function cueAt(cue: string | undefined, t: ShowcaseTimeline): number {
-  if (!cue || cue === "start") return 0;
-  if (cue === "plan") return t.lift * 0.5;
-  if (cue.startsWith("level:")) return t.levels[Number(cue.slice(6))] ?? t.roof;
-  if (cue === "roof") return t.roof;
-  if (cue === "grounds") return t.grounds;
-  if (cue === "checks") return t.grounds + (t.end - t.grounds) * 0.55;
-  return t.end - 300;
-}
-
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function HeroModel({ model, site, steps, caption, side, front, elevation = 22 }: { model: PlanModel; site: readonly SitePiece[]; steps: BuildStep[]; caption: string; side?: ReactNode; front: { x: number; y: number }; elevation?: number }) {
   const mount = useRef<HTMLDivElement>(null);
   const show = useRef<Showcase | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
-  const [step, setStep] = useState(-1);
+  const [playing, setPlaying] = useState(false);
   const [moved, setMoved] = useState(false);
   const [touch, setTouch] = useState(false);
   const [exploring, setExploring] = useState(false);
   const timers = useRef<number[]>([]);
 
-  /** Play the opening, with the log lighting up line by line alongside it. */
+  /** Play the opening: the plan, then the house rising floor by floor. */
   const open = (s: Showcase) => {
     for (const t of timers.current) clearTimeout(t);
     timers.current = [];
     const still = reduceMotion();
     s.playIntro(still);
-    if (still) return setStep(steps.length);
-    setStep(-1);
-    steps.forEach((st, i) => timers.current.push(window.setTimeout(() => setStep(i), cueAt(st.cue, s.timeline))));
-    timers.current.push(window.setTimeout(() => setStep(steps.length), s.timeline.end));
+    if (still) return setPlaying(false);
+    setPlaying(true);
+    timers.current.push(window.setTimeout(() => setPlaying(false), s.timeline.end));
   };
   const [Fallback, setFallback] = useState<ReactNode>(null);
 
@@ -135,57 +123,31 @@ export function HeroModel({ model, site, steps, caption, side, front, elevation 
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-      {/* left: the brand, then the build log; on phones the model sits between them */}
-      <div className="contents lg:flex lg:flex-col lg:justify-between lg:gap-10">
-        <div className="order-1 lg:order-none">{side}</div>
-        <div className="order-3 grid gap-5 lg:order-none">
-          <div className="flex items-center gap-4">
-            <span className="label tabular-nums text-ink">
-              <span className="text-ink-3">Build </span>
-              {String(Math.round((Math.max(0, Math.min(step, steps.length)) / steps.length) * 100)).padStart(3, "0")} %
-            </span>
-            <span className="relative h-px flex-1 bg-rule" aria-hidden="true">
-              <span className="absolute inset-y-0 left-0 bg-marker transition-[width] duration-500" style={{ width: `${(Math.max(0, Math.min(step, steps.length)) / steps.length) * 100}%`, height: 1 }} />
-            </span>
-            <button type="button" onClick={() => show.current && open(show.current)} disabled={state !== "ready" || (step >= 0 && step < steps.length)} className="label flex items-center gap-1.5 text-ink-2 hover:text-marker disabled:opacity-0">
-              <RotateCcw size={12} aria-hidden="true" /> Replay
-            </button>
-          </div>
-          <ol className="font-mono text-[0.68rem] uppercase leading-[1.7] tracking-[0.08em]" aria-label="Build log">
-            {steps.map((s, i) => (
-              <li key={s.code} className={`grid grid-cols-[2.4rem_7.2rem_1fr] transition-colors duration-300 ${i < step ? "text-ink-2" : i === step ? "text-marker" : "text-ink-3/50"}`}>
-                <span>{s.code}</span>
-                <span>{s.title}</span>
-                <span className="truncate">{i <= step ? s.detail : ""}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-
-      <div className="order-2 flex min-w-0 flex-col lg:order-none">
-        <div className="flex items-start justify-between gap-4 pb-2">
-          <span className="label text-ink-3">Fig. 01</span>
-          <span className="label text-right text-ink-2">{caption}</span>
-        </div>
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-center lg:gap-12">
+      <div>{side}</div>
+      <div className="min-w-0">
         <div className="hero-sky relative overflow-hidden border border-rule">
-          <div ref={mount} className="h-[clamp(380px,62vw,560px)] w-full cursor-grab active:cursor-grabbing lg:h-[clamp(460px,72vh,780px)]" aria-label="A 3D model of the house: drag to turn it, scroll to zoom" role="img" />
+          <div ref={mount} className="h-[clamp(380px,62vw,560px)] w-full cursor-grab active:cursor-grabbing lg:h-[clamp(460px,72vh,780px)]" aria-label="A 3D model of a house designed in Clavis: drag to turn it, scroll to zoom" role="img" />
           {state === "loading" && <p className="label absolute inset-0 grid place-items-center text-paper">Loading the 3D model…</p>}
           {state === "ready" && (
-            <div className="absolute bottom-3 right-3 flex gap-1">
-              {touch && (
-                <button type="button" onClick={() => explore(!exploring)} className={`label flex h-9 items-center gap-1.5 border px-3 backdrop-blur ${exploring ? "border-marker bg-marker text-paper" : "border-rule bg-paper/85 text-ink"}`}>
-                  <Hand size={14} aria-hidden="true" /> {exploring ? "Done" : "Explore in 3D"}
+            <>
+              <p className="label pointer-events-none absolute bottom-4 left-4 bg-paper/80 px-2 py-1 text-[0.62rem] text-ink-2 backdrop-blur">{touch ? "Explore in 3D, then drag and pinch" : "Drag to turn · scroll to zoom"}</p>
+              <div className="absolute bottom-3 right-3 flex gap-1">
+                {touch && (
+                  <button type="button" onClick={() => explore(!exploring)} className={`label flex h-9 items-center gap-1.5 border px-3 backdrop-blur ${exploring ? "border-marker bg-marker text-paper" : "border-rule bg-paper/85 text-ink"}`}>
+                    <Hand size={14} aria-hidden="true" /> {exploring ? "Done" : "Explore in 3D"}
+                  </button>
+                )}
+                <button type="button" onClick={() => show.current && open(show.current)} disabled={playing} className="label flex h-9 items-center gap-1.5 border border-rule bg-paper/85 px-3 text-ink backdrop-blur hover:text-marker disabled:opacity-40">
+                  <Play size={13} aria-hidden="true" /> Replay
                 </button>
-              )}
-              <button type="button" onClick={() => show.current?.reset()} disabled={!moved} className="grid h-9 w-9 place-items-center border border-rule bg-paper/85 text-ink backdrop-blur hover:text-marker disabled:opacity-40" aria-label="Back to the front view">
-                <RotateCcw size={15} aria-hidden="true" />
-              </button>
-            </div>
+                <button type="button" onClick={() => show.current?.reset()} disabled={!moved} className="grid h-9 w-9 place-items-center border border-rule bg-paper/85 text-ink backdrop-blur hover:text-marker disabled:opacity-40" aria-label="Back to the front view">
+                  <RotateCcw size={15} aria-hidden="true" />
+                </button>
+              </div>
+            </>
           )}
         </div>
-        <p className="label pt-2 text-ink-3">{touch ? "Tap Explore in 3D, then drag to turn and pinch to zoom" : "Drag to turn · right-drag to move · scroll to zoom"}</p>
       </div>
     </div>
   );

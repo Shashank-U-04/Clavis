@@ -23,7 +23,7 @@ export default function AboutPage() {
         title="Clavis is Latin for key."
         intro="A key is the first thing you need to get into a home. Clavis gives you an early version of that: a clear, checked picture of a place before anything is built or bought."
       />
-      <Section sheet="01" title="How it is built.">
+      <Section title="How it is built.">
         <ul className="grid md:grid-cols-2">
           {PRINCIPLES.map(([t, d], i) => (
             <li key={t} className={`border-b border-rule p-5 md:p-10 ${i % 2 === 0 ? "md:border-r" : ""}`}>

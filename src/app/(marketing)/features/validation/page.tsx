@@ -27,7 +27,7 @@ export default function ValidationPage() {
         intro="Whether you drag a wall, type a size or apply a suggestion from the assistant, Clavis checks the result the same way and marks anything that needs attention on the plan. It measures and reports; it never changes your design by itself."
       />
 
-      <Section sheet="01" title="Three kinds of finding." intro="Each finding names the walls, doors, rooms or furniture involved, with the measurements behind it, and clicking it shows them on the plan.">
+      <Section title="Three kinds of finding." intro="Each finding names the walls, doors, rooms or furniture involved, with the measurements behind it, and clicking it shows them on the plan.">
         <div className="grid gap-px bg-rule md:grid-cols-3">
           {[
             ["Error", "The geometry or a relationship is broken: a piece through a wall, overlapping rooms, a door past the end of its wall.", "error"],
@@ -42,7 +42,7 @@ export default function ValidationPage() {
         </div>
       </Section>
 
-      <Section sheet="02" title="What is checked." intro="The limits are rules of thumb for early design, not the building code of any country, and are shown here exactly as Clavis uses them.">
+      <Section title="What is checked." intro="The limits are rules of thumb for early design, not the building code of any country, and are shown here exactly as Clavis uses them.">
         <div className="grid md:grid-cols-2">
           {GROUPS.map((g, gi) => {
             const codes = CHECK_CODES.filter((c) => CHECKS[c].group === g);

@@ -15,7 +15,8 @@
     "db:check": "node scripts/db-check.mjs",
     "judges": "vite-node --config vitest.config.ts scripts/judges.ts",
     "check:live": "node scripts/live-check.mjs",
-    "plants": "vite-node --config vitest.config.ts scripts/plants.mts"
+    "plants": "vite-node --config vitest.config.ts scripts/plants.mts && npm run models:compact",
+    "models:compact": "vite-node --config vitest.config.ts scripts/compact-models.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -42,6 +43,7 @@
     "@vitejs/plugin-react": "^4.6.0",
     "playwright": "^1.62.1",
     "postcss": "^8.5.32",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.5",
     "typescript": "^5.8.3",
     "vite": "^7.0.0",

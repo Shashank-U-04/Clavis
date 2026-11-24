@@ -507,7 +507,7 @@ export function BuildFigure({ data, steps, caption, side }: { data: FigureData; 
 
       <div className="order-2 flex min-w-0 flex-col lg:order-none">
         <div className="flex items-start justify-between gap-4 pb-2">
-          <span className="label text-ink-3">Fig. 01</span>
+
           <span className="label text-right text-ink-2">{caption}</span>
         </div>
         {world ? (

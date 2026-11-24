@@ -41,7 +41,7 @@ export default function AiDesignPage() {
         </div>
       </PageHeader>
 
-      <Section sheet="01" title="What you can ask for." intro="The built-in assistant runs in your browser, with nothing sent anywhere. It understands requests like these, and says so plainly when it does not.">
+      <Section title="What you can ask for." intro="The built-in assistant runs in your browser, with nothing sent anywhere. It understands requests like these, and says so plainly when it does not.">
         <ul className="grid md:grid-cols-2 lg:grid-cols-3">
           {UNDERSTANDS.map(([t, d], i) => (
             <li key={t} className={`border-b border-rule p-5 md:p-8 ${i % 2 === 0 ? "md:border-r" : ""} ${i % 3 !== 2 ? "lg:border-r" : "lg:border-r-0"}`}>
@@ -63,7 +63,7 @@ export default function AiDesignPage() {
       </Section>
 
       <Section
-        sheet="02"
+
         title="Looser requests go to a hosted AI model."
         intro="A request like “make the living room cosier for movie nights” goes to a hosted AI model. Its answer comes back as a suggestion like any other: checked, previewed, and applied only if you choose."
       >
@@ -79,7 +79,7 @@ export default function AiDesignPage() {
       </Section>
 
       <Section
-        sheet="03"
+
         title="Good ideas, exact measurements."
         intro="An AI model is good at what you mean and loose with centimetres. When a change leaves furniture overlapping, one click moves the pieces until nothing collides."
       >

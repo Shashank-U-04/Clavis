@@ -10,7 +10,7 @@ export default function TemplatesPage() {
   return (
     <>
       <SheetHeader
-        sheet="D · Templates"
+
         title="Start from a home that works"
         intro={`${cards.length} homes, each a different kind: drawn by hand, with no errors or warnings, and room to walk through every door.`}
       />
