@@ -70,15 +70,26 @@ function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { d
   // the room's floor as a grid of cells a person's centre can stand on
   const cols = Math.max(1, Math.round(room.w / CELL));
   const rows = Math.max(1, Math.round(room.h / CELL));
-  const near = solids.filter((s) => s.box.x > room.x - 6 && s.box.x < room.x + room.w + 6 && s.box.y > room.y - 6 && s.box.y < room.y + room.h + 6);
-  const free = new Uint8Array(cols * rows);
+  const free = new Uint8Array(cols * rows).fill(1);
+  // each solid blocks only the cells within reach of it: visit those, not the whole room
+  for (const s of solids) {
+    const b = s.box;
+    const c = Math.abs(Math.cos(b.angle));
+    const sn = Math.abs(Math.sin(b.angle));
+    const ex = c * b.halfW + sn * b.halfD + r;
+    const ey = sn * b.halfW + c * b.halfD + r;
+    const i0 = Math.max(0, Math.ceil((b.x - ex - room.x) / CELL - 0.5));
+    const i1 = Math.min(cols - 1, Math.floor((b.x + ex - room.x) / CELL - 0.5));
+    const j0 = Math.max(0, Math.ceil((b.y - ey - room.y) / CELL - 0.5));
+    const j1 = Math.min(rows - 1, Math.floor((b.y + ey - room.y) / CELL - 0.5));
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++) {
+        const k = j * cols + i;
+        if (free[k] && distance(room.x + (i + 0.5) * CELL, room.y + (j + 0.5) * CELL, s) < r) free[k] = 0;
+      }
+  }
   let freeCount = 0;
-  for (let j = 0; j < rows; j++)
-    for (let i = 0; i < cols; i++) {
-      const x = room.x + (i + 0.5) * CELL;
-      const y = room.y + (j + 0.5) * CELL;
-      if (near.every((s) => distance(x, y, s) >= r)) (free[j * cols + i] = 1), freeCount++;
-    }
+  for (let k = 0; k < free.length; k++) freeCount += free[k];
   const cellOf = (x: number, y: number) => {
     const i = Math.min(cols - 1, Math.max(0, Math.floor((x - room.x) / CELL)));
     const j = Math.min(rows - 1, Math.max(0, Math.floor((y - room.y) / CELL)));
