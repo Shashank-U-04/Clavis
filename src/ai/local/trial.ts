@@ -9,6 +9,7 @@
 
 import { applyBatch } from "../../model/operations";
 import { checkModel } from "../../model/issues";
+import { blocksApproach } from "./approach";
 import type { Issue, PlanModel } from "../../model/types";
 
 export const isProblem = (i: Issue) => i.severity !== "info";
@@ -41,6 +42,10 @@ export class Trial {
   try(ops: unknown[]): TryResult {
     const out = applyBatch(this.model, ops, this.newId);
     if (!out.ok) return { ok: false, model: this.model, problems: this.problems, introduced: [], resolved: [], error: out.error?.message };
+    // the engine's own furniture leaves the way into every door clear (approach.ts)
+    const had = new Set(this.model.items.map((i) => i.id));
+    const inTheWay = out.model.items.find((i) => !had.has(i.id) && blocksApproach(out.model, i));
+    if (inTheWay) return { ok: false, model: this.model, problems: this.problems, introduced: [], resolved: [], error: `${inTheWay.kind} would stand in the way into a door` };
     const problems = checkModel(out.model).filter(isProblem);
     const before = new Set(this.problems.map((i) => i.id));
     const after = new Set(problems.map((i) => i.id));
