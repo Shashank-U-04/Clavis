@@ -133,7 +133,8 @@ describe("MCP tools", () => {
 
     const checked = await tool("check_plan", { plan_id: id });
     expect(checked.structuredContent.counts).toBeDefined();
-    expect(checked.structuredContent.not_walkable).toEqual([]);
+    expect(checked.structuredContent.issues.filter((i: { code: string }) => i.code === "room_not_walkable")).toEqual([]);
+    expect(checked.content[0].text).toContain("every room can be walked through");
   });
 
   it("lays out a plan from a brief", async () => {

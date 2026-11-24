@@ -41,6 +41,8 @@ export const CHECK_CODES = [
   "stair_lands_nowhere",
   "stair_starts_nowhere",
   "door_onto_stairwell",
+  // people (issues.ts, walkable.ts)
+  "room_not_walkable",
 ] as const;
 
 export const CHECK_COUNT = CHECK_CODES.length;

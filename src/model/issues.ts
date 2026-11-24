@@ -28,6 +28,7 @@ import {
 import { catalogByKind, itemSize } from "./catalog";
 import { reviewFindings } from "./analysis";
 import { levelsOf, onLevel } from "./levels";
+import { blockedRooms, MIN_REACH } from "./walkable";
 
 /**
  * Tunable early-design heuristics (not building-code values for any jurisdiction).
@@ -47,6 +48,8 @@ export const RULES = {
   habitableLabel: /\b(bed|bedroom|living|study|office|lounge|kids?|guest|master)\b/i,
   /** how far furniture may poke outside its room before it is reported */
   roomEdgeTolerance: 0.05,
+  /** the clear width a person needs to walk through a furnished room */
+  walkPath: 0.6,
 };
 
 type Draft = Omit<Issue, "id">;
@@ -423,6 +426,27 @@ function checkStairwells(model: PlanModel, out: Draft[]) {
   });
 }
 
+/**
+ * Can a person walk through each furnished room, door to door, with a comfortable path
+ * (RULES.walkPath)? The door clear zones catch furniture right in a doorway; this catches a
+ * room so full, or so cut in two, that nobody could cross it.
+ */
+function checkWalkable(model: PlanModel, out: Draft[]) {
+  const path = RULES.walkPath;
+  for (const b of blockedRooms(model, path / 2)) {
+    const pct = Math.round(b.reach * 100);
+    out.push({
+      severity: "warning",
+      code: "room_not_walkable",
+      message: b.doors.length
+        ? `Furniture in "${b.room}" leaves no ${path} m path from one door to ${b.doors.length === 1 ? "another" : "the others"}.`
+        : `Furniture in "${b.room}" leaves too little room to walk: only ${pct}% of its free floor can be reached from the door with a ${path} m path.`,
+      refs: [b.roomId, ...b.doors],
+      measurements: { reach: Math.round(b.reach * 100) / 100, minReach: MIN_REACH, path },
+    });
+  }
+}
+
 export function checkModel(model: PlanModel): Issue[] {
   const broken = checkNumbers(model);
   if (broken.length) return assignIds(broken);
@@ -440,6 +464,7 @@ export function checkModel(model: PlanModel): Issue[] {
   const orphans = model.openings.filter((o) => !model.walls.some((w) => w.id === o.wallId));
   if (orphans.length) checkOpenings({ model: { ...model, walls: [], rooms: [], items: [], openings: orphans }, wallById: new Map(), out });
   checkStairwells(model, out);
+  checkWalkable(model, out);
   out.push(...reviewFindings(model));
   return assignIds(out);
 }

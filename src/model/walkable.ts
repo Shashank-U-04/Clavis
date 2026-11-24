@@ -13,9 +13,14 @@ import { solidsOf, WALKER_RADIUS, type Solid } from "../three/walkCollision";
 
 const CELL = 0.1;
 
+/** A room must let a person reach at least this share of its free floor from its door. */
+export const MIN_REACH = 0.6;
+
 export interface Blocked {
   level: string;
+  /** the room's label */
   room: string;
+  roomId: string;
   /** the doors of this room that cannot be reached from its first door */
   doors: string[];
   /** share of the room's free floor that can be reached (0..1) */
@@ -42,17 +47,45 @@ export function blockedRooms(model: PlanModel, r = WALKER_RADIUS): Blocked[] {
     // every door open: we are asking about furniture, not about doors being shut
     const solids = solidsOf(floor).filter((s) => !s.door);
     for (const room of floor.rooms) {
-      const result = walkRoom(floor, room, solids, r);
-      if (result) out.push({ level: level.name, room: room.label, ...result });
+      const result = walkRoomCached(floor, room, solids, r);
+      if (result) out.push({ level: level.name, room: room.label, roomId: room.id, ...result });
     }
   }
   return out;
 }
 
-function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { doors: string[]; reach: number } | null {
-  // the doors in this room's walls, and a point just inside the room in front of each
+type Walked = { doors: string[]; reach: number } | null;
+type Start = { id: string; x: number; y: number };
+
+/**
+ * Rooms already walked, by everything their answer depends on. Dragging a piece re-checks the
+ * design on every move, but only the room it is in changes; the others come from here.
+ */
+const walked = new Map<string, Walked>();
+const MAX_WALKED = 400;
+const mm = (v: number) => Math.round(v * 1000);
+
+function walkRoomCached(floor: PlanModel, room: Room, solids: Solid[], r: number): Walked {
+  const starts = doorSteps(floor, room, r);
+  if (starts.length === 0) return null;
+  // only what stands within reach of the room's floor can change its answer
+  const near = solids.filter((s) => {
+    const b = s.box;
+    const e = b.halfW + b.halfD + r;
+    return b.x + e > room.x && b.x - e < room.x + room.w && b.y + e > room.y && b.y - e < room.y + room.h;
+  });
+  const key = [mm(r), mm(room.x), mm(room.y), mm(room.w), mm(room.h), starts.map((p) => `${p.id}@${mm(p.x)},${mm(p.y)}`).join(";"), near.map((s) => [s.box.x, s.box.y, s.box.halfW, s.box.halfD, s.box.angle].map(mm).join(",")).join(";")].join("|");
+  if (walked.has(key)) return walked.get(key)!;
+  const result = walkRoom(room, starts, near, r);
+  if (walked.size >= MAX_WALKED) walked.clear();
+  walked.set(key, result);
+  return result;
+}
+
+/** The doors in this room's walls, and a point just inside the room in front of each. */
+function doorSteps(floor: PlanModel, room: Room, r: number): Start[] {
   const inside = (x: number, y: number) => x > room.x && x < room.x + room.w && y > room.y && y < room.y + room.h;
-  const starts: { id: string; x: number; y: number }[] = [];
+  const starts: Start[] = [];
   for (const o of floor.openings) {
     if (o.kind !== "door") continue;
     const wall = floor.walls.find((w) => w.id === o.wallId);
@@ -65,20 +98,34 @@ function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { d
       if (inside(p.x, p.y)) starts.push({ id: o.id, ...p });
     }
   }
-  if (starts.length === 0) return null;
+  return starts;
+}
+
+function walkRoom(room: Room, starts: Start[], solids: Solid[], r: number): Walked {
 
   // the room's floor as a grid of cells a person's centre can stand on
   const cols = Math.max(1, Math.round(room.w / CELL));
   const rows = Math.max(1, Math.round(room.h / CELL));
-  const near = solids.filter((s) => s.box.x > room.x - 6 && s.box.x < room.x + room.w + 6 && s.box.y > room.y - 6 && s.box.y < room.y + room.h + 6);
-  const free = new Uint8Array(cols * rows);
+  const free = new Uint8Array(cols * rows).fill(1);
+  // each solid blocks only the cells within reach of it: visit those, not the whole room
+  for (const s of solids) {
+    const b = s.box;
+    const c = Math.abs(Math.cos(b.angle));
+    const sn = Math.abs(Math.sin(b.angle));
+    const ex = c * b.halfW + sn * b.halfD + r;
+    const ey = sn * b.halfW + c * b.halfD + r;
+    const i0 = Math.max(0, Math.ceil((b.x - ex - room.x) / CELL - 0.5));
+    const i1 = Math.min(cols - 1, Math.floor((b.x + ex - room.x) / CELL - 0.5));
+    const j0 = Math.max(0, Math.ceil((b.y - ey - room.y) / CELL - 0.5));
+    const j1 = Math.min(rows - 1, Math.floor((b.y + ey - room.y) / CELL - 0.5));
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++) {
+        const k = j * cols + i;
+        if (free[k] && distance(room.x + (i + 0.5) * CELL, room.y + (j + 0.5) * CELL, s) < r) free[k] = 0;
+      }
+  }
   let freeCount = 0;
-  for (let j = 0; j < rows; j++)
-    for (let i = 0; i < cols; i++) {
-      const x = room.x + (i + 0.5) * CELL;
-      const y = room.y + (j + 0.5) * CELL;
-      if (near.every((s) => distance(x, y, s) >= r)) (free[j * cols + i] = 1), freeCount++;
-    }
+  for (let k = 0; k < free.length; k++) freeCount += free[k];
   const cellOf = (x: number, y: number) => {
     const i = Math.min(cols - 1, Math.max(0, Math.floor((x - room.x) / CELL)));
     const j = Math.min(rows - 1, Math.max(0, Math.floor((y - room.y) / CELL)));
@@ -106,5 +153,5 @@ function walkRoom(floor: PlanModel, room: Room, solids: Solid[], r: number): { d
   }
   const doors = [...new Set(starts.filter((s) => !seen[cellOf(s.x, s.y)]).map((s) => s.id))];
   const reach = freeCount ? reached / freeCount : 0;
-  return doors.length || reach < 0.6 ? { doors, reach } : null;
+  return doors.length || reach < MIN_REACH ? { doors, reach } : null;
 }

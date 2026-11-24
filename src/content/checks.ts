@@ -6,6 +6,7 @@
 import type { CHECK_CODES } from "@/model/checks";
 import { HABITABILITY } from "@/model/analysis";
 import { RULES } from "@/model/issues";
+import { MIN_REACH } from "@/model/walkable";
 
 type Code = (typeof CHECK_CODES)[number];
 export type CheckGroup = "Walls" | "Doors and windows" | "Rooms" | "Furniture" | "Circulation" | "Habitability" | "Floors";
@@ -43,6 +44,7 @@ export const CHECKS: Record<Code, { group: CheckGroup; text: string; severity: "
   no_entrance: { group: "Circulation", severity: "warning", text: "No door leads outside." },
   room_unreachable: { group: "Circulation", severity: "warning", text: "A room whose door does not connect back to the entrance." },
   route_through_private: { group: "Circulation", severity: "info", text: "A room you can only reach through a bedroom or bathroom." },
+  room_not_walkable: { group: "Circulation", severity: "warning", text: `A furnished room a person cannot walk through on a ${cm(RULES.walkPath)} path: a door that cannot be reached from another, or less than ${pct(MIN_REACH)} of the free floor reachable from the door.` },
   room_low_daylight: { group: "Habitability", severity: "warning", text: `A habitable room with less than ${pct(HABITABILITY.minDaylightRatio)} glazing for its floor area.` },
   bedroom_no_escape_window: {
     group: "Habitability",

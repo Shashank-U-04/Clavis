@@ -72,15 +72,39 @@ describe("homes laid out from a brief by Clavis Local", () => {
     const out = applyBatch(emptyModel(), localProposal({ mode: "design", instruction: brief, context: { design: {} } }, emptyModel()).operations, (p) => `${p}_${n++}`);
     return out.model;
   };
-  it.each([
+  const BRIEFS: [string, number][] = [
     ["studio apartment, 38 m2", 0],
     ["one bedroom flat with an open kitchen, 52 m2", 1],
+    ["2 bedrooms, 1 bathroom, open kitchen, 70 m2", 2],
     ["3 bedroom house with 2 bathrooms and a study, 120 m2", 3],
     ["4 bedroom home with separate kitchen and laundry, 150 m2", 4],
     ["5 bedroom villa 250 sqm", 5],
-  ])("“%s” has %i bedrooms and no errors", (brief, beds) => {
+  ];
+
+  // the same bar as the templates: nothing to fix, and a person can live in it
+  describe.each(BRIEFS)("“%s”", (brief, beds) => {
     const m = fromBrief(brief);
-    expect(templateFacts(m).bedrooms).toBe(beds);
-    expect(checkModel(m).filter((i) => i.severity === "error")).toEqual([]);
+
+    it(`has ${beds} bedrooms and no errors or warnings`, () => {
+      expect(templateFacts(m).bedrooms).toBe(beds);
+      expect(checkModel(m).filter((i) => i.severity !== "info").map((i) => `${i.code}: ${i.message}`)).toEqual([]);
+    });
+
+    it("can be walked from every door of every room to every other, with 0.6 m to spare", () => {
+      expect(blockedRooms(m, 0.3)).toEqual([]);
+    });
+
+    it("has 1.2 m of clear floor on both sides of every door", () => {
+      expect(crowdedDoors(m)).toEqual([]);
+    });
+
+    it("is furnished: a bed and two more pieces in every bedroom, and a sofa", () => {
+      for (const room of m.rooms.filter((r) => /bedroom/i.test(r.label))) {
+        const kinds = m.items.filter((it) => it.x > room.x && it.x < room.x + room.w && it.y > room.y && it.y < room.y + room.h).map((it) => it.kind);
+        expect(kinds.some((k) => k.startsWith("bed_")), room.label).toBe(true);
+        expect(kinds.length, `${room.label}: ${kinds.join(", ")}`).toBeGreaterThanOrEqual(3);
+      }
+      expect(m.items.some((it) => it.kind.startsWith("sofa"))).toBe(true);
+    });
   });
 });
