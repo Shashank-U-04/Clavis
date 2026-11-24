@@ -141,7 +141,7 @@ export default function DocsPage() {
             <section className="space-y-4">
               <H id="review">Reading the review</H>
               <p>
-                The <b>Review</b> tab lists errors, warnings and notes. Click a finding to highlight what it is about; <b>Fix this</b> or <b>Fix all</b> asks for a repair you can preview first. The room table shows each room&apos;s floor area, its glazing as a share of the floor, and how many doors it is from the entrance — click that number to see the route on the plan. See <Link href="/features/validation" className="text-ink underline underline-offset-4 hover:text-marker">every check</Link>.
+                The <b>Review</b> tab lists errors, warnings and notes. Click a finding to highlight what it is about; <b>Fix this</b> or <b>Fix all</b> asks for a repair you can preview first. Review also warns when furniture leaves no 0.6 m way through a room, from one door to another or across most of its floor; its fix moves pieces and never removes them. The room table shows each room&apos;s floor area, its glazing as a share of the floor, and how many doors it is from the entrance — click that number to see the route on the plan. See <Link href="/features/validation" className="text-ink underline underline-offset-4 hover:text-marker">every check</Link>.
               </p>
             </section>
             <section className="space-y-4">
