@@ -64,13 +64,13 @@ export function PlanDetail({ id }: { id: string }) {
     };
   }, [ws?.model]);
 
-  if (!ws) return <SheetHeader sheet="B.1 · Plan" title="Loading…" />;
+  if (!ws) return <SheetHeader title="Loading…" />;
   const { plan, versions, events } = ws;
 
   if (!plan)
     return (
       <>
-        <SheetHeader sheet="B.1 · Plan" title="Not in this browser" intro="This plan was deleted, or it was made in another browser. Plans are kept where they were made until accounts are switched on." />
+        <SheetHeader title="Not in this browser" intro="This plan was deleted, or it was made in another browser. Plans are kept where they were made until accounts are switched on." />
         <div className="px-5 py-8 md:px-8">
           <Link href="/plans" className="label inline-flex items-center gap-3 border border-ink px-4 py-3 hover:bg-ink hover:text-paper">
             <ArrowLeft size={14} aria-hidden="true" /> All plans
@@ -88,7 +88,7 @@ export function PlanDetail({ id }: { id: string }) {
 
   return (
     <>
-      <SheetHeader sheet="B.1 · Plan" title={plan.name} intro={`${plan.rooms} rooms · ${plan.area} m² · edited ${ago(plan.updatedAt)}${!plan.source ? "" : plan.source.startsWith("template:") ? ` · started from the ${sourceLabel(plan.source)} template` : ` · started from ${sourceText(plan.source)}`}`}>
+      <SheetHeader title={plan.name} intro={`${plan.rooms} rooms · ${plan.area} m² · edited ${ago(plan.updatedAt)}${!plan.source ? "" : plan.source.startsWith("template:") ? ` · started from the ${sourceLabel(plan.source)} template` : ` · started from ${sourceText(plan.source)}`}`}>
         <button
           type="button"
           onClick={() => mutate((s) => starPlan(s, plan.id, !plan.starred))}
@@ -126,7 +126,7 @@ export function PlanDetail({ id }: { id: string }) {
                 </button>
               </>
             ) : (
-              <span>Fig. 01 · As saved {ago(plan.updatedAt)}</span>
+              <span>As saved {ago(plan.updatedAt)}</span>
             )}
           </figcaption>
         </figure>

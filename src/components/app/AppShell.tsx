@@ -31,7 +31,6 @@ function NavItem({ d, path, count, lead }: { d: AppDest; path: string; count?: n
         {lead ?? <d.icon size={16} strokeWidth={1.6} aria-hidden="true" className={on ? "" : "text-ink-3 group-hover:text-ink"} />}
         <span className="flex-1">{d.label}</span>
         {count !== undefined && count > 0 && <span className={`font-mono text-[0.68rem] tabular-nums ${on ? "text-paper/70" : "text-ink-3"}`}>{count}</span>}
-        <span className={`label text-[0.6rem] ${on ? "text-paper/50" : "text-ink-3/70"}`}>{d.sheet}</span>
       </Link>
     </li>
   );
@@ -106,7 +105,7 @@ function PlanSearch({ className = "" }: { className?: string }) {
 
 function TopBar({ path, onMenu }: { path: string; onMenu: () => void }) {
   const last = useWorkspace((s) => lastPlan(s));
-  const { sheet, label } = sheetFor(path);
+  const { label } = sheetFor(path);
   const continueHref = last ? `/studio/try?project=${encodeURIComponent(last.id)}` : "/new";
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-stretch border-b border-rule bg-paper">
@@ -114,7 +113,6 @@ function TopBar({ path, onMenu }: { path: string; onMenu: () => void }) {
         <Menu size={19} strokeWidth={1.5} />
       </button>
       <p className="flex min-w-0 items-center gap-3 px-5 md:px-8">
-        <span className="label text-ink-3">{sheet}</span>
         <span className="truncate font-medium">{label}</span>
       </p>
       <span className="flex-1" />

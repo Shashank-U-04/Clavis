@@ -43,7 +43,7 @@ export function Home({ templates }: { templates: ReactNode }) {
     };
   });
 
-  if (!ws) return <SheetHeader sheet="A · Home" title="Your homes" />;
+  if (!ws) return <SheetHeader title="Your homes" />;
   const { profile, plans, last, lastVersion, events } = ws;
   const live = new Set(plans.map((p) => p.id));
   const recent = plans.filter((p) => p.id !== last?.id).slice(0, 5);
@@ -53,7 +53,6 @@ export function Home({ templates }: { templates: ReactNode }) {
     <>
       <GuestImportBanner />
       <SheetHeader
-        sheet="A · Home"
         title={greeting(profile.name)}
         intro={plans.length ? `${plans.length} ${plans.length === 1 ? "plan" : "plans"} · ${totalArea} m² designed · ${account ? "kept in your account." : "all saved in this browser."}` : "Nothing here yet. Start a plan below, and it will wait for you here."}
       >
@@ -72,7 +71,7 @@ export function Home({ templates }: { templates: ReactNode }) {
           <div className="grid md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
             <Link href={studioHref(last.id)} className="group relative block border-b border-rule md:border-b-0 md:border-r" aria-label={`Continue ${last.name} in the studio`}>
               <PlanThumb id={last.id} stamp={last.updatedAt} className="grid-paper aspect-[16/10] bg-paper" />
-              <span className="label absolute bottom-3 left-3 bg-paper/90 px-2 py-1 text-ink-3 group-hover:text-marker">Fig. 01 · {last.name}</span>
+              <span className="label absolute bottom-3 left-3 bg-paper/90 px-2 py-1 text-ink-3 group-hover:text-marker">{last.name}</span>
             </Link>
             <div className="flex flex-col gap-6 p-5 md:p-8">
               <div>

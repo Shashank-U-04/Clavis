@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Plans", robots: { index: false } };
 export default function PlansPage() {
   return (
     <>
-      <SheetHeader sheet="B · Plans" title="Every plan" intro="Search, sort and star your plans; open one in the studio, or look at its versions and history.">
+      <SheetHeader title="Every plan" intro="Search, sort and star your plans; open one in the studio, or look at its versions and history.">
         <Link href="/new" className="label flex items-center gap-3 bg-ink px-4 py-3 text-paper hover:bg-marker">
           New plan <Plus size={14} aria-hidden="true" />
         </Link>

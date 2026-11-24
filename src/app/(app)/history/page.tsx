@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "History", robots: { index: false } }
 export default function HistoryPage() {
   return (
     <>
-      <SheetHeader sheet="E · History" title="What you did" intro="Every new plan, edit session, saved version, rename and download, across all your plans." />
+      <SheetHeader title="What you did" intro="Every new plan, edit session, saved version, rename and download, across all your plans." />
       <HistoryTimeline />
     </>
   );
