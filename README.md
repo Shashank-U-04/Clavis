@@ -75,6 +75,35 @@ Both return the same proposal format and go through the same workflow:
 propose → dry-run by the validator → preview → you apply → the outcome is measured.
 The assistant never applies anything itself and never decides whether a fix worked.
 
+## AI agents (MCP)
+
+Clavis is also an MCP server, so an AI agent you already use can design in it. In the app,
+open **MCP** (top right, also in the studio and in Settings), make a token, and paste the
+config it shows into the agent's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "clavis": {
+      "type": "http",
+      "url": "https://<your Clavis>/api/mcp",
+      "headers": { "Authorization": "Bearer clv_…" }
+    }
+  }
+}
+```
+
+`POST /api/mcp` speaks JSON-RPC over streamable HTTP (`server/mcp/`). Tools: `list_plans`,
+`get_plan`, `check_plan`, `create_plan` (template, one-line brief or empty),
+`apply_operations` (the studio's validated operations, all or nothing, with `dry_run`),
+`describe_operations`, `list_catalog`, `list_templates`.
+
+- Tokens are per account, read only or read + edit, up to five, revocable. Only a SHA-256
+  hash is stored (in the account's app metadata, which only the server writes).
+- Removing work needs `allow_removals: true`; agents are told to ask first.
+- Every saved edit keeps the plan's previous state as a version and adds a history line; the
+  browser's sync brings the change into the app and studio.
+
 ## Run it
 
 ```bash
